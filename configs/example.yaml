@@ -1,0 +1,63 @@
+# Paths are relative to this file. Change the project path for your checkout.
+version: 1
+server:
+  socket: ~/.deckd/deckd.sock
+context:
+  defaults:
+    project: patchbay
+    mode: development
+security:
+  allow_dangerous_actions: false
+projects:
+  patchbay:
+    name: Patchbay
+    path: ..
+    language: go
+actions:
+  project.vet:
+    type: exec
+    safety: safe
+    command: go
+    args: [vet, ./...]
+    cwd: "{{ .project.path }}"
+  project.test:
+    type: exec
+    safety: safe
+    command: go
+    args: [test, ./...]
+    cwd: "{{ .project.path }}"
+  project.status:
+    type: git
+    safety: safe
+    operation: status
+    cwd: "{{ .project.path }}"
+  project.open:
+    type: open
+    safety: safe
+    target: "{{ .project.path }}"
+  project.validate:
+    type: workflow
+    safety: safe
+    workflow: validate
+workflows:
+  validate:
+    stop_on_error: true
+    steps:
+      - action: project.vet
+      - action: project.test
+parameters:
+  display.level:
+    type: integer
+    value: 50
+    min: 0
+    max: 100
+    step: 5
+    unit: "%"
+    persistent: true
+bindings:
+  - control: key-1
+    when: {mode: development}
+    press: {action: project.validate}
+  - control: dial-1
+    rotate: {parameter: display.level}
+    press: {action: project.status}

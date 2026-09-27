@@ -1,0 +1,3 @@
+version: 1
+parameters:
+  count: {type: integer, value: 1.5, min: 0, max: 10}

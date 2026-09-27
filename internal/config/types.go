@@ -1,0 +1,108 @@
+// Package config loads and validates declarative configuration without starting
+// providers, opening sockets, or inspecting project contents.
+package config
+
+import (
+	"patchbay/internal/binding"
+	runtimecontext "patchbay/internal/context"
+	"patchbay/internal/parameter"
+	"patchbay/internal/permission"
+	"patchbay/internal/workflow"
+)
+
+const (
+	DefaultPath      = "~/.config/deckd/config.yaml"
+	DefaultSocket    = "~/.deckd/deckd.sock"
+	DefaultStatePath = "~/.deckd/state.json"
+	MaxConfigBytes   = 1 << 20
+)
+
+type Config struct {
+	Version    int                             `yaml:"version"`
+	Server     Server                          `yaml:"server,omitempty"`
+	Context    Context                         `yaml:"context,omitempty"`
+	Security   Security                        `yaml:"security,omitempty"`
+	Jobs       Jobs                            `yaml:"jobs,omitempty"`
+	Events     Events                          `yaml:"events,omitempty"`
+	State      State                           `yaml:"state,omitempty"`
+	Projects   map[string]Project              `yaml:"projects,omitempty"`
+	Actions    map[string]Action               `yaml:"actions,omitempty"`
+	Workflows  map[string]Workflow             `yaml:"workflows,omitempty"`
+	Parameters map[string]parameter.Definition `yaml:"parameters,omitempty"`
+	Bindings   []binding.Binding               `yaml:"bindings,omitempty"`
+}
+
+type Server struct {
+	Socket          string `yaml:"socket"`
+	MaxRequestBytes int64  `yaml:"max_request_bytes,omitempty"`
+	ShutdownGrace   string `yaml:"shutdown_grace,omitempty"`
+}
+
+type Context struct {
+	Defaults runtimecontext.RuntimeContext `yaml:"defaults,omitempty"`
+}
+type Security struct {
+	AllowDangerousActions bool `yaml:"allow_dangerous_actions,omitempty"`
+}
+type Jobs struct {
+	Concurrency      int   `yaml:"concurrency,omitempty"`
+	QueueCapacity    int   `yaml:"queue_capacity,omitempty"`
+	HistoryLimit     int   `yaml:"history_limit,omitempty"`
+	OutputLimitBytes int64 `yaml:"output_limit_bytes,omitempty"`
+}
+type Events struct {
+	SubscriberCapacity int `yaml:"subscriber_capacity,omitempty"`
+}
+type State struct {
+	Path          string `yaml:"path,omitempty"`
+	FlushInterval string `yaml:"flush_interval,omitempty"`
+}
+
+type Project struct {
+	ID          string            `yaml:"id,omitempty"`
+	Name        string            `yaml:"name"`
+	Path        string            `yaml:"path"`
+	GitHub      string            `yaml:"github,omitempty"`
+	Language    string            `yaml:"language,omitempty"`
+	Engine      string            `yaml:"engine,omitempty"`
+	Metadata    map[string]string `yaml:"metadata,omitempty"`
+	Environment map[string]string `yaml:"environment,omitempty"`
+	Actions     map[string]Action `yaml:"actions,omitempty"`
+}
+
+type Action struct {
+	Type        string                `yaml:"type"`
+	Safety      permission.Permission `yaml:"safety,omitempty"`
+	Command     string                `yaml:"command,omitempty"`
+	Args        []string              `yaml:"args,omitempty"`
+	Cwd         string                `yaml:"cwd,omitempty"`
+	Environment map[string]string     `yaml:"environment,omitempty"`
+	Timeout     string                `yaml:"timeout,omitempty"`
+	Target      string                `yaml:"target,omitempty"`
+	Operation   string                `yaml:"operation,omitempty"`
+	Workflow    string                `yaml:"workflow,omitempty"`
+	Inputs      map[string]Input      `yaml:"inputs,omitempty"`
+}
+
+type Input struct {
+	Type     parameter.Type `yaml:"type"`
+	Required bool           `yaml:"required,omitempty"`
+	Default  any            `yaml:"default,omitempty"`
+	Min      any            `yaml:"min,omitempty"`
+	Max      any            `yaml:"max,omitempty"`
+	Enum     []string       `yaml:"enum,omitempty"`
+}
+
+type Workflow struct {
+	StopOnError *bool                   `yaml:"stop_on_error,omitempty"`
+	Steps       []workflow.WorkflowStep `yaml:"steps"`
+}
+
+func defaults() Config {
+	return Config{
+		Server: Server{Socket: DefaultSocket, MaxRequestBytes: 1 << 20, ShutdownGrace: "5s"},
+		Jobs:   Jobs{Concurrency: 4, QueueCapacity: 64, HistoryLimit: 100, OutputLimitBytes: 1 << 20},
+		Events: Events{SubscriberCapacity: 64},
+		State:  State{Path: DefaultStatePath, FlushInterval: "250ms"},
+	}
+}

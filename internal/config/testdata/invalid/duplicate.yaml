@@ -1,0 +1,4 @@
+version: 1
+actions:
+  test: {type: exec, command: go}
+  test: {type: exec, command: go}

@@ -1,0 +1,3 @@
+version: 1
+actions:
+  test: {type: exec, command: go, safety: SECRET_SENTINEL}

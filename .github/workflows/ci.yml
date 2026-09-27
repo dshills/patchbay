@@ -1,0 +1,19 @@
+name: Go
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  foundation:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go mod download
+      - run: make install-lint
+      - run: make check GOLANGCI_LINT="$PWD/.tools/golangci-lint"
+      - run: ./bin/deckctl config validate --config configs/example.yaml --json

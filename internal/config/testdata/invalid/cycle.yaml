@@ -1,0 +1,7 @@
+version: 1
+actions:
+  a: {type: workflow, workflow: first}
+  b: {type: workflow, workflow: second}
+workflows:
+  first: {steps: [{action: b}]}
+  second: {steps: [{action: a}]}

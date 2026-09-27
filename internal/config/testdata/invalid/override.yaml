@@ -1,0 +1,9 @@
+version: 1
+actions:
+  test: {type: exec, command: go}
+projects:
+  demo:
+    name: Demo
+    path: .
+    actions:
+      test: {safety: safe}

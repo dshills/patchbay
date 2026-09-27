@@ -367,7 +367,7 @@ package. A later executable-plugin protocol SHOULD use subprocesses and
 versioned JSON over stdin/stdout. Protocol stabilization is deferred
 until core action/result semantics are proven.
 
-## 23. AI / Codex --- Phase 2
+## 23. AI / Codex --- Phase 4
 
 AI is an action provider, not the runtime.
 
@@ -388,7 +388,7 @@ Agent jobs MUST expose status/output and obey cancellation/safety
 policy. AI MUST NOT automatically gain unrestricted hardware-control
 authority.
 
-## 24. SCPI --- Phase 2
+## 24. SCPI --- Phase 5
 
 SCPI is another provider.
 
@@ -431,7 +431,10 @@ goroutine needs a documented owner and shutdown path.
 Stable categories: `invalid_config`, `invalid_request`, `not_found`,
 `action_not_found`, `project_not_found`, `permission_denied`,
 `confirmation_required`, `provider_unavailable`, `execution_failed`,
-`cancelled`, `timeout`, `internal`.
+`cancelled`, `timeout`, `internal`, `busy`, `shutting_down`.
+
+`busy` and `shutting_down` identify admission failures and use HTTP 503;
+no job has been admitted for either response.
 
 ## 29. Testing
 
@@ -552,3 +555,16 @@ development tools and laboratory equipment.
 
 That future capability MUST emerge from stable core abstractions rather
 than V1 speculative complexity.
+
+## 38. Foundation Decisions
+
+Phase 0 schema/defaults, safety normalization, project override semantics,
+template grammar, and package boundaries are recorded in
+[FOUNDATION.md](FOUNDATION.md). Versioned JSON examples and HTTP/error
+semantics are recorded in [API.md](API.md). These documents refine the
+contracts above without advancing later-phase runtime implementation.
+
+The delivery sequence in §33 is authoritative. Initial Git operations
+belong to the headless V1 runtime; Phase 4 refines them. Offline validation
+and version/help commands are included in the foundation; the complete
+reference CLI remains Phase 2.

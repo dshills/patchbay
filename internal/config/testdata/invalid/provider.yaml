@@ -1,0 +1,3 @@
+version: 1
+actions:
+  review: {type: agent}

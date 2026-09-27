@@ -1,0 +1,6 @@
+version: 1
+actions:
+  test: {type: exec, command: go}
+bindings:
+  - {control: key-1, when: {mode: development}, press: {action: test}}
+  - {control: key-1, when: {values.role: coder}, press: {action: test}}
