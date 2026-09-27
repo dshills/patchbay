@@ -48,6 +48,15 @@ func render(value any) string {
 		}
 		for _, a := range v.Actions {
 			line("%s\t%s\t%s", a.Name, a.Type, a.Safety)
+			if a.Origin != "" {
+				line("  origin: %s", a.Origin)
+			}
+			if a.Agent != nil {
+				line("  %s: prompt=%s model=%s; network=%s; workspace_write=%t; tools=%s", a.Agent.Provider, a.Agent.Prompt, a.Agent.Model, a.Agent.Network, a.Agent.WorkspaceWrite, strings.Join(a.Agent.Tools, ","))
+				if len(a.Agent.Files) > 0 {
+					line("  context files: %s", strings.Join(a.Agent.Files, ", "))
+				}
+			}
 			for _, key := range slices.Sorted(maps.Keys(a.Inputs)) {
 				input := a.Inputs[key]
 				requirement := "optional"
@@ -139,7 +148,29 @@ func renderParameter(out *strings.Builder, p protocol.Parameter) {
 	out.WriteByte('\n')
 }
 func renderData(out *strings.Builder, data map[string]any, indent string) {
+	structured := false
+	if entries, ok := data["git_status"].([]any); ok {
+		structured = true
+		for _, item := range entries {
+			entry, _ := item.(map[string]any)
+			_, _ = fmt.Fprintf(out, "%s%v%v %q", indent, entry["index"], entry["worktree"], entry["path"])
+			if original, ok := entry["original_path"]; ok {
+				_, _ = fmt.Fprintf(out, " (from %q)", original)
+			}
+			out.WriteByte('\n')
+		}
+	}
+	if commits, ok := data["git_log"].([]any); ok {
+		structured = true
+		for _, item := range commits {
+			entry, _ := item.(map[string]any)
+			_, _ = fmt.Fprintf(out, "%s%v %v\n", indent, entry["commit"], entry["subject"])
+		}
+	}
 	for _, key := range []string{"stdout", "stderr"} {
+		if key == "stdout" && structured {
+			continue
+		}
 		if text, ok := data[key].(string); ok && text != "" {
 			_, _ = fmt.Fprintf(out, "%s%s:\n%s", indent, key, text)
 			if !strings.HasSuffix(text, "\n") {
@@ -149,6 +180,9 @@ func renderData(out *strings.Builder, data map[string]any, indent string) {
 	}
 	if truncated, _ := data["truncated"].(bool); truncated {
 		_, _ = fmt.Fprintf(out, "%s[output truncated]\n", indent)
+	}
+	if incomplete, _ := data["structured_incomplete"].(bool); incomplete {
+		_, _ = fmt.Fprintf(out, "%s[structured Git output incomplete]\n", indent)
 	}
 	steps, _ := data["steps"].([]any)
 	for i, item := range steps {

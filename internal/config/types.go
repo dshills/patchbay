@@ -18,18 +18,33 @@ const (
 )
 
 type Config struct {
-	Version    int                             `yaml:"version"`
-	Server     Server                          `yaml:"server,omitempty"`
-	Context    Context                         `yaml:"context,omitempty"`
-	Security   Security                        `yaml:"security,omitempty"`
-	Jobs       Jobs                            `yaml:"jobs,omitempty"`
-	Events     Events                          `yaml:"events,omitempty"`
-	State      State                           `yaml:"state,omitempty"`
-	Projects   map[string]Project              `yaml:"projects,omitempty"`
-	Actions    map[string]Action               `yaml:"actions,omitempty"`
-	Workflows  map[string]Workflow             `yaml:"workflows,omitempty"`
-	Parameters map[string]parameter.Definition `yaml:"parameters,omitempty"`
-	Bindings   []binding.Binding               `yaml:"bindings,omitempty"`
+	Version     int                                     `yaml:"version"`
+	Server      Server                                  `yaml:"server,omitempty"`
+	Context     Context                                 `yaml:"context,omitempty"`
+	Security    Security                                `yaml:"security,omitempty"`
+	Jobs        Jobs                                    `yaml:"jobs,omitempty"`
+	Events      Events                                  `yaml:"events,omitempty"`
+	State       State                                   `yaml:"state,omitempty"`
+	Projects    map[string]Project                      `yaml:"projects,omitempty"`
+	Actions     map[string]Action                       `yaml:"actions,omitempty"`
+	Workflows   map[string]Workflow                     `yaml:"workflows,omitempty"`
+	Parameters  map[string]parameter.Definition         `yaml:"parameters,omitempty"`
+	Bindings    []binding.Binding                       `yaml:"bindings,omitempty"`
+	Prompts     map[string]string                       `yaml:"prompts,omitempty"`
+	Agents      Agents                                  `yaml:"agents,omitempty"`
+	Conventions map[string]map[string]ConventionCommand `yaml:"conventions,omitempty"`
+}
+
+type Agents struct {
+	Codex Codex `yaml:"codex,omitempty"`
+}
+type Codex struct {
+	Model           string `yaml:"model,omitempty"`
+	MaxOutputTokens int    `yaml:"max_output_tokens,omitempty"`
+}
+type ConventionCommand struct {
+	Command string   `yaml:"command"`
+	Args    []string `yaml:"args,omitempty"`
 }
 
 type Server struct {
@@ -68,6 +83,7 @@ type Project struct {
 	Metadata    map[string]string `yaml:"metadata,omitempty"`
 	Environment map[string]string `yaml:"environment,omitempty"`
 	Actions     map[string]Action `yaml:"actions,omitempty"`
+	Conventions []string          `yaml:"conventions,omitempty"`
 }
 
 type Action struct {
@@ -82,6 +98,10 @@ type Action struct {
 	Operation   string                `yaml:"operation,omitempty"`
 	Workflow    string                `yaml:"workflow,omitempty"`
 	Inputs      map[string]Input      `yaml:"inputs,omitempty"`
+	Provider    string                `yaml:"provider,omitempty"`
+	Prompt      string                `yaml:"prompt,omitempty"`
+	Files       []string              `yaml:"files,omitempty"`
+	Origin      string                `yaml:"-"`
 }
 
 type Input struct {

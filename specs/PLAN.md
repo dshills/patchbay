@@ -2,7 +2,7 @@
 
 **Source:** [SPEC.md](SPEC.md), version 0.1, dated 2026-09-27
 
-**Plan status:** Phases 0–2 complete. Phase 3 implementation and simulator verification are complete; its physical hardware exit gate remains pending. See [Phase 3 evidence](reviews/PHASE3.md). Phases 4–6 remain planned.
+**Plan status:** Phases 0–2 complete. Phase 3 implementation and simulator verification are complete; its physical hardware exit gate remains pending. See [Phase 3 evidence](reviews/PHASE3.md). Phase 4 implementation and verification are complete; see [Phase 4 evidence and Prism review](reviews/PHASE4.md). Phases 5–6 remain planned.
 
 **Planning baseline:** Before Phase 0, the repository contained `specs/SPEC.md` and no application code, build configuration, or tests.
 
@@ -394,16 +394,16 @@ Follow the published sequence by default. Phases 4 and 5 must remain usable thro
 
 **Depends on:** Phase 2; physical controls are optional.
 
-- [ ] Refine Git results and UX based on V1 usage without removing the existing semantic operations or weakening mutation policies.
-- [ ] Define opt-in project conventions such as validate/test/build and language-specific overrides. Preview or document generated definitions and keep every effective action discoverable.
-- [ ] Add named reusable prompts with validation, explicit variable expansion, and project-scoped working directories. Treat prompt changes as configuration generations.
-- [ ] Define a small agent-provider capability and implement the Codex integration selected after checking its current supported interface.
-- [ ] Expose agent job status, bounded output, result summaries, timeouts, cancellation, provider health, and sanitized diagnostics through existing job/protocol conventions.
-- [ ] Declare and enforce the provider's effective permission floor for workspace writes, network use, and tools. Never classify an arbitrary agent prompt as safe merely because it is text.
-- [ ] Keep AI-generated decisions outside deterministic workflow control. Agent output is data unless a separate, explicitly authorized action consumes it.
-- [ ] Withhold instrument/hardware capabilities from agent execution by default. Any later delegation needs explicit capability restrictions and daemon-side checks.
+- [x] Refine Git results and UX based on V1 usage without removing the existing semantic operations or weakening mutation policies.
+- [x] Define opt-in project conventions such as validate/test/build and language-specific overrides. Preview or document generated definitions and keep every effective action discoverable.
+- [x] Add named reusable prompts with validation, explicit variable expansion, and project-scoped working directories. Treat prompt changes as configuration generations.
+- [x] Define a small agent-provider capability and implement the Codex integration selected after checking its current supported interface.
+- [x] Expose agent job status, bounded output, result summaries, timeouts, cancellation, provider health, and sanitized diagnostics through existing job/protocol conventions.
+- [x] Declare and enforce the provider's effective permission floor for workspace writes, network use, and tools. Never classify an arbitrary agent prompt as safe merely because it is text.
+- [x] Keep AI-generated decisions outside deterministic workflow control. Agent output is data unless a separate, explicitly authorized action consumes it.
+- [x] Withhold instrument/hardware capabilities from agent execution by default. Any later delegation needs explicit capability restrictions and daemon-side checks.
 
-**Verification:** Fake-agent contract tests for completion, streaming/output truncation, malformed output, missing credentials/provider, process failure, cancellation, timeout, and permission refusal. Gate optional real-provider smoke tests separately from deterministic CI.
+**Verification:** Fake-agent contract tests for completion, streaming/output truncation, malformed output, missing credentials/provider, transport failure (the selected API provider has no subprocess), cancellation, timeout, and permission refusal. Gate optional real-provider smoke tests separately from deterministic CI.
 
 **Deliverables:** Project conventions, prompt library, agent provider, documented credential/permission setup, and CLI examples.
 

@@ -237,6 +237,22 @@ func (m *Manager) Get(id string) (Job, error) {
 	}
 	return clone(e.job)
 }
+
+// Update publishes a bounded provider-owned partial result without changing job
+// state. Copy before retaining it, and ignore callbacks after terminal completion.
+func (m *Manager) Update(id string, result action.Result) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	e, exists := m.entries[id]
+	if !exists || e.job.State != Running {
+		return
+	}
+	value := e.job
+	value.Result = &result
+	if snapshot, err := clone(value); err == nil {
+		e.job.Result = snapshot.Result
+	}
+}
 func (m *Manager) List() []Job {
 	m.mu.Lock()
 	defer m.mu.Unlock()

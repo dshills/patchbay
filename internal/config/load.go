@@ -165,6 +165,9 @@ func (v *validator) shape(n *yaml.Node, t reflect.Type, path string, depth int) 
 		if t.Kind() == reflect.Struct {
 			for i := 0; i < t.NumField(); i++ {
 				f := t.Field(i)
+				if f.PkgPath != "" || f.Tag.Get("yaml") == "-" {
+					continue
+				}
 				fields[strings.Split(f.Tag.Get("yaml"), ",")[0]] = f.Type
 			}
 		}

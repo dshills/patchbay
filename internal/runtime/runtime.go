@@ -34,6 +34,7 @@ type Options struct {
 	Log    io.Writer
 	Runner provider.Runner
 	Opener string
+	Agent  provider.Agent
 }
 type Runtime struct {
 	mu              sync.Mutex
@@ -55,6 +56,7 @@ type Runtime struct {
 	stateLock       *localfs.Lock
 	runner          provider.Runner
 	opener          string
+	agent           provider.Agent
 	log             *logging.Logger
 }
 
@@ -91,7 +93,11 @@ func NewConfigured(path string, c *config.Config, options Options) (*Runtime, er
 	if options.Opener == "" {
 		options.Opener = "/usr/bin/open"
 	}
+	if options.Agent == nil {
+		options.Agent = provider.NewCodex()
+	}
 	r := &Runtime{cfg: c, registries: registries, path: path, started: time.Now(), generation: 1, instance: identity.New(), controlRevision: 1, runner: options.Runner, opener: options.Opener, log: logging.New(options.Log)}
+	r.agent = options.Agent
 	r.context = cloneContext(c.Context.Defaults)
 	r.parameters = cloneParameters(c.Parameters)
 	r.stateLock, err = localfs.Acquire(c.State.Path + ".lock")
@@ -330,6 +336,11 @@ func (r *Runtime) Status() protocol.Status {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	providers := map[string]protocol.ProviderHealth{"exec": {Available: true}, "workflow": {Available: true}}
+	agentHealth := r.agent.Health(context.Background())
+	if r.cfg.Agents.Codex.Model == "" {
+		agentHealth = provider.Health{Code: "not_configured"}
+	}
+	providers["codex"] = protocol.ProviderHealth{Available: agentHealth.Available, Code: agentHealth.Code}
 	for name, command := range map[string]string{"git": "git", "open": r.opener} {
 		_, err := provider.ResolveExecutable(command, filepath.Dir(r.path), os.Environ())
 		health := protocol.ProviderHealth{Available: err == nil}
@@ -346,6 +357,9 @@ func (r *Runtime) Close(ctx context.Context) error {
 	r.closed = true
 	r.mu.Unlock()
 	jobErr := r.jobs.Shutdown(ctx)
+	if closer, ok := r.agent.(io.Closer); ok {
+		_ = closer.Close()
+	}
 	stateErr := r.state.Close(ctx)
 	select {
 	case <-r.state.Done():

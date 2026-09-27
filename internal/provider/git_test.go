@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"patchbay/internal/action"
 	"patchbay/internal/permission"
 	"path/filepath"
 	"strings"
@@ -120,5 +121,41 @@ func TestGitLocalRepositoryOperations(t *testing.T) {
 	}
 	if got := raw(repo, "status", "--porcelain"); got != "" {
 		t.Fatal("failed pull changed index", got)
+	}
+}
+
+func TestGitStructuredResultsPreservePathsAndBounds(t *testing.T) {
+	result := action.Result{Status: action.Success, Data: map[string]any{"stdout": "R  new name\x00old\nname\x00?? other\x00", "truncated": false}}
+	parsed := GitResult("status", result)
+	entries := parsed.Data["git_status"].([]map[string]string)
+	if len(entries) != 2 || entries[0]["path"] != "new name" || entries[0]["original_path"] != "old\nname" || entries[1]["index"] != "?" {
+		t.Fatal(entries)
+	}
+	for _, raw := range []string{" M cut", "R  renamed\x00", strings.Repeat("?? x\x00", 1001)} {
+		parsed = GitResult("status", action.Result{Status: action.Success, Data: map[string]any{"stdout": raw}})
+		if parsed.Data["structured_incomplete"] != true || len(parsed.Data["git_status"].([]map[string]string)) > 1000 {
+			t.Fatal("unbounded or incomplete status", parsed.Message)
+		}
+	}
+	hash := strings.Repeat("a", 40)
+	parsed = GitResult("log", action.Result{Status: action.Success, Data: map[string]any{"stdout": hash + "\x00Subject\x00\n" + hash + "\x00Second\x00\n"}})
+	if len(parsed.Data["git_log"].([]map[string]string)) != 2 {
+		t.Fatal(parsed)
+	}
+	for _, raw := range []string{hash + "\x00cut", strings.Repeat(hash+"\x00subject\x00\n", 1001)} {
+		parsed = GitResult("log", action.Result{Status: action.Success, Data: map[string]any{"stdout": raw}})
+		if parsed.Data["structured_incomplete"] != true || len(parsed.Data["git_log"].([]map[string]string)) > 1000 {
+			t.Fatal(parsed.Message)
+		}
+	}
+	parsed = GitResult("status", action.Result{Status: action.Success, Data: map[string]any{"stdout": "", "truncated": true}})
+	if strings.Contains(parsed.Message, "clean") {
+		t.Fatal("truncated output claimed clean")
+	}
+	for _, raw := range []string{"\x00", "M\x00", " M\x00", " M \x00"} {
+		parsed = GitResult("status", action.Result{Status: action.Success, Data: map[string]any{"stdout": raw}})
+		if parsed.Data["structured_incomplete"] != true || len(parsed.Data["git_status"].([]map[string]string)) != 0 {
+			t.Fatal("accepted a short status record", parsed)
+		}
 	}
 }

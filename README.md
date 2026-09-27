@@ -9,12 +9,15 @@ Phase 2 completes headless V1: the runtime and Unix-socket API are available
 through the full `deckctl` command set, with typed arguments, human/JSON output,
 job waiting and cancellation, persistence, and atomic reload. Device adapters
 now include a Phase 3 Stream Deck+ plugin with simulated/native-process checks;
-physical smoke verification remains pending. Agent/instrument integrations remain
-later phases.
+physical smoke verification remains pending. Phase 4 adds opt-in project
+conventions, named prompts, and cancellable Codex text jobs. Instrument and
+executable-plugin integrations remain later phases.
 
 Start with the [temporary-project quick start](specs/QUICKSTART.md), then see
 the [CLI reference](specs/CLI.md) and [macOS operations/release guide](specs/OPERATIONS.md).
 See [Stream Deck+ setup and capabilities](specs/STREAMDECK.md) for the adapter.
+See [developer integrations](specs/DEVELOPMENT.md) for conventions, prompt/file
+selection, credentials, and the agent permission boundary.
 
 ## Build and validate
 
@@ -103,6 +106,8 @@ uses `dev`, `unknown`, and `unknown` defaults.
 - [Phase 2 acceptance and Prism review](specs/reviews/PHASE2.md)
 - [Stream Deck+ adapter and setup](specs/STREAMDECK.md)
 - [Phase 3 verification and Prism review](specs/reviews/PHASE3.md)
+- [Developer integrations and Codex setup](specs/DEVELOPMENT.md)
+- [Phase 4 verification and Prism review](specs/reviews/PHASE4.md)
 
 The local module is `patchbay` because the repository has no configured remote.
 Set a canonical published module path before exposing packages to external Go

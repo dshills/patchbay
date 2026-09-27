@@ -206,3 +206,28 @@ non-idempotent invocations after an ambiguous connection failure; V1 provides no
 idempotency key. On an explicit busy response, callers may retry after backoff.
 Confirmation retries require a new explicit user confirmation. A failed reload
 must not increment the configuration generation.
+
+## Phase 4 developer metadata and streaming results
+
+Action discovery adds optional `origin` (for example `convention:go`) and `agent`
+metadata. An agent descriptor contains `provider`, `prompt` name, `model`, the
+explicit `files` list, `workspace_write:false`, `network:"api.openai.com"`, and
+`tools:[]`. It exposes the effective capability without prompt/file contents or
+credentials. Generated actions appear only where the effective project provides
+them. Codex health is local readiness: `not_configured` or `missing_credentials`
+is unavailable; ready does not prove entitlement or API connectivity.
+
+Agent invocation uses the existing action/workflow/job endpoints and requires
+confirmation even when YAML requests `safe`. A running agent job can contain a
+partial `result` with status `running`, a progress message, and bounded `data`:
+`provider`, `model`, `stdout`, and `truncated`. Poll the ordinary job endpoint;
+there is no new streaming daemon endpoint. Terminal state and cancellation use
+the existing contract. Neither output nor an API tool item can invoke another
+Deckd action. Prompt reloads increment the existing generation.
+
+Git status/log results retain raw `stdout` and add `operation`, plus `git_status`
+records (`index`, `worktree`, `path`, optional `original_path`) or `git_log`
+records (`commit`, `subject`). `structured_incomplete:true` means a record could
+not be completed or the 1000-record cap was reached. The CLI renders these
+records without NUL delimiters. Existing Git argument and mutation policies are
+unchanged. See [DEVELOPMENT.md](DEVELOPMENT.md) for limits and examples.

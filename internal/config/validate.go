@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"net/url"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -66,13 +67,16 @@ func (v *validator) normalize(c *Config, baseDir, home string) error {
 		path  string
 		names []string
 	}{
-		{"projects", keys(c.Projects)}, {"actions", keys(c.Actions)}, {"workflows", keys(c.Workflows)}, {"parameters", keys(c.Parameters)},
+		{"projects", keys(c.Projects)}, {"actions", keys(c.Actions)}, {"workflows", keys(c.Workflows)}, {"parameters", keys(c.Parameters)}, {"prompts", keys(c.Prompts)},
 	} {
 		for _, name := range group.names {
 			if !namePattern.MatchString(name) {
 				return v.fail(group.path, "names must start with an alphanumeric and contain only letters, digits, dot, underscore, or hyphen (128 characters maximum)")
 			}
 		}
+	}
+	if err := v.developerConfig(c, baseDir, home); err != nil {
+		return err
 	}
 	for _, name := range keys(c.Parameters) {
 		p := c.Parameters[name]
@@ -112,16 +116,40 @@ func (v *validator) normalize(c *Config, baseDir, home string) error {
 		if err := v.environment(path+".environment", p.Environment, nil); err != nil {
 			return err
 		}
+		generated, err := v.projectConventions(path, p, c)
+		if err != nil {
+			return err
+		}
+		if p.Actions == nil {
+			p.Actions = map[string]Action{}
+		}
+		for name, a := range generated {
+			if _, exists := p.Actions[name]; !exists {
+				p.Actions[name] = a
+			}
+		}
 		for _, name := range keys(p.Actions) {
 			base, exists := c.Actions[name]
+			if convention, ok := generated[name]; ok {
+				if exists {
+					convention.Safety = permission.Strongest(base.Safety, convention.Safety)
+				}
+				base, exists = convention, true
+			}
 			if !exists {
 				return v.fail(path+".actions."+name, "override must name a global action")
 			}
 			a := p.Actions[name]
+			if base.Origin != "" && a.Type == "exec" && a.Cwd == "" {
+				a.Cwd = "{{ .project.path }}"
+			}
 			if err := v.action(path+".actions."+name, &a, c, baseDir, home); err != nil {
 				return err
 			}
 			a.Safety = permission.Strongest(base.Safety, a.Safety)
+			if base.Origin != "" {
+				a.Origin = base.Origin
+			}
 			p.Actions[name] = a
 		}
 		c.Projects[id] = p
@@ -186,6 +214,9 @@ func (v *validator) environment(path string, environment map[string]string, inpu
 }
 
 func (v *validator) action(path string, a *Action, c *Config, baseDir, home string) error {
+	if a.Type != "agent" && (a.Provider != "" || a.Prompt != "" || len(a.Files) != 0) {
+		return v.fail(path, "provider, prompt, and files are agent-only fields")
+	}
 	if a.Safety == "" {
 		a.Safety = permission.Confirm
 	}
@@ -216,6 +247,34 @@ func (v *validator) action(path string, a *Action, c *Config, baseDir, home stri
 		a.Inputs[key] = input
 	}
 	switch a.Type {
+	case "agent":
+		prompt, exists := c.Prompts[a.Prompt]
+		if a.Provider != "codex" || !exists || c.Agents.Codex.Model == "" {
+			return v.fail(path, "agent requires provider codex, a known prompt, and agents.codex.model")
+		}
+		if a.Command != "" || len(a.Args) != 0 || a.Target != "" || a.Operation != "" || a.Workflow != "" || len(a.Environment) != 0 {
+			return v.fail(path, "agent accepts prompt, files, cwd, inputs, safety, timeout and provider only")
+		}
+		if err := ValidateTemplate(prompt, a.Inputs); err != nil {
+			return v.fail(path+".prompt", "prompt contains an undeclared or unsupported substitution")
+		}
+		if len(a.Files) > 32 {
+			return v.fail(path+".files", "at most 32 explicit files are supported")
+		}
+		seen := map[string]bool{}
+		for _, file := range a.Files {
+			if !filepath.IsLocal(file) || strings.ContainsAny(file, "\x00\r\n") || strings.Contains(file, "{{") || seen[file] {
+				return v.fail(path+".files", "files must be unique literal relative paths within the working directory")
+			}
+			seen[file] = true
+		}
+		a.Safety = permission.Strongest(a.Safety, permission.Confirm)
+		if a.Cwd == "" {
+			a.Cwd = "{{ .project.path }}"
+		}
+		if a.Timeout == "" {
+			a.Timeout = "2m"
+		}
 	case "exec":
 		if strings.TrimSpace(a.Command) == "" || strings.ContainsAny(a.Command, "\x00\r\n") || strings.Contains(a.Command, "{{") || strings.Contains(a.Command, "}}") {
 			return v.fail(path+".command", "a literal executable is required")
@@ -281,12 +340,12 @@ func (v *validator) action(path string, a *Action, c *Config, baseDir, home stri
 			return v.fail(path, "workflow accepts workflow, safety, and timeout only")
 		}
 	default:
-		return v.fail(path+".type", "supported providers are exec, open, git, and workflow")
+		return v.fail(path+".type", "supported providers are exec, open, git, workflow, and agent")
 	}
 	if a.Cwd == "" && (a.Type == "exec" || a.Type == "git") {
 		a.Cwd = baseDir
 	}
-	if a.Cwd != "" && !strings.Contains(a.Cwd, "{{") {
+	if a.Type != "agent" && a.Cwd != "" && !strings.Contains(a.Cwd, "{{") {
 		resolved, err := resolvePath(a.Cwd, baseDir, home)
 		if err != nil {
 			return v.fail(path+".cwd", "invalid working directory")
@@ -380,6 +439,9 @@ func (v *validator) workflowGraph(c *Config, actions map[string]Action) error {
 		for i, step := range c.Workflows[name].Steps {
 			path := fmt.Sprintf("workflows.%s.steps[%d]", name, i)
 			a, exists := actions[step.Action]
+			if !exists && c.conventionAction(step.Action) {
+				continue
+			}
 			if !exists {
 				return v.fail(path+".action", "action does not exist")
 			}
@@ -477,6 +539,9 @@ func (v *validator) bindings(c *Config) error {
 				}
 			} else {
 				a, exists := c.Actions[target.Action]
+				if projectID := b.When["project"]; projectID != "" {
+					a, exists = c.EffectiveActions(projectID)[target.Action]
+				}
 				if !exists || target.Parameter != "" {
 					return v.fail(p, "action gestures require a known action")
 				}

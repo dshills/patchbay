@@ -25,12 +25,14 @@ import (
 )
 
 type prepared struct {
-	name        string
-	risk        permission.Permission
-	timeout     time.Duration
-	command     *provider.Command
-	steps       []*prepared
-	stopOnError bool
+	name         string
+	risk         permission.Permission
+	timeout      time.Duration
+	command      *provider.Command
+	agent        *provider.AgentRequest
+	gitOperation string
+	steps        []*prepared
+	stopOnError  bool
 }
 
 func (r *Runtime) Invoke(ctx context.Context, name string, isWorkflow bool, invocation protocol.Invocation) (*job.Handle, error) {
@@ -115,13 +117,24 @@ func (r *Runtime) prepareAction(ctx context.Context, name string, args map[strin
 		return nil, fault.New(protocol.InvalidRequest, "Action arguments do not satisfy the declared schema.")
 	}
 	var plan *prepared
-	if definition.Type == "workflow" {
+	switch definition.Type {
+	case "workflow":
 		plan, err = r.prepareWorkflow(ctx, definition.Workflow, remaining)
 		if err != nil {
 			return nil, err
 		}
 		plan.name = name
-	} else {
+	case "agent":
+		*remaining--
+		if *remaining < 0 {
+			return nil, fault.New(protocol.InvalidConfig, "Workflow exceeds 1024 expanded actions.")
+		}
+		request, err := r.prepareAgent(definition, values)
+		if err != nil {
+			return nil, err
+		}
+		plan = &prepared{name: name, agent: request, risk: permission.Confirm}
+	default:
 		*remaining--
 		if *remaining < 0 {
 			return nil, fault.New(protocol.InvalidConfig, "Workflow exceeds 1024 expanded actions.")
@@ -131,6 +144,9 @@ func (r *Runtime) prepareAction(ctx context.Context, name string, args map[strin
 			return nil, err
 		}
 		plan = &prepared{name: name, command: command, risk: risk}
+		if definition.Type == "git" {
+			plan.gitOperation = definition.Operation
+		}
 	}
 	plan.risk = permission.Strongest(plan.risk, definition.Safety)
 	if definition.Timeout != "" {
@@ -139,7 +155,7 @@ func (r *Runtime) prepareAction(ctx context.Context, name string, args map[strin
 	return plan, nil
 }
 
-func (r *Runtime) prepareCommand(definition config.Action, args map[string]any) (*provider.Command, permission.Permission, error) {
+func (r *Runtime) variables(args map[string]any) map[string]string {
 	vars := map[string]string{".context.mode": r.context.Mode}
 	for key, value := range r.context.Values {
 		vars[".context.values."+key] = value
@@ -151,6 +167,12 @@ func (r *Runtime) prepareCommand(definition config.Action, args map[string]any) 
 	for key, value := range args {
 		vars[".args."+key] = fmt.Sprint(value)
 	}
+	return vars
+}
+
+func (r *Runtime) prepareCommand(definition config.Action, args map[string]any) (*provider.Command, permission.Permission, error) {
+	vars := r.variables(args)
+	project := r.cfg.Projects[r.context.Project]
 	render := func(text string) (string, error) {
 		value, err := config.Render(text, vars)
 		if err != nil || strings.ContainsRune(value, 0) {
@@ -270,8 +292,13 @@ func (r *Runtime) execute(ctx context.Context, jobID string, plan *prepared, bud
 		}
 		r.bus.Emit(event.ActionFinished, map[string]any{"action_id": actionID, "job_id": jobID, "action": plan.name, "status": result.Status})
 	}()
-	if plan.command != nil {
+	if plan.agent != nil {
+		result, err = r.agent.Run(ctx, *plan.agent, budget, func(partial action.Result) { r.jobs.Update(jobID, partial) })
+	} else if plan.command != nil {
 		result, err = r.runner.Run(ctx, *plan.command, budget)
+		if plan.gitOperation != "" {
+			result = provider.GitResult(plan.gitOperation, result)
+		}
 	} else {
 		steps := make([]workflow.Step, 0, len(plan.steps))
 		for _, child := range plan.steps {

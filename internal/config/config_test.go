@@ -121,7 +121,7 @@ func TestInvalidConfiguration(t *testing.T) {
 		{"templated executable", "version: 1\nactions: {a: {type: exec, command: '{{ .project.path }}'}}", "actions.a.command"},
 		{"provider field", "version: 1\nactions: {a: {type: exec, command: go, target: x}}", "actions.a"},
 		{"unknown safety", "version: 1\nactions: {a: {type: exec, command: go, safety: foo}}", "actions.a.safety"},
-		{"unknown provider", "version: 1\nactions: {a: {type: agent}}", "actions.a.type"},
+		{"unknown provider", "version: 1\nactions: {a: {type: unknown}}", "actions.a.type"},
 		{"open target", "version: 1\nactions: {a: {type: open}}", "actions.a.target"},
 		{"open scheme", "version: 1\nactions: {a: {type: open, target: 'javascript:SECRET_SENTINEL'}}", "actions.a.target"},
 		{"open host", "version: 1\nactions: {a: {type: open, target: 'https:///x'}}", "actions.a.target"},

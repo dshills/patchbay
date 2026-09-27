@@ -603,3 +603,22 @@ operator installation. Bindings now include `long_press`, `touch`, and
 daemon/context identity, and expiring one-use confirmation tokens. Existing V1
 clients retain their prior control and confirmation behavior. The simulator and
 native-binary checks do not substitute for the pending physical smoke gate.
+
+## 42. Phase 4 developer integration decision
+
+Phase 4 implements opt-in Go/Node/Python project conventions, named validated
+prompt templates, and an isolated `Agent` provider capability using Codex models
+through the supported OpenAI Responses API. This initial capability produces
+bounded streamed text from the prompt and explicitly selected project files.
+It exposes no model tools, workspace writes, subprocesses, MCP connections or
+hardware authority. The daemon enforces a confirmation floor and project/file
+confinement before any provider request. Agent output is data and never chooses
+workflow steps or executes commands. The direct API route avoids inheriting a
+local CLI's broader tool/configuration environment.
+
+Existing jobs carry partial/final output, cancellation and sanitized failures;
+existing configuration generations pin prompts/model/capabilities for admitted
+jobs. Project file contents are read when execution starts. Provider credentials
+remain in the daemon environment. Deterministic tests need no external service;
+the separately gated real-provider smoke test is optional. Details and limits
+are in [DEVELOPMENT.md](DEVELOPMENT.md) and the [Phase 4 report](reviews/PHASE4.md).

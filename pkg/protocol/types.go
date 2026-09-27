@@ -129,6 +129,18 @@ type Action struct {
 	Type   string           `json:"type"`
 	Safety string           `json:"safety"`
 	Inputs map[string]Input `json:"inputs,omitempty"`
+	Origin string           `json:"origin,omitempty"`
+	Agent  *AgentCapability `json:"agent,omitempty"`
+}
+
+type AgentCapability struct {
+	Provider       string   `json:"provider"`
+	Prompt         string   `json:"prompt"`
+	Model          string   `json:"model"`
+	Files          []string `json:"files"`
+	WorkspaceWrite bool     `json:"workspace_write"`
+	Network        string   `json:"network"`
+	Tools          []string `json:"tools"`
 }
 type ActionList struct {
 	Actions []Action `json:"actions"`

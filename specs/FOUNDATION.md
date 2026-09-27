@@ -53,7 +53,7 @@ part of Phase 1's scheduler work.
 | `security.allow_dangerous_actions` | `false` | Boolean. |
 | `context.defaults` | Empty context | Optional `project`, `mode`, and `values` string map. |
 
-`projects`, `actions`, `workflows`, and `parameters` are maps keyed by name.
+`projects`, `actions`, `workflows`, `parameters`, and `prompts` are maps keyed by name.
 `bindings` is a list. Names start with a letter or digit, contain letters, digits,
 dot, underscore, or hyphen, and have a maximum length of 128 characters. Context
 value keys, environment variable keys, and input names use identifier syntax:
@@ -70,9 +70,10 @@ checks so offline validation works on another machine.
 Each project requires `name` and `path`. The map key is its ID; an optional `id`
 must match it. Optional fields are `github` (HTTPS URL without credentials),
 `language`, `engine`, `metadata` (string map), `environment` (string map), and
-`actions` (complete replacements of existing global action definitions).
+`actions` (complete replacements of existing global or opted-in convention
+definitions), and `conventions` (Phase 4 operation names).
 
-Overrides cannot add undeclared action names or reduce the global action's safety
+Overrides cannot add undeclared action names or reduce the inherited action's safety
 classification. Each effective project action graph is independently checked for
 workflow cycles and invocation argument compatibility.
 
@@ -87,6 +88,7 @@ Every action requires `type`. Shared fields are `safety` (`safe`, `confirm`,
 | `open` | `target`: file, directory, or URL | `inputs`. Literal URL schemes are limited to file/http/https. |
 | `git` | `operation`: status/diff/log/pull/push/branch/stash/stash-pop | `cwd`; `environment`; `inputs`. No arbitrary Git argument array. |
 | `workflow` | `workflow`: existing name | Shared fields only; inputs are declared by individual step actions. |
+| `agent` | `provider: codex`; `prompt`: existing name; configured Codex model | `cwd`; `files`; `inputs`. See Phase 4 additions below. |
 
 Exec/Git working directories default to the configuration directory. Commands
 containing a path separator resolve relative to that directory; bare commands
@@ -224,3 +226,28 @@ cancellation lifecycle; cancellable public runtime methods accept
 templates, references, project overrides, cycles, binding precedence, parameter
 edges, lifecycle transitions, JSON envelopes, command behavior, and safe logs.
 Hardware and external provider accounts are unnecessary for all Phase 0 checks.
+
+## Phase 4 schema additions
+
+- `prompts.<name>` stores reusable text, limited to 64 KiB. The existing explicit
+  substitution rules apply; each referencing action must declare its arguments.
+- `agents.codex.model` selects an explicit API model;
+  `agents.codex.max_output_tokens` defaults to 4096 (16–32768 accepted).
+- `type: agent` requires `provider: codex` and a known `prompt`. Optional `files`
+  are at most 32 unique, literal relative paths. `cwd` defaults to the selected
+  project and relative agent directories resolve against it. Agents do not
+  accept command, environment, target, operation or workflow fields. Their
+  effective safety is at least `confirm`, and default timeout is two minutes.
+- `projects.<id>.conventions` opts into any of `validate`, `test`, and `build` for
+  the project's supported language. `conventions.<language>.<operation>` supplies
+  optional command/argument replacements. Generated project actions may be
+  overridden by that project without reducing safety. Workflow references to
+  these actions are validated in applicable project scopes; invocation requires
+  a selected project that actually provides them. Project-only binding targets
+  require an explicit project condition.
+- Generated `origin` is internal metadata; YAML cannot supply it. Existing action
+  definitions do not accept agent-only fields. Unknown capability flags are
+  rejected instead of enabling execution privileges.
+
+The exact default commands, precedence, filesystem bounds, API behavior and
+credential setup are documented in [DEVELOPMENT.md](DEVELOPMENT.md).

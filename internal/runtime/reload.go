@@ -98,6 +98,9 @@ func (r *Runtime) actionRisk(name string, seen map[string]bool) permission.Permi
 		return permission.Dangerous
 	}
 	risk := a.Safety
+	if a.Type == "agent" {
+		risk = permission.Strongest(risk, permission.Confirm)
+	}
 	if a.Type == "git" && a.Operation == "branch" {
 		if _, exists := a.Inputs["mode"]; exists {
 			risk = permission.Strongest(risk, permission.Confirm)
@@ -139,7 +142,11 @@ func (r *Runtime) actionMetadata(name string, a config.Action) protocol.Action {
 	for key, input := range a.Inputs {
 		inputs[key] = protocol.Input{Type: string(input.Type), Required: input.Required, Default: input.Default, Min: input.Min, Max: input.Max, Enum: slices.Clone(input.Enum)}
 	}
-	return protocol.Action{Name: name, Type: a.Type, Safety: string(r.actionRisk(name, map[string]bool{})), Inputs: inputs}
+	metadata := protocol.Action{Name: name, Type: a.Type, Safety: string(r.actionRisk(name, map[string]bool{})), Inputs: inputs, Origin: a.Origin}
+	if a.Type == "agent" {
+		metadata.Agent = &protocol.AgentCapability{Provider: a.Provider, Prompt: a.Prompt, Model: r.cfg.Agents.Codex.Model, Files: append([]string{}, a.Files...), Network: "api.openai.com", Tools: []string{}}
+	}
+	return metadata
 }
 
 func (r *Runtime) Workflows() []protocol.Workflow {

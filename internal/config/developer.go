@@ -1,0 +1,103 @@
+package config
+
+import (
+	"strings"
+	"unicode/utf8"
+
+	"patchbay/internal/permission"
+)
+
+var conventionDefaults = map[string]map[string]ConventionCommand{
+	"go":     {"validate": {"go", []string{"vet", "./..."}}, "test": {"go", []string{"test", "./..."}}, "build": {"go", []string{"build", "./..."}}},
+	"node":   {"validate": {"npm", []string{"run", "lint"}}, "test": {"npm", []string{"test"}}, "build": {"npm", []string{"run", "build"}}},
+	"python": {"validate": {"python3", []string{"-m", "compileall", "."}}, "test": {"python3", []string{"-m", "unittest", "discover"}}, "build": {"python3", []string{"-m", "build"}}},
+}
+
+func (v *validator) developerConfig(c *Config, baseDir, home string) error {
+	for name, prompt := range c.Prompts {
+		if strings.TrimSpace(prompt) == "" || len(prompt) > 64<<10 || strings.ContainsRune(prompt, 0) || !utf8.ValidString(prompt) {
+			return v.fail("prompts."+name, "prompt must be nonempty UTF-8 text of at most 64 KiB without NUL")
+		}
+		// Validate even unused prompts. Referencing actions validate argument names.
+		inputs := map[string]Input{}
+		for text := prompt; ; {
+			start := strings.Index(text, "{{")
+			if start < 0 {
+				break
+			}
+			end := strings.Index(text[start+2:], "}}")
+			if end < 0 {
+				break
+			}
+			token := strings.TrimSpace(text[start+2 : start+2+end])
+			if key, ok := strings.CutPrefix(token, ".args."); ok {
+				inputs[key] = Input{}
+			}
+			text = text[start+2+end+2:]
+		}
+		if err := ValidateTemplate(prompt, inputs); err != nil {
+			return v.fail("prompts."+name, "invalid prompt substitution")
+		}
+	}
+	if c.Agents.Codex.Model != "" && !ValidName(c.Agents.Codex.Model) {
+		return v.fail("agents.codex.model", "expected a literal model identifier")
+	}
+	if c.Agents.Codex.MaxOutputTokens == 0 {
+		c.Agents.Codex.MaxOutputTokens = 4096
+	}
+	if c.Agents.Codex.MaxOutputTokens < 16 || c.Agents.Codex.MaxOutputTokens > 32768 {
+		return v.fail("agents.codex.max_output_tokens", "expected 16 through 32768 tokens")
+	}
+	for language, commands := range c.Conventions {
+		if _, ok := conventionDefaults[language]; !ok {
+			return v.fail("conventions", "supported languages are go, node, and python")
+		}
+		for operation, command := range commands {
+			if _, ok := conventionDefaults[language][operation]; !ok {
+				return v.fail("conventions."+language, "supported operations are validate, test, and build")
+			}
+			a := Action{Type: "exec", Safety: permission.Confirm, Command: command.Command, Args: command.Args}
+			if err := v.action("conventions."+language+"."+operation, &a, c, baseDir, home); err != nil {
+				return err
+			}
+			commands[operation] = ConventionCommand{Command: a.Command, Args: a.Args}
+		}
+	}
+	return nil
+}
+
+func (v *validator) projectConventions(path string, p Project, c *Config) (map[string]Action, error) {
+	result := map[string]Action{}
+	if len(p.Conventions) == 0 {
+		return result, nil
+	}
+	language := strings.ToLower(p.Language)
+	if language == "javascript" || language == "typescript" {
+		language = "node"
+	}
+	commands, ok := conventionDefaults[language]
+	if !ok {
+		return nil, v.fail(path+".conventions", "conventions require a supported project language: go, node, or python")
+	}
+	for _, operation := range p.Conventions {
+		command, ok := commands[operation]
+		name := "project." + operation
+		if !ok || result[name].Type != "" {
+			return nil, v.fail(path+".conventions", "choose each of validate, test, and build at most once")
+		}
+		if override, ok := c.Conventions[language][operation]; ok {
+			command = override
+		}
+		result[name] = Action{Type: "exec", Safety: permission.Confirm, Command: command.Command, Args: command.Args, Cwd: "{{ .project.path }}", Origin: "convention:" + language}
+	}
+	return result, nil
+}
+
+func (c *Config) conventionAction(name string) bool {
+	for _, p := range c.Projects {
+		if strings.HasPrefix(p.Actions[name].Origin, "convention:") {
+			return true
+		}
+	}
+	return false
+}
