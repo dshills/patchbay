@@ -67,7 +67,7 @@ func (v *validator) normalize(c *Config, baseDir, home string) error {
 		path  string
 		names []string
 	}{
-		{"projects", keys(c.Projects)}, {"actions", keys(c.Actions)}, {"workflows", keys(c.Workflows)}, {"parameters", keys(c.Parameters)}, {"prompts", keys(c.Prompts)}, {"devices", keys(c.Devices)},
+		{"projects", keys(c.Projects)}, {"actions", keys(c.Actions)}, {"workflows", keys(c.Workflows)}, {"parameters", keys(c.Parameters)}, {"prompts", keys(c.Prompts)}, {"devices", keys(c.Devices)}, {"plugins", keys(c.Plugins)},
 	} {
 		for _, name := range group.names {
 			if !namePattern.MatchString(name) {
@@ -79,6 +79,9 @@ func (v *validator) normalize(c *Config, baseDir, home string) error {
 		return err
 	}
 	if err := v.scpiDevices(c); err != nil {
+		return err
+	}
+	if err := v.plugins(c, baseDir, home); err != nil {
 		return err
 	}
 	for _, name := range keys(c.Parameters) {
@@ -220,6 +223,9 @@ func (v *validator) environment(path string, environment map[string]string, inpu
 }
 
 func (v *validator) action(path string, a *Action, c *Config, baseDir, home string) error {
+	if a.Type != "plugin" && a.Plugin != "" {
+		return v.fail(path, "plugin is only supported by plugin actions")
+	}
 	if a.Type != "scpi" && (a.Device != "" || a.Channel != 0 || a.Parameter != "") {
 		return v.fail(path, "device, channel and parameter are SCPI-only fields")
 	}
@@ -261,6 +267,10 @@ func (v *validator) action(path string, a *Action, c *Config, baseDir, home stri
 		a.Inputs[key] = input
 	}
 	switch a.Type {
+	case "plugin":
+		if err := v.pluginAction(path, a, c); err != nil {
+			return err
+		}
 	case "scpi":
 		a.Safety = permission.Strongest(a.Safety, provider.SCPIRisk(a.Operation))
 		if a.Timeout == "" {
@@ -359,7 +369,7 @@ func (v *validator) action(path string, a *Action, c *Config, baseDir, home stri
 			return v.fail(path, "workflow accepts workflow, safety, and timeout only")
 		}
 	default:
-		return v.fail(path+".type", "supported providers are exec, open, git, workflow, agent, and scpi")
+		return v.fail(path+".type", "supported providers are exec, open, git, workflow, agent, scpi, and plugin")
 	}
 	if a.Cwd == "" && (a.Type == "exec" || a.Type == "git") {
 		a.Cwd = baseDir

@@ -2,7 +2,7 @@
 
 **Source:** [SPEC.md](SPEC.md), version 0.1, dated 2026-09-27
 
-**Plan status:** Phases 0–2 complete. Phase 3 implementation and simulator verification are complete; its physical hardware exit gate remains pending. See [Phase 3 evidence](reviews/PHASE3.md). Phase 4 implementation and verification are complete; see [Phase 4 evidence and Prism review](reviews/PHASE4.md). Phase 5 implementation and simulator verification are complete; physical DG812/MHO954 validation remains pending. See [Phase 5 evidence](reviews/PHASE5.md). Phase 6 remains planned.
+**Plan status:** Phases 0–2 complete. Phase 3 implementation and simulator verification are complete; its physical hardware exit gate remains pending. See [Phase 3 evidence](reviews/PHASE3.md). Phase 4 implementation and verification are complete; see [Phase 4 evidence and Prism review](reviews/PHASE4.md). Phase 5 implementation and simulator verification are complete; physical DG812/MHO954 validation remains pending. See [Phase 5 evidence](reviews/PHASE5.md). Phase 6 implementation and local conformance verification are complete; see [Phase 6 evidence](reviews/PHASE6.md).
 
 **Planning baseline:** Before Phase 0, the repository contained `specs/SPEC.md` and no application code, build configuration, or tests.
 
@@ -436,13 +436,13 @@ Follow the published sequence by default. Phases 4 and 5 must remain usable thro
 
 **Depends on:** Enough experience with built-in, agent, and SCPI providers to stabilize the smallest useful capability contract.
 
-- [ ] Specify a versioned JSON protocol over stdin/stdout with message framing, request IDs, handshake/version negotiation, capability discovery, health, execution, cancellation, and shutdown.
-- [ ] Define maximum message size, pending-request limits, deadlines, stderr handling, and behavior for unknown/duplicate/out-of-order messages.
-- [ ] Implement process supervision, bounded I/O, cancellation propagation, crash handling, and deterministic host cleanup. Do not use Go's `plugin` package.
-- [ ] Require an explicit executable allowlist/configuration entry and validate every message before it affects runtime state.
-- [ ] Apply daemon policy to exposed plugin actions; plugin-advertised metadata cannot lower the configured permission floor.
-- [ ] Document actual isolation guarantees. A subprocess boundary provides lifecycle/crash separation; filesystem/network confinement requires separate operating-system controls.
-- [ ] Supply a minimal example plugin and reusable conformance harness. Defer marketplace, automatic installation, and broad SDKs.
+- [x] Specify a versioned JSON protocol over stdin/stdout with message framing, request IDs, handshake/version negotiation, capability discovery, health, execution, cancellation, and shutdown.
+- [x] Define maximum message size, pending-request limits, deadlines, stderr handling, and behavior for unknown/duplicate/out-of-order messages.
+- [x] Implement process supervision, bounded I/O, cancellation propagation, crash handling, and deterministic host cleanup. Do not use Go's `plugin` package.
+- [x] Require an explicit executable allowlist/configuration entry and validate every message before it affects runtime state.
+- [x] Apply daemon policy to exposed plugin actions; plugin-advertised metadata cannot lower the configured permission floor.
+- [x] Document actual isolation guarantees. A subprocess boundary provides lifecycle/crash separation; filesystem/network confinement requires separate operating-system controls.
+- [x] Supply a minimal example plugin and reusable conformance harness. Defer marketplace, automatic installation, and broad SDKs.
 
 **Verification:** Golden protocol fixtures and conformance tests for compatible/incompatible versions, malformed/oversized frames, hung children, cancellation refusal, stderr floods, unexpected exit, and attempts to claim undeclared capabilities or forge internal state.
 

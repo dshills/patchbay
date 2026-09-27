@@ -6,12 +6,18 @@ COMMIT ?= $(shell git rev-parse --short HEAD)
 BUILD_TIME ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS = -X patchbay/internal/version.Version=$(VERSION) -X patchbay/internal/version.Commit=$(COMMIT) -X patchbay/internal/version.BuildTime=$(BUILD_TIME)
 
-.PHONY: build release streamdeck-package streamdeck-verify fmt fmt-check vet lint test race coverage check install-lint
+.PHONY: build release streamdeck-package streamdeck-verify plugin-example plugin-verify fmt fmt-check vet lint test race coverage check install-lint
 build:
 	mkdir -p bin
 	$(GO) build -trimpath -buildvcs=false -ldflags '$(LDFLAGS)' -o bin/deckd ./cmd/deckd
 	$(GO) build -trimpath -buildvcs=false -ldflags '$(LDFLAGS)' -o bin/deckctl ./cmd/deckctl
 	$(GO) build -trimpath -buildvcs=false -ldflags '$(LDFLAGS)' -o bin/decksd ./cmd/decksd
+	$(GO) build -trimpath -buildvcs=false -o bin/deckplugincheck ./cmd/deckplugincheck
+plugin-example:
+	mkdir -p bin
+	$(GO) build -trimpath -buildvcs=false -o bin/deckplugin-example ./examples/plugin
+plugin-verify: plugin-example
+	$(GO) run ./cmd/deckplugincheck --config configs/plugins.yaml
 streamdeck-package:
 	python3 scripts/package_streamdeck.py --version '$(VERSION)' --commit '$(COMMIT)' --build-time '$(BUILD_TIME)'
 streamdeck-verify: build
@@ -19,9 +25,9 @@ streamdeck-verify: build
 release:
 	python3 scripts/release.py --version '$(VERSION)' --commit '$(COMMIT)' --build-time '$(BUILD_TIME)'
 fmt:
-	gofmt -w $$(find cmd internal pkg adapters -name '*.go')
+	gofmt -w $$(find cmd internal pkg adapters examples -name '*.go')
 fmt-check:
-	@test -z "$$(gofmt -l $$(find cmd internal pkg adapters -name '*.go'))" || (echo 'Run make fmt'; exit 1)
+	@test -z "$$(gofmt -l $$(find cmd internal pkg adapters examples -name '*.go'))" || (echo 'Run make fmt'; exit 1)
 vet:
 	$(GO) vet ./...
 lint:
@@ -32,6 +38,6 @@ race:
 	$(GO) test -race ./...
 coverage:
 	$(GO) test -coverprofile=coverage.out ./...
-check: fmt-check vet lint test race build
+check: fmt-check vet lint test race build plugin-verify
 install-lint:
 	GOBIN=$(CURDIR)/.tools $(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(LINT_VERSION)

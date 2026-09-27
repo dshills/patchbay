@@ -35,6 +35,7 @@ type Config struct {
 	Agents      Agents                                  `yaml:"agents,omitempty"`
 	Conventions map[string]map[string]ConventionCommand `yaml:"conventions,omitempty"`
 	Devices     map[string]provider.SCPIDevice          `yaml:"devices,omitempty"`
+	Plugins     map[string]provider.PluginConfig        `yaml:"plugins,omitempty"`
 }
 
 type Agents struct {
@@ -107,6 +108,7 @@ type Action struct {
 	Device      string                `yaml:"device,omitempty"`
 	Channel     int                   `yaml:"channel,omitempty"`
 	Parameter   string                `yaml:"parameter,omitempty"`
+	Plugin      string                `yaml:"plugin,omitempty"`
 }
 
 type Input struct {

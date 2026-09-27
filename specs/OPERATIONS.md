@@ -152,3 +152,11 @@ local archives; signing, notarization, publication, and installation are separat
 operator actions. Architectures and runtime verification results are recorded in
 [the Phase 2 report](reviews/PHASE2.md). No claim of Intel runtime verification
 is made solely from cross-compilation.
+
+### Executable plugin tools
+
+Release bundles also include `bin/deckplugincheck` and the optional
+`bin/deckplugin-example`, alongside `configs/plugins.yaml`. They are never
+started automatically. The bundled example path resolves within the extracted
+bundle. See [PLUGINS.md](PLUGINS.md) for explicit conformance probes and the
+permissions and isolation limits of installed plugin code.

@@ -1,0 +1,33 @@
+version: 1
+server: {socket: ~/.deckd/plugins.sock}
+state: {path: ~/.deckd/plugins-state.json}
+plugins:
+  example:
+    # Build with make plugin-example. This path is relative to this config.
+    command: ../bin/deckplugin-example
+    cwd: ..
+    operations: {echo: confirm, wait: confirm}
+    startup_timeout: 2s
+    execution_timeout: 30s
+    cancel_timeout: 500ms
+    shutdown_timeout: 500ms
+    # No environment is inherited. Declare only necessary literal entries here.
+    environment: {}
+actions:
+  plugin.echo:
+    type: plugin
+    plugin: example
+    operation: echo
+    inputs:
+      text: {type: string, default: Hello from a plugin.}
+  plugin.wait:
+    type: plugin
+    plugin: example
+    operation: wait
+    inputs:
+      milliseconds: {type: integer, min: 1, max: 60000, default: 30000}
+workflows:
+  plugin.demo:
+    steps:
+      - {action: plugin.echo, args: {text: First step}}
+      - {action: plugin.echo, args: {text: Second step}}

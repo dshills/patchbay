@@ -35,6 +35,9 @@ func (r *Runtime) Reload(ctx context.Context) (uint64, error) {
 		return 0, err
 	}
 	old := r.cfg
+	if !reflect.DeepEqual(candidate.Plugins, old.Plugins) {
+		return 0, fault.New(protocol.InvalidConfig, "Plugin configuration changes require a restart.")
+	}
 	if !reflect.DeepEqual(candidate.Devices, old.Devices) {
 		return 0, fault.New(protocol.InvalidConfig, "Instrument configuration changes require a restart.")
 	}
@@ -104,6 +107,9 @@ func (r *Runtime) actionRisk(name string, seen map[string]bool) permission.Permi
 		return permission.Dangerous
 	}
 	risk := a.Safety
+	if a.Type == "plugin" {
+		risk = permission.Strongest(risk, r.plugins.Risk(a.Plugin, a.Operation))
+	}
 	if a.Type == "scpi" {
 		risk = permission.Strongest(risk, provider.SCPIRisk(a.Operation))
 	}
@@ -152,6 +158,9 @@ func (r *Runtime) actionMetadata(name string, a config.Action) protocol.Action {
 		inputs[key] = protocol.Input{Type: string(input.Type), Required: input.Required, Default: input.Default, Min: input.Min, Max: input.Max, Enum: slices.Clone(input.Enum)}
 	}
 	metadata := protocol.Action{Name: name, Type: a.Type, Safety: string(r.actionRisk(name, map[string]bool{})), Inputs: inputs, Origin: a.Origin}
+	if a.Type == "plugin" {
+		metadata.Plugin = &protocol.PluginAction{Name: a.Plugin, Operation: a.Operation, Protocol: 1}
+	}
 	if a.Type == "scpi" {
 		_, unit, _, _ := r.cfg.Devices[a.Device].ValueSpec(a.Operation)
 		metadata.Instrument = &protocol.InstrumentAction{Device: a.Device, Operation: a.Operation, Channel: a.Channel, Parameter: a.Parameter, Unit: unit}

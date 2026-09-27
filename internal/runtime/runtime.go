@@ -58,6 +58,7 @@ type Runtime struct {
 	opener          string
 	agent           provider.Agent
 	scpi            *provider.SCPI
+	plugins         *provider.Plugins
 	synchronization map[string]parameter.Synchronization
 	log             *logging.Logger
 }
@@ -101,6 +102,7 @@ func NewConfigured(path string, c *config.Config, options Options) (*Runtime, er
 	r := &Runtime{cfg: c, registries: registries, path: path, started: time.Now(), generation: 1, instance: identity.New(), controlRevision: 1, runner: options.Runner, opener: options.Opener, log: logging.New(options.Log)}
 	r.agent = options.Agent
 	r.scpi = provider.NewSCPI(c.Devices)
+	r.plugins = provider.NewPlugins(c.Plugins)
 	r.synchronization = map[string]parameter.Synchronization{}
 	r.context = cloneContext(c.Context.Defaults)
 	r.parameters = cloneParameters(c.Parameters)
@@ -365,6 +367,16 @@ func (r *Runtime) Status() protocol.Status {
 		providers["scpi:"+id] = protocol.ProviderHealth{Available: h.Available, Code: h.Code}
 		devices[id] = protocol.InstrumentStatus{Profile: d.Profile, Model: d.Model, Firmware: d.Firmware, Address: d.Address, Shutdown: d.Shutdown, Capabilities: scpiCapabilities(d)}
 	}
+	plugins := map[string]protocol.PluginStatus{}
+	for id, definition := range r.cfg.Plugins {
+		snapshot := r.plugins.Snapshot(id)
+		providers["plugin:"+id] = protocol.ProviderHealth{Available: snapshot.Health.Available, Code: snapshot.Health.Code}
+		operations := map[string]string{}
+		for name := range definition.Operations {
+			operations[name] = string(r.plugins.Risk(id, name))
+		}
+		plugins[id] = protocol.PluginStatus{Protocol: 1, Operations: operations, Discovered: len(snapshot.Operations) > 0}
+	}
 	for name, command := range map[string]string{"git": "git", "open": r.opener} {
 		_, err := provider.ResolveExecutable(command, filepath.Dir(r.path), os.Environ())
 		health := protocol.ProviderHealth{Available: err == nil}
@@ -373,7 +385,7 @@ func (r *Runtime) Status() protocol.Status {
 		}
 		providers[name] = health
 	}
-	return protocol.Status{Version: version.Current().Version, UptimeMS: time.Since(r.started).Milliseconds(), ConfigPath: r.path, Project: r.context.Project, Mode: r.context.Mode, RunningJobs: r.jobs.Running(), Generation: r.generation, Providers: providers, Devices: devices}
+	return protocol.Status{Version: version.Current().Version, UptimeMS: time.Since(r.started).Milliseconds(), ConfigPath: r.path, Project: r.context.Project, Mode: r.context.Mode, RunningJobs: r.jobs.Running(), Generation: r.generation, Providers: providers, Devices: devices, Plugins: plugins}
 }
 
 func (r *Runtime) Close(ctx context.Context) error {
@@ -381,6 +393,7 @@ func (r *Runtime) Close(ctx context.Context) error {
 	r.closed = true
 	r.mu.Unlock()
 	jobErr := r.jobs.Shutdown(ctx)
+	pluginErr := r.plugins.Close(ctx)
 	scpiErr := r.scpi.Close(ctx)
 	if closer, ok := r.agent.(io.Closer); ok {
 		_ = closer.Close()
@@ -392,5 +405,5 @@ func (r *Runtime) Close(ctx context.Context) error {
 	default:
 	}
 	r.bus.Close()
-	return errors.Join(jobErr, scpiErr, stateErr)
+	return errors.Join(jobErr, pluginErr, scpiErr, stateErr)
 }

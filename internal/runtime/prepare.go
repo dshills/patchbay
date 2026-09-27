@@ -21,6 +21,7 @@ import (
 	"patchbay/internal/permission"
 	"patchbay/internal/provider"
 	"patchbay/internal/workflow"
+	pluginwire "patchbay/pkg/plugin"
 	"patchbay/pkg/protocol"
 )
 
@@ -31,6 +32,7 @@ type prepared struct {
 	command      *provider.Command
 	agent        *provider.AgentRequest
 	scpi         *provider.SCPIRequest
+	plugin       *provider.PluginRequest
 	generation   uint64
 	gitOperation string
 	steps        []*prepared
@@ -120,6 +122,15 @@ func (r *Runtime) prepareAction(ctx context.Context, name string, args map[strin
 	}
 	var plan *prepared
 	switch definition.Type {
+	case "plugin":
+		*remaining--
+		if *remaining < 0 {
+			return nil, fault.New(protocol.InvalidConfig, "Workflow exceeds 1024 expanded actions.")
+		}
+		plan = &prepared{name: name, risk: r.plugins.Risk(definition.Plugin, definition.Operation), plugin: &provider.PluginRequest{
+			Plugin: definition.Plugin, Operation: definition.Operation, Args: values,
+			Context: pluginwire.Context{Project: r.context.Project, Mode: r.context.Mode, Values: maps.Clone(r.context.Values)},
+		}}
 	case "scpi":
 		*remaining--
 		if *remaining < 0 {
@@ -304,7 +315,11 @@ func (r *Runtime) execute(ctx context.Context, jobID string, plan *prepared, bud
 		}
 		r.bus.Emit(event.ActionFinished, map[string]any{"action_id": actionID, "job_id": jobID, "action": plan.name, "status": result.Status})
 	}()
-	if plan.scpi != nil {
+	if plan.plugin != nil {
+		request := *plan.plugin
+		request.AllowDangerous, request.Confirmed = allow, confirmed
+		result, err = r.plugins.Run(ctx, request, budget)
+	} else if plan.scpi != nil {
 		result, err = r.scpi.Run(ctx, *plan.scpi, budget, func(observation provider.SCPIObservation) { r.observeInstrument(plan.generation, observation) })
 	} else if plan.agent != nil {
 		result, err = r.agent.Run(ctx, *plan.agent, budget, func(partial action.Result) { r.jobs.Update(jobID, partial) })

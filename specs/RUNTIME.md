@@ -117,3 +117,14 @@ the shutdown budget, shutdown reports failure and the process exits.
 
 See [Phase 1 verification](reviews/PHASE1.md) for checks, performance measurements,
 and Prism findings and dispositions.
+
+## Phase 6 executable lifecycle
+
+The runtime owns a plugin host with a serialization slot per explicitly configured
+plugin. Each admitted invocation owns one fresh subprocess through hello, health,
+execute and shutdown. Prepared args/context and policy retain their admitted
+generation. Plugin configuration requires restart; action reloads share the host.
+All I/O, negotiation and cleanup are bounded; cancellation attempts a cooperative
+message then kills the process group and reaps the child. Runtime shutdown cancels
+jobs before closing the host. No subprocess remains for an idle successful plugin.
+See [PLUGINS.md](PLUGINS.md) for deadlines and OS isolation limits.

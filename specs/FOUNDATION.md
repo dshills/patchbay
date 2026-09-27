@@ -260,3 +260,12 @@ actions reference a device/operation/channel or an instrument-bound parameter.
 Parameters can add an `instrument` binding; their existing value is desired state.
 Config validation remains offline. See [SCPI.md](SCPI.md) and
 [`configs/bench.yaml`](../configs/bench.yaml) for the complete contract.
+
+## Phase 6 schema additions
+
+`plugins` explicitly allowlists literal executable paths, fixed args/cwd/environment,
+operation safety floors, and lifecycle deadlines. `type: plugin` actions name a
+configured `plugin` and `operation`, with the existing typed `inputs`, `safety` and
+`timeout`. At least confirmation is required. Validation is offline and plugin
+configuration changes require restart. [PLUGINS.md](PLUGINS.md) gives the complete
+limits and [`configs/plugins.yaml`](../configs/plugins.yaml) is the runnable example.

@@ -1,7 +1,7 @@
 # Deckd
 
 Deckd connects physical controls and local clients to semantic actions. The
-executables are `deckd` and `deckctl`; this repository is named Patchbay.
+core executables are `deckd` and `deckctl`; this repository is named Patchbay.
 
 ## Current status
 
@@ -13,8 +13,9 @@ physical smoke verification remains pending. Phase 4 adds opt-in project
 conventions, named prompts, and cancellable Codex text jobs. Phase 5 adds TCP SCPI
 profiles for the Rigol DG812 and MHO954, explicit generator actions, scope capture,
 and separate desired/observed parameter state. Instrument simulator checks are
-complete; physical model/firmware validation remains pending. Executable plugins
-remain Phase 6.
+complete; physical model/firmware validation remains pending. Phase 6 adds a
+versioned executable plugin host, explicit operation allowlists, bounded lifecycle
+handling, and a reusable conformance checker.
 
 Start with the [temporary-project quick start](specs/QUICKSTART.md), then see
 the [CLI reference](specs/CLI.md) and [macOS operations/release guide](specs/OPERATIONS.md).
@@ -23,6 +24,8 @@ See [developer integrations](specs/DEVELOPMENT.md) for conventions, prompt/file
 selection, credentials, and the agent permission boundary.
 See [SCPI bench setup](specs/SCPI.md) for instrument limits, transport requirements,
 output policy, and the bench example.
+See [executable plugins](specs/PLUGINS.md) for the v1 protocol, example and
+conformance checker, including the limits of process isolation.
 
 ## Build and validate
 
@@ -115,6 +118,8 @@ uses `dev`, `unknown`, and `unknown` defaults.
 - [Phase 4 verification and Prism review](specs/reviews/PHASE4.md)
 - [SCPI profiles and bench setup](specs/SCPI.md)
 - [Phase 5 verification and Prism review](specs/reviews/PHASE5.md)
+- [Executable plugin protocol and setup](specs/PLUGINS.md)
+- [Phase 6 verification and Prism review](specs/reviews/PHASE6.md)
 
 The local module is `patchbay` because the repository has no configured remote.
 Set a canonical published module path before exposing packages to external Go

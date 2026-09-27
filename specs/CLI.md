@@ -104,3 +104,11 @@ health; `action list` includes instrument routing. Instrument `param set` stages
 only a desired value; a bound action explicitly applies it. Parameter output
 labels desired, observed and synchronization state. Scope captures show a compact
 human summary and bounded samples in JSON. See [SCPI bench setup](SCPI.md).
+
+## Executable plugins
+
+Plugin actions use the ordinary typed invocation, workflow, job and cancellation
+commands. `action list` shows plugin routing and policy; `status` shows configured
+operations, discovery state and last-use health. Both are passive reads. Plugin
+text is shown as job stdout. The separate `deckplugincheck` tool executes explicit
+conformance probes against a configured plugin; see [PLUGINS.md](PLUGINS.md).

@@ -35,10 +35,12 @@ def main():
         for arch in ("arm64", "amd64"):
             environment = {**os.environ, "GOOS": "darwin", "GOARCH": arch, "CGO_ENABLED": "0"}
             files = {}
-            for command in ("deckd", "deckctl"):
+            for command, package in (("deckd", "cmd/deckd"), ("deckctl", "cmd/deckctl"),
+                                     ("deckplugincheck", "cmd/deckplugincheck"),
+                                     ("deckplugin-example", "examples/plugin")):
                 binary = Path(staging) / command
                 subprocess.run(["go", "build", "-trimpath", "-buildvcs=false", "-ldflags", ldflags,
-                                "-o", str(binary), f"./cmd/{command}"], cwd=root, env=environment, check=True)
+                                "-o", str(binary), f"./{package}"], cwd=root, env=environment, check=True)
                 files[f"bin/{command}"] = (binary.read_bytes(), 0o755)
             for pattern in ("README.md", "configs/*", "specs/*.md", "specs/reviews/*.md", "scripts/*.py"):
                 for path in root.glob(pattern):

@@ -635,3 +635,18 @@ output restore or side-effect retries are provided. Stateful per-device
 serialization survives action reloads; changing device definitions requires
 restart. See [SCPI.md](SCPI.md) for the recorded design, command references,
 shutdown behavior and the pending physical model/firmware verification matrix.
+
+## 44. Phase 6 executable plugin decision
+
+The executable v1 protocol is bounded newline-delimited JSON over child stdin/stdout,
+with version selection, strict request IDs, capability discovery, health, one
+execution, cooperative cancellation and shutdown. Every invocation starts a fresh
+configured executable, applies an explicit operation allowlist and daemon permission
+floors, and returns bounded text through ordinary jobs. Startup, config validation
+and API discovery do not execute plugins. Plugin settings require restart; prepared
+actions retain their admitted args/context across reload. No plugin messages mutate
+internal state or expand workflow steps. The subprocess is supervised and reaped,
+with bounded stderr and forced process-group cleanup after protocol failure or
+cancellation refusal. This is not filesystem/network isolation against same-user
+malicious code; the actual guarantees and OS containment limits are documented in
+[PLUGINS.md](PLUGINS.md), alongside the example and reusable conformance harness.

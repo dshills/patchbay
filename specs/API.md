@@ -252,3 +252,17 @@ Instrument `parameter.changed` events include the same synchronization object.
 Generator results include semantic `observed` properties; captures include a
 bounded `waveform` object with voltage samples and scaling metadata. See
 [SCPI.md](SCPI.md) for state meanings, limits and safety requirements.
+
+## Phase 6 executable plugins
+
+Configured plugin actions add `plugin: {name, operation, protocol}` metadata and
+use the existing action/workflow/job routes. `status.plugins` maps plugin names
+to `protocol`, operation names with effective safety floors, and `discovered`.
+`providers["plugin:<name>"]` reports last-use health, initially `not_checked`.
+Neither API inspection nor startup executes a plugin. Negotiated metadata can
+raise permission floors but cannot lower configured policy.
+
+Plugin text appears in ordinary result `data.stdout`, with `truncated`, plugin
+name, operation, `stderr_bytes`, and optional lifecycle diagnostics. Plugin frames
+cannot forge job IDs, internal events or state mutations. The executable protocol
+has its own version independent of API v1. See [PLUGINS.md](PLUGINS.md).

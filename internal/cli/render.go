@@ -31,6 +31,10 @@ func render(value any) string {
 			d := v.Devices[name]
 			line("Instrument %s: %s %s at %s; shutdown=%s; %s", name, d.Profile, d.Model, d.Address, d.Shutdown, strings.Join(d.Capabilities, ", "))
 		}
+		for _, name := range slices.Sorted(maps.Keys(v.Plugins)) {
+			p := v.Plugins[name]
+			line("Plugin %s: protocol=%d discovered=%t operations=%s", name, p.Protocol, p.Discovered, strings.Join(slices.Sorted(maps.Keys(p.Operations)), ", "))
+		}
 	case protocol.Context:
 		line("Project: %s", orNone(v.Project))
 		line("Mode: %s", orNone(v.Mode))
@@ -52,6 +56,9 @@ func render(value any) string {
 		}
 		for _, a := range v.Actions {
 			line("%s\t%s\t%s", a.Name, a.Type, a.Safety)
+			if p := a.Plugin; p != nil {
+				line("  plugin: %s operation=%s protocol=%d", p.Name, p.Operation, p.Protocol)
+			}
 			if d := a.Instrument; d != nil {
 				line("  instrument: %s channel=%d operation=%s parameter=%s unit=%s", d.Device, d.Channel, d.Operation, d.Parameter, d.Unit)
 			}

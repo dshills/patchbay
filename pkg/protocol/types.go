@@ -132,6 +132,18 @@ type Action struct {
 	Origin     string            `json:"origin,omitempty"`
 	Agent      *AgentCapability  `json:"agent,omitempty"`
 	Instrument *InstrumentAction `json:"instrument,omitempty"`
+	Plugin     *PluginAction     `json:"plugin,omitempty"`
+}
+
+type PluginAction struct {
+	Name      string `json:"name"`
+	Operation string `json:"operation"`
+	Protocol  int    `json:"protocol"`
+}
+type PluginStatus struct {
+	Protocol   int               `json:"protocol"`
+	Operations map[string]string `json:"operations"`
+	Discovered bool              `json:"discovered"`
 }
 
 type InstrumentAction struct {
@@ -259,6 +271,7 @@ type ProviderHealth struct {
 	Code      string `json:"code,omitempty"`
 }
 type Status struct {
+	Plugins     map[string]PluginStatus     `json:"plugins,omitempty"`
 	Devices     map[string]InstrumentStatus `json:"devices,omitempty"`
 	Version     string                      `json:"version"`
 	UptimeMS    int64                       `json:"uptime_ms"`
