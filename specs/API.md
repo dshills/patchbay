@@ -27,6 +27,7 @@ generation numbers shown here are illustrative.
 | `GET /v1/projects/{id}` | No body | `{"id":"demo","name":"Demo","path":"/src/demo","language":"go"}` |
 | `PUT /v1/context/project` | `{"project":"demo"}` | `{"project":"demo","mode":"development"}` |
 | `GET /v1/actions` | No body | `{"actions":[{"name":"test","type":"exec","safety":"safe","inputs":{"count":{"type":"integer","required":false,"default":1}}}]}` |
+| `GET /v1/actions/{name}` | No body | `{"name":"test","type":"exec","safety":"safe","inputs":{"count":{"type":"integer","required":false,"default":1}}}` |
 | `POST /v1/actions/{name}` | `{"mode":"async","args":{"count":1},"confirmed":false}` | HTTP 202: `{"job_id":"j1"}` |
 | `GET /v1/workflows` | No body | `{"workflows":[{"name":"validate","stop_on_error":true,"steps":[{"action":"test"}]}]}` |
 | `POST /v1/workflows/{name}` | `{"mode":"async","confirmed":true}` | HTTP 202: `{"job_id":"j2"}` |
@@ -44,6 +45,9 @@ configured built-in provider health summaries; it contains no environment values
 or credentials. Action discovery describes effective project actions and input
 schemas; it never exposes command arguments or environment values. Workflow
 discovery exposes action names and ordering without static step argument values.
+Single-action discovery was added during Phase 2 review for typed CLI arguments;
+it uses the same effective project definition as the collection route and returns
+`action_not_found` for unknown names.
 
 ## Context and parameters
 

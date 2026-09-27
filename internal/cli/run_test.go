@@ -33,7 +33,7 @@ func TestFoundationCommands(t *testing.T) {
 		{"deckd", []string{"--help"}, 0, false},
 		{"deckctl", []string{"config", "validate", "--help"}, 0, false},
 		{"deckd", []string{"--config", path + "-missing"}, 1, false},
-		{"deckctl", []string{"status"}, 2, false},
+		{"deckctl", []string{"--socket", path + "-missing.sock", "status"}, 3, false},
 		{"deckctl", []string{"config", "validate", "extra"}, 2, false},
 		{"deckctl", []string{"--unknown"}, 2, false},
 		{"deckctl", []string{"config", "validate", "--unknown"}, 2, false},

@@ -22,6 +22,12 @@ func Run(program string, args []string, stdout, stderr io.Writer) int {
 }
 
 func RunContext(ctx context.Context, program string, args []string, stdout, stderr io.Writer) int {
+	if program == "deckctl" {
+		return runDeckctl(ctx, args, stdout, stderr)
+	}
+	if program != "deckd" {
+		return 2
+	}
 	flags := flag.NewFlagSet(program, flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	var versionFlag, validateFlag, jsonFlag bool
@@ -29,16 +35,10 @@ func RunContext(ctx context.Context, program string, args []string, stdout, stde
 	flags.BoolVar(&versionFlag, "version", false, "print build version")
 	flags.BoolVar(&jsonFlag, "json", false, "emit JSON to stdout")
 	flags.StringVar(&configPath, "config", config.DefaultPath, "configuration file")
-	if program == "deckd" {
-		flags.BoolVar(&validateFlag, "validate", false, "validate configuration and exit")
-	}
+	flags.BoolVar(&validateFlag, "validate", false, "validate configuration and exit")
 	flags.Usage = func() {
 		_, _ = fmt.Fprintf(stderr, "%s: Deckd local automation runtime\n", program)
-		if program == "deckctl" {
-			_, _ = fmt.Fprintln(stderr, "Usage: deckctl [flags] config validate [flags]")
-		} else {
-			_, _ = fmt.Fprintln(stderr, "Usage: deckd [flags] [--validate]")
-		}
+		_, _ = fmt.Fprintln(stderr, "Usage: deckd [flags] [--validate]")
 		flags.PrintDefaults()
 	}
 	if err := flags.Parse(args); err != nil {
@@ -48,16 +48,6 @@ func RunContext(ctx context.Context, program string, args []string, stdout, stde
 		return 2
 	}
 	rest := flags.Args()
-	if program == "deckctl" && len(rest) >= 2 && rest[0] == "config" && rest[1] == "validate" {
-		validateFlag = true
-		if err := flags.Parse(rest[2:]); err != nil {
-			if err == flag.ErrHelp {
-				return 0
-			}
-			return 2
-		}
-		rest = flags.Args()
-	}
 	if len(rest) != 0 || versionFlag && validateFlag {
 		flags.Usage()
 		return 2
@@ -72,24 +62,18 @@ func RunContext(ctx context.Context, program string, args []string, stdout, stde
 		return 0
 	}
 	if !validateFlag {
-		if program == "deckd" {
-			if err := daemon.Run(ctx, configPath, stderr); err != nil {
-				logging.New(stderr).Operation(context.Background(), logging.Record{Component: "daemon", Outcome: "failed", Err: err})
-				_, _ = fmt.Fprintln(stderr, "Daemon could not start or shut down cleanly; check configuration and private socket/state paths.")
-				return 1
-			}
-			return 0
+		if err := daemon.Run(ctx, configPath, stderr); err != nil {
+			logging.New(stderr).Operation(context.Background(), logging.Record{Component: "daemon", Outcome: "failed", Err: err})
+			_, _ = fmt.Fprintln(stderr, "Daemon could not start or shut down cleanly; check configuration and private socket/state paths.")
+			return 1
 		}
-		_, _ = fmt.Fprintln(stderr, "Runtime commands are available in later phases. Use --help for offline foundation commands.")
-		return 2
+		return 0
 	}
 	start := time.Now()
 	_, err := config.Load(configPath)
 	if err != nil {
 		apiError := &protocol.Error{Code: protocol.InvalidConfig, Message: err.Error()}
-		if program == "deckd" {
-			logging.New(stderr).Operation(context.Background(), logging.Record{Component: "config", Duration: time.Since(start), Outcome: "failed", Err: apiError})
-		}
+		logging.New(stderr).Operation(context.Background(), logging.Record{Component: "config", Duration: time.Since(start), Outcome: "failed", Err: apiError})
 		if jsonFlag {
 			_ = writeJSON(stdout, protocol.ErrorResponse{Error: *apiError})
 		} else {

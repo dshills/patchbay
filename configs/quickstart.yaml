@@ -1,0 +1,55 @@
+# Copy to a temporary project directory; all paths below are relative to this file.
+version: 1
+server:
+  socket: private/deckd.sock
+state:
+  path: private/state.json
+context:
+  defaults: {project: demo, mode: development}
+projects:
+  demo: {name: Demo project, path: .}
+actions:
+  project.check:
+    type: exec
+    safety: safe
+    command: /bin/test
+    args: [-d, .]
+    cwd: '{{ .project.path }}'
+  project.describe:
+    type: exec
+    safety: safe
+    command: /bin/echo
+    args: ['Project {{ .project.name }} in mode {{ .context.mode }}']
+  project.status:
+    type: git
+    safety: safe
+    operation: status
+    cwd: '{{ .project.path }}'
+  project.open:
+    type: open
+    safety: safe
+    target: '{{ .project.path }}'
+  task.long:
+    type: exec
+    safety: safe
+    command: /bin/sleep
+    args: ['30']
+workflows:
+  validate:
+    steps:
+      - action: project.check
+      - action: project.describe
+parameters:
+  display.level:
+    type: integer
+    value: 50
+    min: 0
+    max: 100
+    step: 5
+    unit: '%'
+    persistent: true
+bindings:
+  - control: dial-1
+    rotate: {parameter: display.level}
+  - control: key-1
+    press: {action: project.describe}

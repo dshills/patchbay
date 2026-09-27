@@ -5,10 +5,13 @@ executables are `deckd` and `deckctl`; this repository is named Patchbay.
 
 ## Current status
 
-Phase 1 implements the headless runtime: context and persistent parameters,
-bindings and events, exec/open/Git actions, sequential workflows, bounded jobs,
-cancellation, atomic reload, and the complete Unix-socket HTTP API. The full
-`deckctl` command surface follows in Phase 2; offline validation is available now.
+Phase 2 completes headless V1: the runtime and Unix-socket API are available
+through the full `deckctl` command set, with typed arguments, human/JSON output,
+job waiting and cancellation, persistence, and atomic reload. Device adapters
+and agent/instrument integrations remain later phases.
+
+Start with the [temporary-project quick start](specs/QUICKSTART.md), then see
+the [CLI reference](specs/CLI.md) and [macOS operations/release guide](specs/OPERATIONS.md).
 
 ## Build and validate
 
@@ -40,10 +43,9 @@ project path `..` points at this checkout.
 ```sh
 ./bin/deckd --config configs/example.yaml
 # In a second terminal:
-curl --unix-socket "$HOME/.deckd/deckd.sock" http://deckd/v1/status
-curl --unix-socket "$HOME/.deckd/deckd.sock" \
-  -H 'Content-Type: application/json' -d '{"mode":"sync"}' \
-  http://deckd/v1/actions/project.status
+./bin/deckctl status
+./bin/deckctl action run project.status
+./bin/deckctl workflow run validate --json
 ```
 
 Socket and state parent directories must be owned by your user and private
@@ -92,6 +94,10 @@ uses `dev`, `unknown`, and `unknown` defaults.
 - [Phase 0 verification and Prism review](specs/reviews/PHASE0.md)
 - [Phase 1 runtime decisions](specs/RUNTIME.md)
 - [Phase 1 verification, performance, and Prism review](specs/reviews/PHASE1.md)
+- [CLI reference](specs/CLI.md)
+- [Quick start](specs/QUICKSTART.md)
+- [macOS operation and release builds](specs/OPERATIONS.md)
+- [Phase 2 acceptance and Prism review](specs/reviews/PHASE2.md)
 
 The local module is `patchbay` because the repository has no configured remote.
 Set a canonical published module path before exposing packages to external Go

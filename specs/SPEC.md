@@ -316,6 +316,7 @@ GET    /v1/projects
 GET    /v1/projects/{id}
 PUT    /v1/context/project
 GET    /v1/actions
+GET    /v1/actions/{name}
 POST   /v1/actions/{name}
 GET    /v1/workflows
 POST   /v1/workflows/{name}
@@ -578,4 +579,15 @@ settings, and private socket/state locking. Queue wait counts toward invocation
 timeouts; expiry before execution transitions a queued job directly to failed
 with code `timeout`. JSON request field names are case-sensitive and all explicit
 null values are rejected. Measurements and review evidence live in
-[reviews/PHASE1.md](reviews/PHASE1.md). The complete `deckctl` remains Phase 2.
+[reviews/PHASE1.md](reviews/PHASE1.md). The complete `deckctl` is delivered in Phase 2.
+
+## 40. Reference CLI and Headless V1 Release
+
+Phase 2 implements the complete `deckctl` command surface. [CLI.md](CLI.md)
+defines interspersed options, typed scalar arguments, JSON output, exit codes,
+bounded Unix HTTP transport, asynchronous admission with default waiting, and
+explicit cancellation on interruption. [QUICKSTART.md](QUICKSTART.md) and
+[OPERATIONS.md](OPERATIONS.md) cover local use, launchd, and reproducible release
+bundles. [reviews/PHASE2.md](reviews/PHASE2.md) records the twelve-criterion V1
+acceptance matrix and verification limits. Service installation, publishing, and
+later-phase integrations remain explicit separate work.

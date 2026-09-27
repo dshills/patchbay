@@ -120,7 +120,7 @@ func request(t testing.TB, f fixtureAPI, method, path, body string, want int) ma
 
 func TestUnixAPIAllRoutes(t *testing.T) {
 	f := newAPI(t)
-	for _, path := range []string{"status", "context", "projects", "projects/p", "actions", "workflows", "jobs", "parameters", "parameters/level"} {
+	for _, path := range []string{"status", "context", "projects", "projects/p", "actions", "actions/echo", "workflows", "jobs", "parameters", "parameters/level"} {
 		request(t, f, "GET", "/v1/"+path, "", 200)
 	}
 	request(t, f, "PATCH", "/v1/context", `{"mode":"review","values":{"tag":"main"}}`, 200)
@@ -163,6 +163,7 @@ func TestAPIRejectsMalformedAndUnauthorizedRequests(t *testing.T) {
 		{"GET", "/missing", "", 404}, {"POST", "/v1/status", "{}", 405}, {"GET", "/v1/status", "{}", 400},
 		{"GET", "/v1/projects/missing", "", 404}, {"GET", "/v1/jobs/missing", "", 404}, {"DELETE", "/v1/jobs/missing", "", 404},
 		{"GET", "/v1/parameters/missing", "", 404}, {"POST", "/v1/actions/missing", "{}", 404}, {"POST", "/v1/workflows/missing", "{}", 404},
+		{"GET", "/v1/actions/missing", "", 404}, {"GET", "/v1/actions/echo", "{}", 400}, {"PUT", "/v1/actions/echo", "{}", 405},
 		{"PUT", "/v1/context/project", "{}", 400}, {"PUT", "/v1/context/project", `{"project":"absent"}`, 404},
 		{"PATCH", "/v1/context", `{"mode":null}`, 400}, {"PATCH", "/v1/context", `{"mode":"x","mode":"y"}`, 400},
 		{"PATCH", "/v1/context", `{"values":{"tag":"x","tag":"y"}}`, 400}, {"PATCH", "/v1/context", `{"mode":"x"} {}`, 400},

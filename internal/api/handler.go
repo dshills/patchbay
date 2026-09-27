@@ -31,7 +31,18 @@ func NewHandler(runtime *runtimecore.Runtime) http.Handler {
 	h.route("/v1/actions", "GET", func(w http.ResponseWriter, r *http.Request) {
 		respond(w, 200, protocol.ActionList{Actions: runtime.Actions()})
 	})
-	h.route("/v1/actions/{name}", "POST", func(w http.ResponseWriter, r *http.Request) { h.invoke(w, r, false) })
+	h.route("/v1/actions/{name}", "GET, POST", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			h.invoke(w, r, false)
+			return
+		}
+		value, err := runtime.Action(r.PathValue("name"))
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, value)
+	})
 	h.route("/v1/workflows", "GET", func(w http.ResponseWriter, r *http.Request) {
 		respond(w, 200, protocol.WorkflowList{Workflows: runtime.Workflows()})
 	})

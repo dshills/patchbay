@@ -6,11 +6,13 @@ COMMIT ?= $(shell git rev-parse --short HEAD)
 BUILD_TIME ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS = -X patchbay/internal/version.Version=$(VERSION) -X patchbay/internal/version.Commit=$(COMMIT) -X patchbay/internal/version.BuildTime=$(BUILD_TIME)
 
-.PHONY: build fmt fmt-check vet lint test race coverage check install-lint
+.PHONY: build release fmt fmt-check vet lint test race coverage check install-lint
 build:
 	mkdir -p bin
-	$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o bin/deckd ./cmd/deckd
-	$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o bin/deckctl ./cmd/deckctl
+	$(GO) build -trimpath -buildvcs=false -ldflags '$(LDFLAGS)' -o bin/deckd ./cmd/deckd
+	$(GO) build -trimpath -buildvcs=false -ldflags '$(LDFLAGS)' -o bin/deckctl ./cmd/deckctl
+release:
+	python3 scripts/release.py --version '$(VERSION)' --commit '$(COMMIT)' --build-time '$(BUILD_TIME)'
 fmt:
 	gofmt -w $$(find cmd internal pkg -name '*.go')
 fmt-check:

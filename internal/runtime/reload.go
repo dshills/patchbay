@@ -117,13 +117,28 @@ func (r *Runtime) Actions() []protocol.Action {
 	list := make([]protocol.Action, 0, len(registry.Names()))
 	for _, name := range registry.Names() {
 		a, _ := registry.Get(name)
-		inputs := make(map[string]protocol.Input, len(a.Inputs))
-		for key, input := range a.Inputs {
-			inputs[key] = protocol.Input{Type: string(input.Type), Required: input.Required, Default: input.Default, Min: input.Min, Max: input.Max, Enum: slices.Clone(input.Enum)}
-		}
-		list = append(list, protocol.Action{Name: name, Type: a.Type, Safety: string(r.actionRisk(name, map[string]bool{})), Inputs: inputs})
+		list = append(list, r.actionMetadata(name, a))
 	}
 	return list
+}
+
+func (r *Runtime) Action(name string) (protocol.Action, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	a, exists := r.registries[r.context.Project].Get(name)
+	if !exists {
+		return protocol.Action{}, fault.New(protocol.ActionNotFound, "Action not found.")
+	}
+	return r.actionMetadata(name, a), nil
+}
+
+// actionMetadata reads a published generation while its caller holds r.mu.
+func (r *Runtime) actionMetadata(name string, a config.Action) protocol.Action {
+	inputs := make(map[string]protocol.Input, len(a.Inputs))
+	for key, input := range a.Inputs {
+		inputs[key] = protocol.Input{Type: string(input.Type), Required: input.Required, Default: input.Default, Min: input.Min, Max: input.Max, Enum: slices.Clone(input.Enum)}
+	}
+	return protocol.Action{Name: name, Type: a.Type, Safety: string(r.actionRisk(name, map[string]bool{})), Inputs: inputs}
 }
 
 func (r *Runtime) Workflows() []protocol.Workflow {

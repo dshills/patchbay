@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>local.patchbay.deckd</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>@HOME@/.local/bin/deckd</string>
+    <string>--config</string>
+    <string>@HOME@/.config/deckd/config.yaml</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>ExitTimeOut</key><integer>10</integer>
+  <key>Umask</key><integer>63</integer>
+  <key>WorkingDirectory</key><string>@HOME@/.config/deckd</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>StandardOutPath</key><string>@HOME@/.deckd/deckd.stdout.log</string>
+  <key>StandardErrorPath</key><string>@HOME@/.deckd/deckd.stderr.log</string>
+</dict>
+</plist>

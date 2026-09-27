@@ -13,6 +13,7 @@ import (
 	"patchbay/internal/provider"
 	"patchbay/pkg/protocol"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -150,6 +151,32 @@ func wantCode(t *testing.T, err error, code protocol.Code) {
 	if err == nil || fault.Safe(err).Code != code {
 		t.Fatalf("got %v, want %s", err, code)
 	}
+}
+
+func TestSingleActionMetadataUsesEffectiveRegistryAndCopiesInputs(t *testing.T) {
+	r, _ := setup(t, fixture, &fakeRunner{})
+	for _, listed := range r.Actions() {
+		got, err := r.Action(listed.Name)
+		if err != nil || !reflect.DeepEqual(got, listed) {
+			t.Fatal(got, listed, err)
+		}
+	}
+	scoped, err := r.Action("scoped")
+	if err != nil || scoped.Safety != "confirm" {
+		t.Fatal(scoped, err)
+	}
+	branch, err := r.Action("branch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	branch.Inputs["mode"].Enum[0] = "mutated"
+	delete(branch.Inputs, "name")
+	again, err := r.Action("branch")
+	if err != nil || again.Inputs["mode"].Enum[0] != "list" || again.Inputs["name"].Type != "string" {
+		t.Fatal("metadata shares registry state", again, err)
+	}
+	_, err = r.Action("missing-action")
+	wantCode(t, err, protocol.ActionNotFound)
 }
 
 func TestStateParametersEventsAndRestart(t *testing.T) {

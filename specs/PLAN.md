@@ -327,32 +327,32 @@ Follow the published sequence by default. Phases 4 and 5 must remain usable thro
 
 ### 2.1 Transport and command surface
 
-- [ ] Implement Unix-socket HTTP transport with configurable socket path, request deadlines, cancellation, and actionable connection errors.
-- [ ] Implement `status` and `project list|current|use <id>`.
-- [ ] Implement `context show|set <key> <value>` with documented keys and routing of project changes.
-- [ ] Implement `action list|run <name>` and `workflow list|run <name>` with typed argument input, confirmation, and timeout options.
-- [ ] Implement `job list|show <id>|cancel <id>`.
-- [ ] Implement `param list|get <name>|set <name> <value>`; obtain parameter metadata to encode typed values correctly and leave final validation to the daemon.
-- [ ] Implement offline `config validate` and daemon-backed `config reload`; clearly distinguish the local file being validated from the daemon's configured file.
-- [ ] Add help/version output and consistently placed global options for socket path and JSON output.
+- [x] Implement Unix-socket HTTP transport with configurable socket path, request deadlines, cancellation, and actionable connection errors.
+- [x] Implement `status` and `project list|current|use <id>`.
+- [x] Implement `context show|set <key> <value>` with documented keys and routing of project changes.
+- [x] Implement `action list|run <name>` and `workflow list|run <name>` with typed argument input, confirmation, and timeout options.
+- [x] Implement `job list|show <id>|cancel <id>`.
+- [x] Implement `param list|get <name>|set <name> <value>`; obtain parameter metadata to encode typed values correctly and leave final validation to the daemon.
+- [x] Implement offline `config validate` and daemon-backed `config reload`; clearly distinguish the local file being validated from the daemon's configured file.
+- [x] Add help/version output and consistently placed global options for socket path and JSON output.
 
 ### 2.2 Execution UX and output
 
-- [ ] Default `action run`/`workflow run` to submit an asynchronous job and wait for its outcome; provide `--async` to return the job ID immediately.
-- [ ] Implement `--confirm` as explicit invocation evidence. A confirmation-required response must explain how to retry without automatically reissuing work.
-- [ ] On Ctrl-C while waiting, request cancellation of that job, wait for a bounded acknowledgement, and return a documented cancellation exit code.
-- [ ] Separate human-readable output from stable JSON output. Emit JSON data to stdout, diagnostics to stderr, and define consistent exit codes for usage, transport, permission, execution, timeout, and cancellation failures.
-- [ ] Present per-step workflow outcomes, bounded command output/truncation, parameter units, active context, and meaningful provider health.
-- [ ] Use bounded polling with cancellation while awaiting jobs; avoid a busy loop.
+- [x] Default `action run`/`workflow run` to submit an asynchronous job and wait for its outcome; provide `--async` to return the job ID immediately.
+- [x] Implement `--confirm` as explicit invocation evidence. A confirmation-required response must explain how to retry without automatically reissuing work.
+- [x] On Ctrl-C while waiting, request cancellation of that job, wait for a bounded acknowledgement, and return a documented cancellation exit code.
+- [x] Separate human-readable output from stable JSON output. Emit JSON data to stdout, diagnostics to stderr, and define consistent exit codes for usage, transport, permission, execution, timeout, and cancellation failures.
+- [x] Present per-step workflow outcomes, bounded command output/truncation, parameter units, active context, and meaningful provider health.
+- [x] Use bounded polling with cancellation while awaiting jobs; avoid a busy loop.
 
 ### 2.3 Release verification and operations
 
-- [ ] Add CLI tests against an ephemeral real daemon, including each required command, JSON parsing, exit codes, offline validation, unavailable daemon, confirmation, and invalid reload.
-- [ ] Publish a quick-start workflow: configure a temporary project -> validate configuration -> start daemon -> inspect/select project -> run validation workflow -> cancel a long task -> rotate/set a parameter through API/CLI -> restart and verify state.
-- [ ] Document configuration fields/defaults, action naming/overrides, templates, safety limitations, API contracts, cancellation, reload behavior, logging, and troubleshooting.
-- [ ] Document a macOS user-level launchd setup and clean shutdown/uninstall procedure. Verify the service's PATH, environment, socket/state locations, and file permissions; installation remains an explicit operator action.
-- [ ] Provide reproducible build/release instructions for `deckd` and `deckctl`, with version metadata and example configuration. Exercise supported macOS architectures or record any unverified architecture clearly.
-- [ ] Run the V1 matrix in section 12, resolve material defects, and record performance measurements and remaining limitations.
+- [x] Add CLI tests against an ephemeral real daemon, including each required command, JSON parsing, exit codes, offline validation, unavailable daemon, confirmation, and invalid reload.
+- [x] Publish a quick-start workflow: configure a temporary project -> validate configuration -> start daemon -> inspect/select project -> run validation workflow -> cancel a long task -> rotate/set a parameter through API/CLI -> restart and verify state.
+- [x] Document configuration fields/defaults, action naming/overrides, templates, safety limitations, API contracts, cancellation, reload behavior, logging, and troubleshooting.
+- [x] Document a macOS user-level launchd setup and clean shutdown/uninstall procedure. Verify the service's PATH, environment, socket/state locations, and file permissions; installation remains an explicit operator action.
+- [x] Provide reproducible build/release instructions for `deckd` and `deckctl`, with version metadata and example configuration. Exercise supported macOS architectures or record any unverified architecture clearly.
+- [x] Run the V1 matrix in section 12, resolve material defects, and record performance measurements and remaining limitations.
 
 **Deliverables:** Reference CLI, complete headless V1, user/API/configuration documentation, macOS operation instructions, and release verification evidence.
 
