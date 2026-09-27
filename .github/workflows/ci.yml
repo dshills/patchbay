@@ -5,7 +5,7 @@ on:
 permissions:
   contents: read
 jobs:
-  headless-v1:
+  core-and-streamdeck:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -13,6 +13,9 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - run: go mod download
       - run: make install-lint
       - run: make check GOLANGCI_LINT="$PWD/.tools/golangci-lint"
@@ -20,4 +23,9 @@ jobs:
       - run: ./bin/deckctl config validate --config configs/quickstart.yaml --json
       - run: plutil -lint configs/local.patchbay.deckd.plist
       - run: python3 scripts/verify_v1.py
+      - run: ./bin/deckctl config validate --config configs/streamdeck.yaml --json
+      - run: make streamdeck-verify
+      - run: node --test adapters/streamdeck/inspector.test.cjs
+      - run: make streamdeck-package VERSION=0.2.0 COMMIT="$(git rev-parse HEAD)" BUILD_TIME=2026-09-27T00:00:00Z
+      - run: npm exec --yes --package @elgato/cli@1.10.1 -- streamdeck validate dist/local.patchbay.deckd.sdPlugin
       - run: make release VERSION=0.1.0-ci COMMIT="$(git rev-parse HEAD)" BUILD_TIME=2026-09-27T00:00:00Z

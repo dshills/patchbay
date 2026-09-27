@@ -327,6 +327,7 @@ GET    /v1/parameters
 GET    /v1/parameters/{name}
 PUT    /v1/parameters/{name}
 POST   /v1/events
+POST   /v1/controls/snapshot
 POST   /v1/config/reload
 ```
 
@@ -591,3 +592,14 @@ explicit cancellation on interruption. [QUICKSTART.md](QUICKSTART.md) and
 bundles. [reviews/PHASE2.md](reviews/PHASE2.md) records the twelve-criterion V1
 acceptance matrix and verification limits. Service installation, publishing, and
 later-phase integrations remain explicit separate work.
+
+## 41. Stream Deck+ Adapter Decisions
+
+Phase 3 adds the isolated `decksd` native plugin, configured with control names
+and a private daemon socket. [STREAMDECK.md](STREAMDECK.md) defines the integration
+route, capabilities, gesture timing, bounded polling/rendering, packaging, and
+operator installation. Bindings now include `long_press`, `touch`, and
+`long_touch`. [API.md](API.md) specifies atomic control snapshots, guards tied to
+daemon/context identity, and expiring one-use confirmation tokens. Existing V1
+clients retain their prior control and confirmation behavior. The simulator and
+native-binary checks do not substitute for the pending physical smoke gate.

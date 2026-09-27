@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src ws://127.0.0.1:*; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>Deckd Control</title>
+<style>
+  :root { color-scheme: dark; font: 13px -apple-system, BlinkMacSystemFont, sans-serif; }
+  body { background:#282828; color:#eee; margin:18px; }
+  h1 { font-size:17px; margin:0 0 16px; } label { display:block; margin:16px 0 6px; }
+  input { box-sizing:border-box; width:100%; padding:9px; border:1px solid #666; border-radius:5px; background:#191919; color:#fff; }
+  input:focus,button:focus { outline:2px solid #83baff; outline-offset:2px; }
+  p { color:#bfc4cd; line-height:1.5; } small { display:block; margin-top:6px; color:#bfc4cd; }
+  button { padding:9px 16px; background:#e3ecf8; color:#192431; border:0; border-radius:5px; }
+  button:disabled { opacity:.5; } #status { min-height:20px; }
+</style>
+<h1>Deckd Control</h1>
+<form id="settings">
+  <label for="control">Control name</label>
+  <input id="control" name="control" maxlength="128" placeholder="Automatic: key-1 or dial-1" pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,127}">
+  <small>Match a control in your Deckd bindings. Leave blank to use its position.</small>
+  <label for="label">Display label</label>
+  <input id="label" name="label" maxlength="64" placeholder="Use the action or parameter name">
+  <label for="socket">Daemon socket — all Deckd controls</label>
+  <input id="socket" name="socket" maxlength="1024" placeholder="~/.deckd/deckd.sock">
+  <p>Actions and permissions come from the daemon. When a control asks for confirmation, hold that same key or dial for 0.7 seconds within five seconds.</p>
+  <button id="save" type="submit" disabled>Save settings</button>
+  <p id="status" role="status" aria-live="polite">Waiting for Stream Deck…</p>
+</form>
+<script src="inspector.js"></script>
+</html>

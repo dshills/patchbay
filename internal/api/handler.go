@@ -56,6 +56,7 @@ func NewHandler(runtime *runtimecore.Runtime) http.Handler {
 	})
 	h.route("/v1/parameters/{name}", "GET, PUT", h.parameter)
 	h.route("/v1/events", "POST", h.control)
+	h.route("/v1/controls/snapshot", "POST", h.controls)
 	h.route("/v1/config/reload", "POST", h.reload)
 	h.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		failure(w, fault.New(protocol.NotFound, "Route not found."))
@@ -261,6 +262,18 @@ func (h *Handler) control(w http.ResponseWriter, r *http.Request) {
 		status = 202
 	}
 	respond(w, status, value)
+}
+func (h *Handler) controls(w http.ResponseWriter, r *http.Request) {
+	var request protocol.ControlSnapshotRequest
+	if !h.decode(w, r, &request) {
+		return
+	}
+	value, err := h.runtime.ControlSnapshot(r.Context(), request)
+	if err != nil {
+		failure(w, err)
+		return
+	}
+	respond(w, 200, value)
 }
 func (h *Handler) reload(w http.ResponseWriter, r *http.Request) {
 	var empty struct{}

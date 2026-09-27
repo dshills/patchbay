@@ -13,13 +13,11 @@ import (
 	"time"
 
 	"patchbay/internal/action"
-	"patchbay/internal/binding"
 	"patchbay/internal/config"
 	"patchbay/internal/event"
 	"patchbay/internal/fault"
 	"patchbay/internal/identity"
 	"patchbay/internal/job"
-	"patchbay/internal/jsonstrict"
 	"patchbay/internal/permission"
 	"patchbay/internal/provider"
 	"patchbay/internal/workflow"
@@ -284,41 +282,4 @@ func (r *Runtime) execute(ctx context.Context, jobID string, plan *prepared, bud
 		result, err = workflow.Run(ctx, steps, plan.stopOnError)
 	}
 	return result, err
-}
-
-func (r *Runtime) Control(ctx context.Context, request protocol.EventRequest) (protocol.EventResponse, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if err := r.writable(ctx); err != nil {
-		return protocol.EventResponse{}, err
-	}
-	if request.Type != event.ControlPressed && request.Type != event.ControlReleased && request.Type != event.ControlRotated {
-		return protocol.EventResponse{}, fault.New(protocol.InvalidRequest, "Only external control events are accepted.")
-	}
-	var payload struct {
-		Device    string `json:"device"`
-		Control   string `json:"control"`
-		Delta     *int64 `json:"delta"`
-		Confirmed *bool  `json:"confirmed"`
-	}
-	if err := jsonstrict.Decode(request.Payload, &payload); err != nil || !config.ValidName(payload.Control) || !config.ValidName(request.Source) || payload.Device != "" && !config.ValidName(payload.Device) || (request.Type == event.ControlRotated) != (payload.Delta != nil) || request.Type == event.ControlRotated && payload.Confirmed != nil {
-		return protocol.EventResponse{}, fault.New(protocol.InvalidRequest, "Invalid control payload.")
-	}
-	target := binding.Resolve(r.cfg.Bindings, payload.Device, payload.Control, request.Type, r.context)
-	response := protocol.EventResponse{EventID: identity.New(), Matched: target != nil}
-	if target != nil {
-		if target.Parameter != "" {
-			if _, err := r.setParameter(target.Parameter, nil, payload.Delta); err != nil {
-				return protocol.EventResponse{}, err
-			}
-		} else {
-			handle, err := r.invoke(ctx, target.Action, false, protocol.Invocation{Mode: protocol.Async, Args: target.Args, Confirmed: payload.Confirmed != nil && *payload.Confirmed})
-			if err != nil {
-				return protocol.EventResponse{}, err
-			}
-			response.JobID = handle.ID
-		}
-	}
-	r.bus.Publish(ctx, event.Event{ID: response.EventID, Type: request.Type, Source: request.Source, Timestamp: time.Now().UTC(), Payload: request.Payload})
-	return response, nil
 }

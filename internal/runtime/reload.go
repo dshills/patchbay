@@ -65,6 +65,7 @@ func (r *Runtime) Reload(ctx context.Context) (uint64, error) {
 	previousContext, previousParameters := r.context, r.parameters
 	r.cfg, r.registries, r.context, r.parameters = candidate, registries, ctxState, parameters
 	r.generation++
+	r.invalidateControls()
 	r.jobs.Reconfigure(jobLimits(candidate))
 	r.bus.Emit(event.ConfigReloaded, map[string]uint64{"generation": r.generation})
 	if previousContext.Project != ctxState.Project {

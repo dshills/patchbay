@@ -442,7 +442,7 @@ func (v *validator) bindings(c *Config) error {
 		if b.Device != "" && !namePattern.MatchString(b.Device) {
 			return v.fail(path+".device", "invalid device name")
 		}
-		if b.Press == nil && b.Release == nil && b.Rotate == nil {
+		if b.Press == nil && b.Release == nil && b.Rotate == nil && b.LongPress == nil && b.Touch == nil && b.LongTouch == nil {
 			return v.fail(path, "at least one input gesture is required")
 		}
 		for _, key := range keys(b.When) {
@@ -464,7 +464,7 @@ func (v *validator) bindings(c *Config) error {
 		for _, gesture := range []struct {
 			name   string
 			target *binding.Target
-		}{{"press", b.Press}, {"release", b.Release}, {"rotate", b.Rotate}} {
+		}{{"press", b.Press}, {"release", b.Release}, {"rotate", b.Rotate}, {"long_press", b.LongPress}, {"touch", b.Touch}, {"long_touch", b.LongTouch}} {
 			target := gesture.target
 			if target == nil {
 				continue
@@ -478,7 +478,7 @@ func (v *validator) bindings(c *Config) error {
 			} else {
 				a, exists := c.Actions[target.Action]
 				if !exists || target.Parameter != "" {
-					return v.fail(p, "press/release requires a known action")
+					return v.fail(p, "action gestures require a known action")
 				}
 				if projectID := b.When["project"]; projectID != "" {
 					a = c.EffectiveActions(projectID)[target.Action]

@@ -7,18 +7,21 @@ import (
 )
 
 const (
-	ControlPressed   = "control.pressed"
-	ControlReleased  = "control.released"
-	ControlRotated   = "control.rotated"
-	ContextChanged   = "context.changed"
-	ProjectChanged   = "project.changed"
-	ParameterChanged = "parameter.changed"
-	ActionStarted    = "action.started"
-	ActionFinished   = "action.finished"
-	JobQueued        = "job.queued"
-	JobRunning       = "job.running"
-	JobFinished      = "job.finished"
-	ConfigReloaded   = "config.reloaded"
+	ControlPressed     = "control.pressed"
+	ControlReleased    = "control.released"
+	ControlRotated     = "control.rotated"
+	ControlLongPressed = "control.long_pressed"
+	ControlTouched     = "control.touched"
+	ControlLongTouched = "control.long_touched"
+	ContextChanged     = "context.changed"
+	ProjectChanged     = "project.changed"
+	ParameterChanged   = "parameter.changed"
+	ActionStarted      = "action.started"
+	ActionFinished     = "action.finished"
+	JobQueued          = "job.queued"
+	JobRunning         = "job.running"
+	JobFinished        = "job.finished"
+	ConfigReloaded     = "config.reloaded"
 )
 
 type Event struct {

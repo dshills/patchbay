@@ -43,6 +43,12 @@ func Resolve(bindings []Binding, device, control, gesture string, state runtimec
 			target = b.Release
 		case event.ControlRotated:
 			target = b.Rotate
+		case event.ControlLongPressed:
+			target = b.LongPress
+		case event.ControlTouched:
+			target = b.Touch
+		case event.ControlLongTouched:
+			target = b.LongTouch
 		}
 		if target != nil && b.Rank() > rank {
 			selected, rank = target, b.Rank()

@@ -2,7 +2,7 @@
 
 **Source:** [SPEC.md](SPEC.md), version 0.1, dated 2026-09-27
 
-**Plan status:** Phase 0 complete. Checks passed and Prism findings were resolved; see [review evidence](reviews/PHASE0.md). Phases 1–6 remain planned.
+**Plan status:** Phases 0–2 complete. Phase 3 implementation and simulator verification are complete; its physical hardware exit gate remains pending. See [Phase 3 evidence](reviews/PHASE3.md). Phases 4–6 remain planned.
 
 **Planning baseline:** Before Phase 0, the repository contained `specs/SPEC.md` and no application code, build configuration, or tests.
 
@@ -366,19 +366,21 @@ Follow the published sequence by default. Phases 4 and 5 must remain usable thro
 
 ### 3.1 Integration investigation and adapter boundary
 
-- [ ] Evaluate available macOS integration routes against keys, encoder rotation/press, touch, labels, reconnect, packaging, and distribution constraints. Verify current vendor documentation when implementing this phase.
-- [ ] Record the selected route, dependencies, transport to the Unix-socket daemon, permission requirements, and any required bridge. Keep device-specific code in a separate adapter subtree/process.
-- [ ] Build a fake device/adapter harness first so CI can replay input and inspect rendered feedback without hardware.
-- [ ] Specify stable device/control identifiers, input normalization, capability reporting, and reconnect/resynchronization behavior.
+- [x] Evaluate available macOS integration routes against keys, encoder rotation/press, touch, labels, reconnect, packaging, and distribution constraints. Verify current vendor documentation when implementing this phase.
+- [x] Record the selected route, dependencies, transport to the Unix-socket daemon, permission requirements, and any required bridge. Keep device-specific code in a separate adapter subtree/process.
+- [x] Build a fake device/adapter harness first so CI can replay input and inspect rendered feedback without hardware.
+- [x] Specify stable device/control identifiers, input normalization, capability reporting, and reconnect/resynchronization behavior.
 
 ### 3.2 Input and display integration
 
-- [ ] Map key press/release and encoder rotation/press into validated control events. Use daemon bindings to select semantic actions and parameters.
-- [ ] Preserve rotation direction and delta, coalescing only where the total delta is preserved. Keep rendering throttled without dropping authoritative parameter changes.
-- [ ] Implement long press and touch interactions where supported, documenting unavailable capabilities. Define any additional event types as protocol extensions before using them.
-- [ ] Implement confirmation gestures tied to a particular pending invocation and context. A context change or expiry invalidates stale device confirmation.
-- [ ] Render action/job state, labels, parameter values/units, active context, errors, and disabled/disconnected state from daemon data.
-- [ ] Start with bounded snapshot polling. If streaming is justified, specify a bounded subscription endpoint, overflow/reconnect behavior, and mandatory snapshot resynchronization; keep V1 clients compatible.
+- [x] Map key press/release and encoder rotation/press into validated control events. Use daemon bindings to select semantic actions and parameters.
+- [x] Preserve rotation direction and delta, coalescing only where the total delta is preserved. Keep rendering throttled without dropping authoritative parameter changes.
+- [x] Implement long press and touch interactions where supported, documenting unavailable capabilities. Define any additional event types as protocol extensions before using them.
+- [x] Implement confirmation gestures tied to a particular pending invocation and context. A context change or expiry invalidates stale device confirmation.
+- [x] Render action/job state, labels, parameter values/units, active context, errors, and disabled/disconnected state from daemon data.
+- [x] Start with bounded snapshot polling. If streaming is justified, specify a bounded subscription endpoint, overflow/reconnect behavior, and mandatory snapshot resynchronization; keep V1 clients compatible.
+
+- [ ] Complete the physical Stream Deck+ smoke matrix and record hardware feedback latency.
 
 **Verification:** Simulator tests for input normalization, binding/context changes, rapid rotation, confirmation, disconnect/reconnect, stale feedback, and daemon restart. Run a hardware smoke matrix for each supported key/encoder/touch capability and measure feedback latency.
 

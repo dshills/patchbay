@@ -160,10 +160,11 @@ and overflow-safe rotation are implemented in Phase 1.
 ### Bindings
 
 Bindings require a `control`, optional `device`, optional `when` conditions, and
-at least one of `press`, `release`, or `rotate`. Conditions support `mode`,
+at least one of `press`, `release`, `rotate`, `long_press`, `touch`, or
+`long_touch`. The last three were added in Phase 3. Conditions support `mode`,
 `project`, and `values.<identifier>`; all supplied conditions must match.
 
-Press/release targets use `{action, args?}`. Rotation uses `{parameter}` and must
+Action gestures use `{action, args?}`. Rotation uses `{parameter}` and must
 name a numeric parameter. Precedence is device+control+conditions, then
 control+conditions, then device+control, then control. Condition count is not an
 extra precedence rule. Overlapping conditions for the same control/device,

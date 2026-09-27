@@ -8,10 +8,13 @@ executables are `deckd` and `deckctl`; this repository is named Patchbay.
 Phase 2 completes headless V1: the runtime and Unix-socket API are available
 through the full `deckctl` command set, with typed arguments, human/JSON output,
 job waiting and cancellation, persistence, and atomic reload. Device adapters
-and agent/instrument integrations remain later phases.
+now include a Phase 3 Stream Deck+ plugin with simulated/native-process checks;
+physical smoke verification remains pending. Agent/instrument integrations remain
+later phases.
 
 Start with the [temporary-project quick start](specs/QUICKSTART.md), then see
 the [CLI reference](specs/CLI.md) and [macOS operations/release guide](specs/OPERATIONS.md).
+See [Stream Deck+ setup and capabilities](specs/STREAMDECK.md) for the adapter.
 
 ## Build and validate
 
@@ -69,7 +72,7 @@ go tool cover -func=coverage.out
 ```
 
 `make check` checks formatting, runs vet, lint, unit tests, race tests, and builds
-both commands. `make fmt` formats source. The lint version is pinned in the
+all three commands. `make fmt` formats source. The lint version is pinned in the
 Makefile; the selected checks are `errcheck`, `govet`, `ineffassign`, `staticcheck`,
 and `unused`. These catch correctness and maintenance issues without a broad
 style policy. CI runs these commands on macOS. The race suite uses the platform's
@@ -98,16 +101,23 @@ uses `dev`, `unknown`, and `unknown` defaults.
 - [Quick start](specs/QUICKSTART.md)
 - [macOS operation and release builds](specs/OPERATIONS.md)
 - [Phase 2 acceptance and Prism review](specs/reviews/PHASE2.md)
+- [Stream Deck+ adapter and setup](specs/STREAMDECK.md)
+- [Phase 3 verification and Prism review](specs/reviews/PHASE3.md)
 
 The local module is `patchbay` because the repository has no configured remote.
 Set a canonical published module path before exposing packages to external Go
 consumers. Application behavior is internal; `pkg/protocol` contains only wire
 contracts and depends exclusively on the standard library.
 
-The single runtime dependency is `go.yaml.in/yaml/v3`, pinned to v3.0.5. YAML
+The core runtime dependency is `go.yaml.in/yaml/v3`, pinned to v3.0.5. YAML
 decoding is absent from the standard library. This security-maintained v3 line
 provides the stable node API needed for source locations; the loader adds strict
 schema/type checks and excludes aliases and merge keys. The upstream project's
 [version policy](https://github.com/yaml/go-yaml#version-intentions) directs new
 feature work to v4; adopting that API can be evaluated separately. No dependency
 is needed for HTTP, JSON, logging, argument parsing, or process execution.
+
+The isolated Stream Deck adapter additionally uses `github.com/gorilla/websocket`
+v1.5.3 for the vendor WebSocket protocol. It is not imported by the core daemon or
+CLI; its BSD license ships with the plugin. Inspector/vendor validation uses Node
+only during development, not at plugin runtime.

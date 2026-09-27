@@ -8,12 +8,15 @@ type Target struct {
 }
 
 type Binding struct {
-	Device  string            `yaml:"device,omitempty"`
-	Control string            `yaml:"control"`
-	When    map[string]string `yaml:"when,omitempty"`
-	Press   *Target           `yaml:"press,omitempty"`
-	Release *Target           `yaml:"release,omitempty"`
-	Rotate  *Target           `yaml:"rotate,omitempty"`
+	Device    string            `yaml:"device,omitempty"`
+	Control   string            `yaml:"control"`
+	When      map[string]string `yaml:"when,omitempty"`
+	Press     *Target           `yaml:"press,omitempty"`
+	Release   *Target           `yaml:"release,omitempty"`
+	Rotate    *Target           `yaml:"rotate,omitempty"`
+	LongPress *Target           `yaml:"long_press,omitempty"`
+	Touch     *Target           `yaml:"touch,omitempty"`
+	LongTouch *Target           `yaml:"long_touch,omitempty"`
 }
 
 // Rank implements the specification's four precedence tiers. Context predicate
@@ -35,6 +38,7 @@ func Overlaps(a, b Binding) bool {
 		return false
 	}
 	sharedGesture := a.Press != nil && b.Press != nil || a.Release != nil && b.Release != nil || a.Rotate != nil && b.Rotate != nil
+	sharedGesture = sharedGesture || a.LongPress != nil && b.LongPress != nil || a.Touch != nil && b.Touch != nil || a.LongTouch != nil && b.LongTouch != nil
 	if !sharedGesture {
 		return false
 	}

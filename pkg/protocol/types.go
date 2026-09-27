@@ -49,8 +49,9 @@ func (c Code) HTTPStatus() int {
 }
 
 type Error struct {
-	Code    Code   `json:"code"`
-	Message string `json:"message"`
+	Code         Code                 `json:"code"`
+	Message      string               `json:"message"`
+	Confirmation *ControlConfirmation `json:"confirmation,omitempty"`
 }
 
 func (c Code) Valid() bool {
@@ -200,10 +201,12 @@ type EventRequest struct {
 	Payload json.RawMessage `json:"payload"`
 }
 type ControlPayload struct {
-	Device    string `json:"device,omitempty"`
-	Control   string `json:"control"`
-	Delta     int64  `json:"delta,omitempty"`
-	Confirmed bool   `json:"confirmed,omitempty"`
+	Device       string        `json:"device,omitempty"`
+	Control      string        `json:"control"`
+	Delta        int64         `json:"delta,omitempty"`
+	Confirmed    bool          `json:"confirmed,omitempty"`
+	Guard        *ControlGuard `json:"guard,omitempty"`
+	Confirmation string        `json:"confirmation,omitempty"`
 }
 type EventResponse struct {
 	EventID string `json:"event_id"`

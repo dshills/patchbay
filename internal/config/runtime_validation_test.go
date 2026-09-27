@@ -34,3 +34,19 @@ func TestWorkflowExpansionBound(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestExtendedControlBindingsValidateAndRejectAmbiguity(t *testing.T) {
+	prefix := "version: 1\nactions: {test: {type: exec, safety: safe, command: /bin/echo}}\nbindings:\n"
+	for _, gesture := range []string{"long_press", "touch", "long_touch"} {
+		row := "  - control: key\n    " + gesture + ": {action: test}\n"
+		if _, err := parseTest(t, prefix+row); err != nil {
+			t.Fatal(gesture, err)
+		}
+		if _, err := parseTest(t, prefix+row+row); err == nil {
+			t.Fatal("ambiguous gesture accepted", gesture)
+		}
+		if _, err := parseTest(t, prefix+strings.Replace(row, "action: test", "parameter: test", 1)); err == nil {
+			t.Fatal("non-action target accepted", gesture)
+		}
+	}
+}

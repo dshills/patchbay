@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/layout.json",
+  "id": "deckd-control",
+  "controller": "Encoder",
+  "items": [
+    {"key":"title","type":"text","rect":[8,4,184,20],"font":{"size":14,"weight":600},"color":"#F3F5F7","alignment":"left","text-overflow":"ellipsis","value":"Deckd"},
+    {"key":"value","type":"text","rect":[8,25,184,30],"font":{"size":24,"weight":600},"color":"#F3F5F7","alignment":"left","text-overflow":"ellipsis","value":""},
+    {"key":"context","type":"text","rect":[8,56,184,18],"font":{"size":11},"color":"#ADB9C9","alignment":"left","text-overflow":"ellipsis","value":""},
+    {"key":"status","type":"text","rect":[8,75,184,20],"font":{"size":12},"color":"#687484","alignment":"left","text-overflow":"ellipsis","value":"disconnected"}
+  ]
+}

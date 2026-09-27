@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "Name": "Deckd",
+  "Description": "Semantic local controls and authoritative feedback from Deckd.",
+  "Author": "Patchbay",
+  "UUID": "local.patchbay.deckd",
+  "Version": "0.2.0.0",
+  "SDKVersion": 2,
+  "CodePath": "bin/decksd",
+  "OS": [{"Platform": "mac", "MinimumVersion": "13"}],
+  "Software": {"MinimumVersion": "7.0"},
+  "Icon": "assets/plugin",
+  "Category": "Deckd",
+  "CategoryIcon": "assets/category",
+  "PropertyInspectorPath": "inspector.html",
+  "Actions": [{
+    "UUID": "local.patchbay.deckd.control",
+    "Name": "Deckd Control",
+    "Tooltip": "Use a daemon binding for this Stream Deck+ key or dial.",
+    "Icon": "assets/action",
+    "Controllers": ["Keypad", "Encoder"],
+    "SupportedInMultiActions": false,
+    "SupportedInKeyLogicActions": false,
+    "UserTitleEnabled": false,
+    "States": [{"Image": "assets/key", "ShowTitle": false}],
+    "Encoder": {
+      "layout": "layout.json",
+      "TriggerDescription": {
+        "Push": "Press or hold the configured control",
+        "Rotate": "Adjust the bound parameter",
+        "Touch": "Run the touch binding",
+        "LongTouch": "Run long-touch or confirm a pending action"
+      }
+    }
+  }]
+}

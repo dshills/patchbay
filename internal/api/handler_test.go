@@ -126,6 +126,7 @@ func TestUnixAPIAllRoutes(t *testing.T) {
 	request(t, f, "PATCH", "/v1/context", `{"mode":"review","values":{"tag":"main"}}`, 200)
 	request(t, f, "PUT", "/v1/context/project", `{"project":"p"}`, 200)
 	request(t, f, "PUT", "/v1/parameters/level", `{"value":5}`, 200)
+	request(t, f, "POST", "/v1/controls/snapshot", `{"controls":[{"device":"deck","control":"dial"}]}`, 200)
 	result := request(t, f, "POST", "/v1/actions/echo", `{"mode":"sync"}`, 200)
 	id := result["job_id"].(string)
 	request(t, f, "GET", "/v1/jobs/"+id, "", 200)
@@ -176,6 +177,7 @@ func TestAPIRejectsMalformedAndUnauthorizedRequests(t *testing.T) {
 		{"POST", "/v1/events", `{"type":"job.finished","source":"test","payload":{}}`, 400},
 		{"POST", "/v1/events", `{"type":"control.rotated","source":"test","payload":{"control":"dial","delta":1.5}}`, 400},
 		{"POST", "/v1/config/reload", `{"extra":1}`, 400},
+		{"GET", "/v1/controls/snapshot", "", 405}, {"POST", "/v1/controls/snapshot", `{"controls":[{"control":"../bad"}]}`, 400},
 	} {
 		result := request(t, f, c.method, c.path, c.body, c.status)
 		if result["error"] == nil {

@@ -19,6 +19,7 @@ import (
 	runtimecontext "patchbay/internal/context"
 	"patchbay/internal/event"
 	"patchbay/internal/fault"
+	"patchbay/internal/identity"
 	"patchbay/internal/job"
 	"patchbay/internal/localfs"
 	"patchbay/internal/logging"
@@ -35,23 +36,26 @@ type Options struct {
 	Opener string
 }
 type Runtime struct {
-	mu         sync.Mutex
-	reloadMu   sync.Mutex
-	cfg        *config.Config
-	registries map[string]*action.Registry[config.Action]
-	context    runtimecontext.RuntimeContext
-	parameters map[string]parameter.Definition
-	generation uint64
-	closed     bool
-	path       string
-	started    time.Time
-	bus        *event.Bus
-	jobs       *job.Manager
-	state      *state.Writer
-	stateLock  *localfs.Lock
-	runner     provider.Runner
-	opener     string
-	log        *logging.Logger
+	mu              sync.Mutex
+	reloadMu        sync.Mutex
+	cfg             *config.Config
+	registries      map[string]*action.Registry[config.Action]
+	context         runtimecontext.RuntimeContext
+	parameters      map[string]parameter.Definition
+	generation      uint64
+	instance        string
+	controlRevision uint64
+	confirmations   map[string]controlConfirmation
+	closed          bool
+	path            string
+	started         time.Time
+	bus             *event.Bus
+	jobs            *job.Manager
+	state           *state.Writer
+	stateLock       *localfs.Lock
+	runner          provider.Runner
+	opener          string
+	log             *logging.Logger
 }
 
 func New(path string, options Options) (*Runtime, error) {
@@ -87,7 +91,7 @@ func NewConfigured(path string, c *config.Config, options Options) (*Runtime, er
 	if options.Opener == "" {
 		options.Opener = "/usr/bin/open"
 	}
-	r := &Runtime{cfg: c, registries: registries, path: path, started: time.Now(), generation: 1, runner: options.Runner, opener: options.Opener, log: logging.New(options.Log)}
+	r := &Runtime{cfg: c, registries: registries, path: path, started: time.Now(), generation: 1, instance: identity.New(), controlRevision: 1, runner: options.Runner, opener: options.Opener, log: logging.New(options.Log)}
 	r.context = cloneContext(c.Context.Defaults)
 	r.parameters = cloneParameters(c.Parameters)
 	r.stateLock, err = localfs.Acquire(c.State.Path + ".lock")
@@ -244,6 +248,7 @@ func (r *Runtime) PatchContext(ctx context.Context, patch protocol.ContextPatch)
 	}
 	previous := r.context
 	r.context = next
+	r.invalidateControls()
 	if previous.Project != next.Project {
 		r.bus.Emit(event.ProjectChanged, map[string]string{"project": next.Project})
 	}
