@@ -30,6 +30,8 @@ type prepared struct {
 	timeout      time.Duration
 	command      *provider.Command
 	agent        *provider.AgentRequest
+	scpi         *provider.SCPIRequest
+	generation   uint64
 	gitOperation string
 	steps        []*prepared
 	stopOnError  bool
@@ -118,6 +120,16 @@ func (r *Runtime) prepareAction(ctx context.Context, name string, args map[strin
 	}
 	var plan *prepared
 	switch definition.Type {
+	case "scpi":
+		*remaining--
+		if *remaining < 0 {
+			return nil, fault.New(protocol.InvalidConfig, "Workflow exceeds 1024 expanded actions.")
+		}
+		value := values["value"]
+		if definition.Parameter != "" {
+			value = r.parameters[definition.Parameter].Value
+		}
+		plan = &prepared{name: name, risk: provider.SCPIRisk(definition.Operation), generation: r.generation, scpi: &provider.SCPIRequest{Device: definition.Device, Operation: definition.Operation, Channel: definition.Channel, Value: value}}
 	case "workflow":
 		plan, err = r.prepareWorkflow(ctx, definition.Workflow, remaining)
 		if err != nil {
@@ -292,7 +304,9 @@ func (r *Runtime) execute(ctx context.Context, jobID string, plan *prepared, bud
 		}
 		r.bus.Emit(event.ActionFinished, map[string]any{"action_id": actionID, "job_id": jobID, "action": plan.name, "status": result.Status})
 	}()
-	if plan.agent != nil {
+	if plan.scpi != nil {
+		result, err = r.scpi.Run(ctx, *plan.scpi, budget, func(observation provider.SCPIObservation) { r.observeInstrument(plan.generation, observation) })
+	} else if plan.agent != nil {
 		result, err = r.agent.Run(ctx, *plan.agent, budget, func(partial action.Result) { r.jobs.Update(jobID, partial) })
 	} else if plan.command != nil {
 		result, err = r.runner.Run(ctx, *plan.command, budget)

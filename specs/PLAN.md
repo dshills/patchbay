@@ -2,7 +2,7 @@
 
 **Source:** [SPEC.md](SPEC.md), version 0.1, dated 2026-09-27
 
-**Plan status:** Phases 0–2 complete. Phase 3 implementation and simulator verification are complete; its physical hardware exit gate remains pending. See [Phase 3 evidence](reviews/PHASE3.md). Phase 4 implementation and verification are complete; see [Phase 4 evidence and Prism review](reviews/PHASE4.md). Phases 5–6 remain planned.
+**Plan status:** Phases 0–2 complete. Phase 3 implementation and simulator verification are complete; its physical hardware exit gate remains pending. See [Phase 3 evidence](reviews/PHASE3.md). Phase 4 implementation and verification are complete; see [Phase 4 evidence and Prism review](reviews/PHASE4.md). Phase 5 implementation and simulator verification are complete; physical DG812/MHO954 validation remains pending. See [Phase 5 evidence](reviews/PHASE5.md). Phase 6 remains planned.
 
 **Planning baseline:** Before Phase 0, the repository contained `specs/SPEC.md` and no application code, build configuration, or tests.
 
@@ -415,14 +415,14 @@ Follow the published sequence by default. Phases 4 and 5 must remain usable thro
 
 **Depends on:** Stable provider, parameter, permission, and job contracts; Phase 3 is needed only for physical bench controls.
 
-- [ ] Define device configuration, capability/health models, per-device safe limits, and supported transport settings. Begin with configured TCP SCPI transport.
-- [ ] Implement bounded dial/read/write timeouts, message framing, response-size limits, cancellation, connection cleanup, and serialized access per instrument.
-- [ ] Build a fake SCPI server before connecting real equipment; keep transport and instrument-specific command mappings separate.
-- [ ] Add semantic operations for generator frequency/amplitude/output and scope capture with validated units, ranges, output state, and structured results.
-- [ ] Model desired and observed parameter values separately where hardware may reject or round settings. Surface synchronization failure rather than showing an unconfirmed value as applied.
-- [ ] Define safe reconnect and shutdown behavior, including explicit output-state policy. Do not automatically re-enable output after reconnect; do not blindly retry commands with side effects.
-- [ ] Use stronger permissions for hazardous output changes and optional raw SCPI. Ordinary clients receive semantic operations, not raw command authority.
-- [ ] Add sequential bench workflows using existing workflow semantics and safe examples with instrument-specific limits.
+- [x] Define device configuration, capability/health models, per-device safe limits, and supported transport settings. Begin with configured TCP SCPI transport.
+- [x] Implement bounded dial/read/write timeouts, message framing, response-size limits, cancellation, connection cleanup, and serialized access per instrument.
+- [x] Build a fake SCPI server before connecting real equipment; keep transport and instrument-specific command mappings separate.
+- [x] Add semantic operations for generator frequency/amplitude/output and scope capture with validated units, ranges, output state, and structured results.
+- [x] Model desired and observed parameter values separately where hardware may reject or round settings. Surface synchronization failure rather than showing an unconfirmed value as applied.
+- [x] Define safe reconnect and shutdown behavior, including explicit output-state policy. Do not automatically re-enable output after reconnect; do not blindly retry commands with side effects.
+- [x] Use stronger permissions for hazardous output changes and optional raw SCPI. Ordinary clients receive semantic operations, not raw command authority.
+- [x] Add sequential bench workflows using existing workflow semantics and safe examples with instrument-specific limits.
 
 **Verification:** Simulator tests for partial reads, framing, delayed/malformed responses, disconnect/reconnect, concurrent requests, units/ranges, cancellation, rejected settings, and output safety. Conduct controlled hardware checks against explicitly supported instruments and record model/firmware assumptions.
 

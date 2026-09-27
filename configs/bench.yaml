@@ -1,0 +1,66 @@
+version: 1
+server: {socket: ~/.deckd/bench.sock}
+state: {path: ~/.deckd/bench-state.json}
+security: {allow_dangerous_actions: false}
+devices:
+  generator:
+    provider: scpi
+    transport: tcp
+    profile: rigol-dg800
+    model: DG812
+    # Replace with the DG812 USB-LAN adapter's configured SCPI TCP endpoint.
+    address: 127.0.0.1:5501
+    shutdown: preserve
+    limits:
+      frequency_min_hz: 1
+      frequency_max_hz: 1000000
+      amplitude_min_vpp: 0.01
+      amplitude_max_vpp: 1
+  scope:
+    provider: scpi
+    transport: tcp
+    profile: rigol-mho900
+    model: MHO954
+    address: 127.0.0.1:5502
+parameters:
+  bench.frequency:
+    type: float
+    value: 1000
+    min: 1
+    max: 1000000
+    step: 100
+    unit: Hz
+    persistent: true
+    instrument: {device: generator, channel: 1, operation: generator.set_frequency}
+  bench.amplitude:
+    type: float
+    value: 0.1
+    min: 0.01
+    max: 1
+    step: 0.01
+    unit: Vpp
+    persistent: true
+    instrument: {device: generator, channel: 1, operation: generator.set_amplitude}
+actions:
+  generator.inspect: {type: scpi, device: generator, channel: 1, operation: generator.inspect}
+  generator.frequency: {type: scpi, parameter: bench.frequency}
+  generator.amplitude: {type: scpi, parameter: bench.amplitude}
+  generator.output: {type: scpi, device: generator, channel: 1, operation: generator.output}
+  generator.off: {type: scpi, device: generator, channel: 1, operation: generator.disable}
+  generator.off2: {type: scpi, device: generator, channel: 2, operation: generator.disable}
+  scope.capture: {type: scpi, device: scope, channel: 1, operation: scope.capture}
+workflows:
+  bench.prepare:
+    steps:
+      - {action: generator.off}
+      - {action: generator.off2}
+      - {action: generator.frequency}
+      - {action: generator.amplitude}
+  bench.capture:
+    steps:
+      - {action: generator.inspect}
+      - {action: scope.capture}
+bindings:
+  - control: bench.frequency
+    rotate: {parameter: bench.frequency}
+    press: {action: generator.frequency}

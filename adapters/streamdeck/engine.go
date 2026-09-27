@@ -413,6 +413,7 @@ func (e *Engine) Poll(ctx context.Context) error {
 
 func (e *Engine) frame(c *control, now time.Time) Frame {
 	f := Frame{Title: c.label, State: "idle", Context: clean(strings.TrimSpace(e.snapshot.Context.Project+" / "+e.snapshot.Context.Mode), 28)}
+	instrument := false
 	if f.Title == "" {
 		f.Title = c.ref.Control
 	}
@@ -447,6 +448,14 @@ func (e *Engine) frame(c *control, now time.Time) Frame {
 				f.Title = t.Parameter.Name
 			}
 			f.Value = clean(fmt.Sprint(t.Parameter.Value)+t.Parameter.Unit, 28)
+			if s := t.Parameter.Synchronization; s != nil {
+				instrument = true
+				f.Value = "Want " + f.Value
+				f.Detail = clean("Read "+fmt.Sprint(s.Observed)+" "+s.Status, 40)
+				if s.Status != "matched" {
+					f.State = "warning"
+				}
+			}
 		}
 		if !t.Enabled {
 			f.State = "disabled"
@@ -454,7 +463,7 @@ func (e *Engine) frame(c *control, now time.Time) Frame {
 		}
 		break
 	}
-	if c.job.ID != "" {
+	if c.job.ID != "" && (!instrument || c.job.State != "success") {
 		f.State = c.job.State
 		if f.State == "queued" {
 			f.State = "running"

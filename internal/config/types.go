@@ -7,6 +7,7 @@ import (
 	runtimecontext "patchbay/internal/context"
 	"patchbay/internal/parameter"
 	"patchbay/internal/permission"
+	"patchbay/internal/provider"
 	"patchbay/internal/workflow"
 )
 
@@ -33,6 +34,7 @@ type Config struct {
 	Prompts     map[string]string                       `yaml:"prompts,omitempty"`
 	Agents      Agents                                  `yaml:"agents,omitempty"`
 	Conventions map[string]map[string]ConventionCommand `yaml:"conventions,omitempty"`
+	Devices     map[string]provider.SCPIDevice          `yaml:"devices,omitempty"`
 }
 
 type Agents struct {
@@ -102,6 +104,9 @@ type Action struct {
 	Prompt      string                `yaml:"prompt,omitempty"`
 	Files       []string              `yaml:"files,omitempty"`
 	Origin      string                `yaml:"-"`
+	Device      string                `yaml:"device,omitempty"`
+	Channel     int                   `yaml:"channel,omitempty"`
+	Parameter   string                `yaml:"parameter,omitempty"`
 }
 
 type Input struct {

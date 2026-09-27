@@ -251,3 +251,12 @@ Hardware and external provider accounts are unnecessary for all Phase 0 checks.
 
 The exact default commands, precedence, filesystem bounds, API behavior and
 credential setup are documented in [DEVELOPMENT.md](DEVELOPMENT.md).
+
+## Phase 5 schema additions
+
+`devices` declares explicit TCP SCPI instruments, model profiles, optional firmware
+pins, transport bounds, output shutdown policy and generator limits. `type: scpi`
+actions reference a device/operation/channel or an instrument-bound parameter.
+Parameters can add an `instrument` binding; their existing value is desired state.
+Config validation remains offline. See [SCPI.md](SCPI.md) and
+[`configs/bench.yaml`](../configs/bench.yaml) for the complete contract.

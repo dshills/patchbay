@@ -27,6 +27,10 @@ func render(value any) string {
 			}
 			line("Provider %s: %s", name, status)
 		}
+		for _, name := range slices.Sorted(maps.Keys(v.Devices)) {
+			d := v.Devices[name]
+			line("Instrument %s: %s %s at %s; shutdown=%s; %s", name, d.Profile, d.Model, d.Address, d.Shutdown, strings.Join(d.Capabilities, ", "))
+		}
 	case protocol.Context:
 		line("Project: %s", orNone(v.Project))
 		line("Mode: %s", orNone(v.Mode))
@@ -48,6 +52,9 @@ func render(value any) string {
 		}
 		for _, a := range v.Actions {
 			line("%s\t%s\t%s", a.Name, a.Type, a.Safety)
+			if d := a.Instrument; d != nil {
+				line("  instrument: %s channel=%d operation=%s parameter=%s unit=%s", d.Device, d.Channel, d.Operation, d.Parameter, d.Unit)
+			}
 			if a.Origin != "" {
 				line("  origin: %s", a.Origin)
 			}
@@ -128,6 +135,17 @@ func orNone(value string) string {
 	return value
 }
 func renderParameter(out *strings.Builder, p protocol.Parameter) {
+	if s := p.Synchronization; s != nil {
+		_, _ = fmt.Fprintf(out, "%s: desired=%v %s; observed=%v; synchronization=%s", p.Name, s.Desired, p.Unit, s.Observed, s.Status)
+		if s.ObservedAt != nil {
+			_, _ = fmt.Fprintf(out, "; observed_at=%s", s.ObservedAt.Format(time.RFC3339))
+		}
+		if s.ErrorCode != "" {
+			_, _ = fmt.Fprintf(out, "; error=%s", s.ErrorCode)
+		}
+		out.WriteByte('\n')
+		return
+	}
 	unit := ""
 	if p.Unit != "" {
 		unit = " " + p.Unit
@@ -148,6 +166,14 @@ func renderParameter(out *strings.Builder, p protocol.Parameter) {
 	out.WriteByte('\n')
 }
 func renderData(out *strings.Builder, data map[string]any, indent string) {
+	if observed, ok := data["observed"].(map[string]any); ok {
+		for _, name := range slices.Sorted(maps.Keys(observed)) {
+			_, _ = fmt.Fprintf(out, "%s%s: observed=%v\n", indent, name, observed[name])
+		}
+	}
+	if wave, ok := data["waveform"].(map[string]any); ok {
+		_, _ = fmt.Fprintf(out, "%sWaveform: channel=%v points=%v x_increment=%v s (samples in JSON output)\n", indent, wave["channel"], wave["points"], wave["x_increment_s"])
+	}
 	structured := false
 	if entries, ok := data["git_status"].([]any); ok {
 		structured = true

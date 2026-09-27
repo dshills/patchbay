@@ -231,3 +231,24 @@ records (`commit`, `subject`). `structured_incomplete:true` means a record could
 not be completed or the 1000-record cap was reached. The CLI renders these
 records without NUL delimiters. Existing Git argument and mutation policies are
 unchanged. See [DEVELOPMENT.md](DEVELOPMENT.md) for limits and examples.
+
+## Phase 5 instrument metadata and results
+
+The existing routes also support configured SCPI operations. `status.devices`
+maps names to `profile`, `model`, optional configured `firmware`, `address`,
+`shutdown`, and semantic `capabilities`. `providers["scpi:<name>"]` reports the
+last operation's health, initially unavailable with `not_checked`.
+
+SCPI action descriptors add `instrument` with `device`, `operation`, `channel`,
+optional bound `parameter`, and numeric `unit`. Direct setting actions declare
+one generated typed `value` input; bound actions use the parameter's desired
+value pinned at admission. Normal job, confirmation, cancellation and workflow
+routes apply. There is no raw-command endpoint.
+
+Instrument parameter and control snapshots add `instrument` and
+`synchronization`; `value` continues to mean desired state. Synchronization
+contains `status`, `desired`, optional `observed`, `observed_at`, and `error_code`.
+Instrument `parameter.changed` events include the same synchronization object.
+Generator results include semantic `observed` properties; captures include a
+bounded `waveform` object with voltage samples and scaling metadata. See
+[SCPI.md](SCPI.md) for state meanings, limits and safety requirements.

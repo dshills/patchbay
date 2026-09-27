@@ -9,7 +9,9 @@ import (
 	"patchbay/internal/config"
 	"patchbay/internal/event"
 	"patchbay/internal/fault"
+	"patchbay/internal/parameter"
 	"patchbay/internal/permission"
+	"patchbay/internal/provider"
 	"patchbay/pkg/protocol"
 )
 
@@ -33,6 +35,9 @@ func (r *Runtime) Reload(ctx context.Context) (uint64, error) {
 		return 0, err
 	}
 	old := r.cfg
+	if !reflect.DeepEqual(candidate.Devices, old.Devices) {
+		return 0, fault.New(protocol.InvalidConfig, "Instrument configuration changes require a restart.")
+	}
 	if candidate.Server.Socket != old.Server.Socket || candidate.Server.ShutdownGrace != old.Server.ShutdownGrace || candidate.State != old.State || candidate.Events != old.Events {
 		return 0, fault.New(protocol.InvalidConfig, "Socket, state, shutdown, or subscription settings require a restart.")
 	}
@@ -65,6 +70,7 @@ func (r *Runtime) Reload(ctx context.Context) (uint64, error) {
 	previousContext, previousParameters := r.context, r.parameters
 	r.cfg, r.registries, r.context, r.parameters = candidate, registries, ctxState, parameters
 	r.generation++
+	r.synchronization = map[string]parameter.Synchronization{}
 	r.invalidateControls()
 	r.jobs.Reconfigure(jobLimits(candidate))
 	r.bus.Emit(event.ConfigReloaded, map[string]uint64{"generation": r.generation})
@@ -98,6 +104,9 @@ func (r *Runtime) actionRisk(name string, seen map[string]bool) permission.Permi
 		return permission.Dangerous
 	}
 	risk := a.Safety
+	if a.Type == "scpi" {
+		risk = permission.Strongest(risk, provider.SCPIRisk(a.Operation))
+	}
 	if a.Type == "agent" {
 		risk = permission.Strongest(risk, permission.Confirm)
 	}
@@ -143,6 +152,10 @@ func (r *Runtime) actionMetadata(name string, a config.Action) protocol.Action {
 		inputs[key] = protocol.Input{Type: string(input.Type), Required: input.Required, Default: input.Default, Min: input.Min, Max: input.Max, Enum: slices.Clone(input.Enum)}
 	}
 	metadata := protocol.Action{Name: name, Type: a.Type, Safety: string(r.actionRisk(name, map[string]bool{})), Inputs: inputs, Origin: a.Origin}
+	if a.Type == "scpi" {
+		_, unit, _, _ := r.cfg.Devices[a.Device].ValueSpec(a.Operation)
+		metadata.Instrument = &protocol.InstrumentAction{Device: a.Device, Operation: a.Operation, Channel: a.Channel, Parameter: a.Parameter, Unit: unit}
+	}
 	if a.Type == "agent" {
 		metadata.Agent = &protocol.AgentCapability{Provider: a.Provider, Prompt: a.Prompt, Model: r.cfg.Agents.Codex.Model, Files: append([]string{}, a.Files...), Network: "api.openai.com", Tools: []string{}}
 	}

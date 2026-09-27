@@ -125,12 +125,36 @@ type Input struct {
 	Enum     []string `json:"enum,omitempty"`
 }
 type Action struct {
-	Name   string           `json:"name"`
-	Type   string           `json:"type"`
-	Safety string           `json:"safety"`
-	Inputs map[string]Input `json:"inputs,omitempty"`
-	Origin string           `json:"origin,omitempty"`
-	Agent  *AgentCapability `json:"agent,omitempty"`
+	Name       string            `json:"name"`
+	Type       string            `json:"type"`
+	Safety     string            `json:"safety"`
+	Inputs     map[string]Input  `json:"inputs,omitempty"`
+	Origin     string            `json:"origin,omitempty"`
+	Agent      *AgentCapability  `json:"agent,omitempty"`
+	Instrument *InstrumentAction `json:"instrument,omitempty"`
+}
+
+type InstrumentAction struct {
+	Device    string `json:"device"`
+	Operation string `json:"operation"`
+	Channel   int    `json:"channel"`
+	Parameter string `json:"parameter,omitempty"`
+	Unit      string `json:"unit,omitempty"`
+}
+type InstrumentStatus struct {
+	Profile      string   `json:"profile"`
+	Model        string   `json:"model"`
+	Firmware     string   `json:"firmware,omitempty"`
+	Address      string   `json:"address"`
+	Shutdown     string   `json:"shutdown"`
+	Capabilities []string `json:"capabilities"`
+}
+type ParameterSynchronization struct {
+	Status     string     `json:"status"`
+	Desired    any        `json:"desired"`
+	Observed   any        `json:"observed,omitempty"`
+	ObservedAt *time.Time `json:"observed_at,omitempty"`
+	ErrorCode  string     `json:"error_code,omitempty"`
 }
 
 type AgentCapability struct {
@@ -190,15 +214,17 @@ type InvocationResponse struct {
 }
 
 type Parameter struct {
-	Name       string   `json:"name"`
-	Type       string   `json:"type"`
-	Value      any      `json:"value"`
-	Min        any      `json:"min,omitempty"`
-	Max        any      `json:"max,omitempty"`
-	Step       any      `json:"step,omitempty"`
-	Enum       []string `json:"enum,omitempty"`
-	Unit       string   `json:"unit,omitempty"`
-	Persistent bool     `json:"persistent"`
+	Instrument      *InstrumentAction         `json:"instrument,omitempty"`
+	Synchronization *ParameterSynchronization `json:"synchronization,omitempty"`
+	Name            string                    `json:"name"`
+	Type            string                    `json:"type"`
+	Value           any                       `json:"value"`
+	Min             any                       `json:"min,omitempty"`
+	Max             any                       `json:"max,omitempty"`
+	Step            any                       `json:"step,omitempty"`
+	Enum            []string                  `json:"enum,omitempty"`
+	Unit            string                    `json:"unit,omitempty"`
+	Persistent      bool                      `json:"persistent"`
 }
 type ParameterList struct {
 	Parameters []Parameter `json:"parameters"`
@@ -233,12 +259,13 @@ type ProviderHealth struct {
 	Code      string `json:"code,omitempty"`
 }
 type Status struct {
-	Version     string                    `json:"version"`
-	UptimeMS    int64                     `json:"uptime_ms"`
-	ConfigPath  string                    `json:"config_path"`
-	Project     string                    `json:"project,omitempty"`
-	Mode        string                    `json:"mode,omitempty"`
-	RunningJobs int                       `json:"running_jobs"`
-	Generation  uint64                    `json:"generation"`
-	Providers   map[string]ProviderHealth `json:"providers"`
+	Devices     map[string]InstrumentStatus `json:"devices,omitempty"`
+	Version     string                      `json:"version"`
+	UptimeMS    int64                       `json:"uptime_ms"`
+	ConfigPath  string                      `json:"config_path"`
+	Project     string                      `json:"project,omitempty"`
+	Mode        string                      `json:"mode,omitempty"`
+	RunningJobs int                         `json:"running_jobs"`
+	Generation  uint64                      `json:"generation"`
+	Providers   map[string]ProviderHealth   `json:"providers"`
 }

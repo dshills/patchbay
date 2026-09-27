@@ -13,7 +13,14 @@ func wireContext(value runtimecontext.RuntimeContext) protocol.Context {
 	return protocol.Context{Project: value.Project, Mode: value.Mode, Values: value.Values}
 }
 func wireParameter(value parameter.Parameter) protocol.Parameter {
-	return protocol.Parameter{Name: value.Name, Type: string(value.Type), Value: value.Value, Min: value.Min, Max: value.Max, Step: value.Step, Enum: value.Enum, Unit: value.Unit, Persistent: value.Persistent}
+	p := protocol.Parameter{Name: value.Name, Type: string(value.Type), Value: value.Value, Min: value.Min, Max: value.Max, Step: value.Step, Enum: value.Enum, Unit: value.Unit, Persistent: value.Persistent}
+	if b := value.Instrument; b != nil {
+		p.Instrument = &protocol.InstrumentAction{Device: b.Device, Operation: b.Operation, Channel: b.Channel}
+	}
+	if s := value.Synchronization; s != nil {
+		p.Synchronization = &protocol.ParameterSynchronization{Status: s.Status, Desired: s.Desired, Observed: s.Observed, ObservedAt: s.ObservedAt, ErrorCode: s.ErrorCode}
+	}
+	return p
 }
 func wireParameters(values []parameter.Parameter) protocol.ParameterList {
 	result := protocol.ParameterList{Parameters: make([]protocol.Parameter, 0, len(values))}

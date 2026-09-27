@@ -622,3 +622,16 @@ jobs. Project file contents are read when execution starts. Provider credentials
 remain in the daemon environment. Deterministic tests need no external service;
 the separately gated real-provider smoke test is optional. Details and limits
 are in [DEVELOPMENT.md](DEVELOPMENT.md) and the [Phase 4 report](reviews/PHASE4.md).
+
+## 43. Phase 5 instrument integration decision
+
+The first configured TCP SCPI profiles target the user's Rigol DG812 generator
+and MHO954 oscilloscope. Semantic generator settings/output and stopped scope
+capture share the existing jobs, permissions and workflow paths. Desired
+parameters are staged independently from transient readback; explicit actions
+apply values and surface rounding or failure. Identity, units, range, waveform
+state, time and response limits are checked. No discovery, raw commands, automatic
+output restore or side-effect retries are provided. Stateful per-device
+serialization survives action reloads; changing device definitions requires
+restart. See [SCPI.md](SCPI.md) for the recorded design, command references,
+shutdown behavior and the pending physical model/firmware verification matrix.

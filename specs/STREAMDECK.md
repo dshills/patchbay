@@ -177,3 +177,11 @@ Simulator and native-binary results are recorded in
 [the Phase 3 report](reviews/PHASE3.md). **Physical smoke checks remain pending.**
 The Phase 3 hardware exit gate cannot be claimed from simulation or vendor schema
 validation. Tests and the headless CLI remain usable without a device.
+
+## Instrument dials
+
+Phase 5 instrument parameters show `Want` for the desired value and `Read` for
+readback plus synchronization state. Unsynchronized values show a warning, even
+following a successful older job. Rotation stages the desired value; an explicitly
+bound press action applies it under the usual confirmation policy. Changing the
+desired value invalidates an outstanding confirmation. See [SCPI.md](SCPI.md).

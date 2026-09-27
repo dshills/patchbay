@@ -221,6 +221,10 @@ func (v *validator) shape(n *yaml.Node, t reflect.Type, path string, depth int) 
 		if n.Kind != yaml.ScalarNode || n.Tag != "!!int" {
 			return v.fail(path, "expected an integer")
 		}
+	case reflect.Float64:
+		if n.Kind != yaml.ScalarNode || (n.Tag != "!!int" && n.Tag != "!!float") {
+			return v.fail(path, "expected a number")
+		}
 	default:
 		return v.fail(path, "unsupported schema type")
 	}

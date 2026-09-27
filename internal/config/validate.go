@@ -67,7 +67,7 @@ func (v *validator) normalize(c *Config, baseDir, home string) error {
 		path  string
 		names []string
 	}{
-		{"projects", keys(c.Projects)}, {"actions", keys(c.Actions)}, {"workflows", keys(c.Workflows)}, {"parameters", keys(c.Parameters)}, {"prompts", keys(c.Prompts)},
+		{"projects", keys(c.Projects)}, {"actions", keys(c.Actions)}, {"workflows", keys(c.Workflows)}, {"parameters", keys(c.Parameters)}, {"prompts", keys(c.Prompts)}, {"devices", keys(c.Devices)},
 	} {
 		for _, name := range group.names {
 			if !namePattern.MatchString(name) {
@@ -78,12 +78,18 @@ func (v *validator) normalize(c *Config, baseDir, home string) error {
 	if err := v.developerConfig(c, baseDir, home); err != nil {
 		return err
 	}
+	if err := v.scpiDevices(c); err != nil {
+		return err
+	}
 	for _, name := range keys(c.Parameters) {
 		p := c.Parameters[name]
 		if err := p.Normalize(); err != nil {
 			return v.fail("parameters."+name, err.Error())
 		}
 		c.Parameters[name] = p
+	}
+	if err := v.scpiParameters(c); err != nil {
+		return err
 	}
 	for _, name := range keys(c.Actions) {
 		a := c.Actions[name]
@@ -214,6 +220,14 @@ func (v *validator) environment(path string, environment map[string]string, inpu
 }
 
 func (v *validator) action(path string, a *Action, c *Config, baseDir, home string) error {
+	if a.Type != "scpi" && (a.Device != "" || a.Channel != 0 || a.Parameter != "") {
+		return v.fail(path, "device, channel and parameter are SCPI-only fields")
+	}
+	if a.Type == "scpi" {
+		if err := v.scpiAction(path, a, c); err != nil {
+			return err
+		}
+	}
 	if a.Type != "agent" && (a.Provider != "" || a.Prompt != "" || len(a.Files) != 0) {
 		return v.fail(path, "provider, prompt, and files are agent-only fields")
 	}
@@ -247,6 +261,11 @@ func (v *validator) action(path string, a *Action, c *Config, baseDir, home stri
 		a.Inputs[key] = input
 	}
 	switch a.Type {
+	case "scpi":
+		a.Safety = permission.Strongest(a.Safety, provider.SCPIRisk(a.Operation))
+		if a.Timeout == "" {
+			a.Timeout = "15s"
+		}
 	case "agent":
 		prompt, exists := c.Prompts[a.Prompt]
 		if a.Provider != "codex" || !exists || c.Agents.Codex.Model == "" {
@@ -340,7 +359,7 @@ func (v *validator) action(path string, a *Action, c *Config, baseDir, home stri
 			return v.fail(path, "workflow accepts workflow, safety, and timeout only")
 		}
 	default:
-		return v.fail(path+".type", "supported providers are exec, open, git, workflow, and agent")
+		return v.fail(path+".type", "supported providers are exec, open, git, workflow, agent, and scpi")
 	}
 	if a.Cwd == "" && (a.Type == "exec" || a.Type == "git") {
 		a.Cwd = baseDir

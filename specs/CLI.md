@@ -95,3 +95,12 @@ Responses are size-bounded and JSON numbers retain precision. Redirects are
 rejected and transport never falls back to TCP or an HTTP proxy. Large job lists
 can exceed the client response limit; reduce history/output retention, inspect a
 single job, or explicitly increase the bounded client limit.
+
+## Instrument actions
+
+SCPI actions use the same `action run`, `workflow run`, `job show/cancel`,
+confirmation and typed argument commands. `status` lists profiles and last-use
+health; `action list` includes instrument routing. Instrument `param set` stages
+only a desired value; a bound action explicitly applies it. Parameter output
+labels desired, observed and synchronization state. Scope captures show a compact
+human summary and bounded samples in JSON. See [SCPI bench setup](SCPI.md).

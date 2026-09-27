@@ -57,6 +57,8 @@ type Runtime struct {
 	runner          provider.Runner
 	opener          string
 	agent           provider.Agent
+	scpi            *provider.SCPI
+	synchronization map[string]parameter.Synchronization
 	log             *logging.Logger
 }
 
@@ -98,6 +100,8 @@ func NewConfigured(path string, c *config.Config, options Options) (*Runtime, er
 	}
 	r := &Runtime{cfg: c, registries: registries, path: path, started: time.Now(), generation: 1, instance: identity.New(), controlRevision: 1, runner: options.Runner, opener: options.Opener, log: logging.New(options.Log)}
 	r.agent = options.Agent
+	r.scpi = provider.NewSCPI(c.Devices)
+	r.synchronization = map[string]parameter.Synchronization{}
 	r.context = cloneContext(c.Context.Defaults)
 	r.parameters = cloneParameters(c.Parameters)
 	r.stateLock, err = localfs.Acquire(c.State.Path + ".lock")
@@ -177,6 +181,10 @@ func cloneParameters(values map[string]parameter.Definition) map[string]paramete
 	copy := make(map[string]parameter.Definition, len(values))
 	for key, value := range values {
 		value.Enum = slices.Clone(value.Enum)
+		if value.Instrument != nil {
+			binding := *value.Instrument
+			value.Instrument = &binding
+		}
 		copy[key] = value
 	}
 	return copy
@@ -269,7 +277,7 @@ func (r *Runtime) Parameters() []parameter.Parameter {
 	for _, name := range slices.Sorted(maps.Keys(r.parameters)) {
 		p := r.parameters[name]
 		p.Enum = slices.Clone(p.Enum)
-		list = append(list, parameter.Parameter{Name: name, Definition: p})
+		list = append(list, r.parameterSnapshot(name, p))
 	}
 	return list
 }
@@ -281,7 +289,7 @@ func (r *Runtime) Parameter(name string) (parameter.Parameter, error) {
 		return parameter.Parameter{}, fault.New(protocol.NotFound, "Parameter not found.")
 	}
 	p.Enum = slices.Clone(p.Enum)
-	return parameter.Parameter{Name: name, Definition: p}, nil
+	return r.parameterSnapshot(name, p), nil
 }
 func (r *Runtime) SetParameter(ctx context.Context, name string, value any) (parameter.Parameter, error) {
 	r.mu.Lock()
@@ -315,10 +323,20 @@ func (r *Runtime) setParameter(name string, value any, delta *int64) (parameter.
 				return parameter.Parameter{}, fault.New(protocol.InvalidRequest, "Persistent state is too large.")
 			}
 		}
-		r.bus.Emit(event.ParameterChanged, map[string]any{"name": name, "value": value})
+		change := map[string]any{"name": name, "value": value}
+		if p.Instrument != nil {
+			sync := r.synchronization[name]
+			sync.Status = "pending"
+			sync.Desired = value
+			sync.ErrorCode = ""
+			r.synchronization[name] = sync
+			change["synchronization"] = sync
+			r.invalidateControls()
+		}
+		r.bus.Emit(event.ParameterChanged, change)
 	}
 	p.Enum = slices.Clone(p.Enum)
-	return parameter.Parameter{Name: name, Definition: p}, nil
+	return r.parameterSnapshot(name, p), nil
 }
 
 func (r *Runtime) Projects() []protocol.Project {
@@ -341,6 +359,12 @@ func (r *Runtime) Status() protocol.Status {
 		agentHealth = provider.Health{Code: "not_configured"}
 	}
 	providers["codex"] = protocol.ProviderHealth{Available: agentHealth.Available, Code: agentHealth.Code}
+	devices := map[string]protocol.InstrumentStatus{}
+	for id, d := range r.cfg.Devices {
+		h := r.scpi.Health(id)
+		providers["scpi:"+id] = protocol.ProviderHealth{Available: h.Available, Code: h.Code}
+		devices[id] = protocol.InstrumentStatus{Profile: d.Profile, Model: d.Model, Firmware: d.Firmware, Address: d.Address, Shutdown: d.Shutdown, Capabilities: scpiCapabilities(d)}
+	}
 	for name, command := range map[string]string{"git": "git", "open": r.opener} {
 		_, err := provider.ResolveExecutable(command, filepath.Dir(r.path), os.Environ())
 		health := protocol.ProviderHealth{Available: err == nil}
@@ -349,7 +373,7 @@ func (r *Runtime) Status() protocol.Status {
 		}
 		providers[name] = health
 	}
-	return protocol.Status{Version: version.Current().Version, UptimeMS: time.Since(r.started).Milliseconds(), ConfigPath: r.path, Project: r.context.Project, Mode: r.context.Mode, RunningJobs: r.jobs.Running(), Generation: r.generation, Providers: providers}
+	return protocol.Status{Version: version.Current().Version, UptimeMS: time.Since(r.started).Milliseconds(), ConfigPath: r.path, Project: r.context.Project, Mode: r.context.Mode, RunningJobs: r.jobs.Running(), Generation: r.generation, Providers: providers, Devices: devices}
 }
 
 func (r *Runtime) Close(ctx context.Context) error {
@@ -357,6 +381,7 @@ func (r *Runtime) Close(ctx context.Context) error {
 	r.closed = true
 	r.mu.Unlock()
 	jobErr := r.jobs.Shutdown(ctx)
+	scpiErr := r.scpi.Close(ctx)
 	if closer, ok := r.agent.(io.Closer); ok {
 		_ = closer.Close()
 	}
@@ -367,5 +392,5 @@ func (r *Runtime) Close(ctx context.Context) error {
 	default:
 	}
 	r.bus.Close()
-	return errors.Join(jobErr, stateErr)
+	return errors.Join(jobErr, scpiErr, stateErr)
 }

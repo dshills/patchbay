@@ -7,6 +7,7 @@ import (
 	"errors"
 	"math"
 	"strconv"
+	"time"
 )
 
 type Type string
@@ -22,17 +23,32 @@ const (
 type Parameter struct {
 	Name string `json:"name"`
 	Definition
+	Synchronization *Synchronization `json:"synchronization,omitempty"`
+}
+
+type Instrument struct {
+	Device    string `json:"device" yaml:"device"`
+	Operation string `json:"operation" yaml:"operation"`
+	Channel   int    `json:"channel" yaml:"channel"`
+}
+type Synchronization struct {
+	Status     string     `json:"status"`
+	Desired    any        `json:"desired"`
+	Observed   any        `json:"observed,omitempty"`
+	ObservedAt *time.Time `json:"observed_at,omitempty"`
+	ErrorCode  string     `json:"error_code,omitempty"`
 }
 
 type Definition struct {
-	Type       Type     `json:"type" yaml:"type"`
-	Value      any      `json:"value" yaml:"value"`
-	Min        any      `json:"min,omitempty" yaml:"min,omitempty"`
-	Max        any      `json:"max,omitempty" yaml:"max,omitempty"`
-	Step       any      `json:"step,omitempty" yaml:"step,omitempty"`
-	Enum       []string `json:"enum,omitempty" yaml:"enum,omitempty"`
-	Unit       string   `json:"unit,omitempty" yaml:"unit,omitempty"`
-	Persistent bool     `json:"persistent" yaml:"persistent,omitempty"`
+	Type       Type        `json:"type" yaml:"type"`
+	Value      any         `json:"value" yaml:"value"`
+	Min        any         `json:"min,omitempty" yaml:"min,omitempty"`
+	Max        any         `json:"max,omitempty" yaml:"max,omitempty"`
+	Step       any         `json:"step,omitempty" yaml:"step,omitempty"`
+	Enum       []string    `json:"enum,omitempty" yaml:"enum,omitempty"`
+	Unit       string      `json:"unit,omitempty" yaml:"unit,omitempty"`
+	Persistent bool        `json:"persistent" yaml:"persistent,omitempty"`
+	Instrument *Instrument `json:"instrument,omitempty" yaml:"instrument,omitempty"`
 }
 
 // Normalize validates metadata and returns canonical int64/float64 scalar values.

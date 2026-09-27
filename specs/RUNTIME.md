@@ -12,10 +12,11 @@ before implementation and refined during validation.
   limited to 1024 action/workflow nodes, in addition to the 32-level depth limit.
 - Exec, Git, and open providers are stateless. Prepared jobs pin their commands,
   environment, policy, context, and output budget; no mutable provider resource
-  needs retirement on reload. Future stateful providers must add that lifecycle.
+  needs retirement on reload. Phase 5 SCPI owns per-device serialization and
+  health; device changes require restart and actions retain that shared manager.
 - Reload supports definitions, security, defaults, parameters, bindings, worker
   concurrency, queue/history/output limits, and HTTP body limits. Socket path,
-  state path/flush interval, shutdown grace, and subscriber capacity require a
+  state path/flush interval, shutdown grace, subscriber capacity, and SCPI device definitions require a
   restart. Changing them rejects the whole candidate and preserves active state.
 - Process cancellation kills the dedicated process group immediately and reaps
   its child. Pipe draining has a 250 ms bound. Commands that deliberately detach

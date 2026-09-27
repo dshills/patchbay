@@ -25,6 +25,7 @@ jobs:
       - run: python3 scripts/verify_v1.py
       - run: ./bin/deckctl config validate --config configs/streamdeck.yaml --json
       - run: ./bin/deckctl config validate --config configs/developer.yaml --json
+      - run: ./bin/deckctl config validate --config configs/bench.yaml --json
       - run: make streamdeck-verify
       - run: node --test adapters/streamdeck/inspector.test.cjs
       - run: make streamdeck-package VERSION=0.2.0 COMMIT="$(git rev-parse HEAD)" BUILD_TIME=2026-09-27T00:00:00Z

@@ -65,6 +65,11 @@ func (r *Runtime) ControlSnapshot(ctx context.Context, request protocol.ControlS
 			if target.Parameter != "" {
 				p := r.parameters[target.Parameter]
 				wire.Parameter = &protocol.Parameter{Name: target.Parameter, Type: string(p.Type), Value: p.Value, Min: p.Min, Max: p.Max, Step: p.Step, Enum: slices.Clone(p.Enum), Unit: p.Unit, Persistent: p.Persistent}
+				if p.Instrument != nil {
+					b := p.Instrument
+					wire.Parameter.Instrument = &protocol.InstrumentAction{Device: b.Device, Operation: b.Operation, Channel: b.Channel}
+					wire.Parameter.Synchronization = synchronizationWire(r.parameterSnapshot(target.Parameter, p).Synchronization)
+				}
 			} else {
 				risk := r.actionRisk(target.Action, map[string]bool{})
 				wire.Safety = string(risk)

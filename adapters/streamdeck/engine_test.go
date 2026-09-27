@@ -391,3 +391,18 @@ func TestLostAdmissionIsNotRetriedAndRemainsVisibleAfterResync(t *testing.T) {
 		t.Fatal(d.frames)
 	}
 }
+
+func TestInstrumentFrameKeepsDesiredAndObservedAfterJobSuccess(t *testing.T) {
+	e, b, d := engineFixture(t)
+	p := b.snapshot.Controls[1].Targets[Rotate].Parameter
+	p.Unit, p.Value = "Hz", float64(2000)
+	p.Synchronization = &protocol.ParameterSynchronization{Desired: float64(2000), Observed: 1999.75, Status: "different"}
+	input(t, e, d, message("Encoder", "willAppear"))
+	for _, c := range e.controls {
+		c.job = protocol.Job{ID: "old", State: "success", Action: "apply"}
+		f := e.frame(c, d.now)
+		if f.State != "warning" || !strings.Contains(f.Value, "Want 2000Hz") || !strings.Contains(f.Detail, "Read 1999.75 different") {
+			t.Fatal(f)
+		}
+	}
+}
