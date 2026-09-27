@@ -1,7 +1,11 @@
-// Package workflow defines ordered workflows; execution follows in Phase 1.
+// Package workflow defines and executes ordered, prepared workflows.
 package workflow
 
-import "patchbay/internal/action"
+import (
+	"patchbay/internal/action"
+	"patchbay/pkg/protocol"
+	"time"
+)
 
 type Workflow struct {
 	Name        string
@@ -15,8 +19,11 @@ type WorkflowStep struct {
 }
 
 type StepResult struct {
-	Index   int            `json:"index"`
-	Action  string         `json:"action"`
-	Result  *action.Result `json:"result,omitempty"`
-	Skipped bool           `json:"skipped,omitempty"`
+	Index      int             `json:"index"`
+	Action     string          `json:"action"`
+	Result     *action.Result  `json:"result,omitempty"`
+	Skipped    bool            `json:"skipped,omitempty"`
+	Error      *protocol.Error `json:"error,omitempty"`
+	StartedAt  *time.Time      `json:"started_at,omitempty"`
+	FinishedAt *time.Time      `json:"finished_at,omitempty"`
 }

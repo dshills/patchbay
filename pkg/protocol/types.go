@@ -1,5 +1,5 @@
 // Package protocol defines v1 JSON contracts. It has no dependency on daemon
-// implementation packages. HTTP handlers are introduced in Phase 1.
+// implementation packages.
 package protocol
 
 import (

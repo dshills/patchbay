@@ -5,7 +5,7 @@ import "testing"
 func TestTransitions(t *testing.T) {
 	states := []State{Queued, Running, Success, Failed, Cancelled, "invalid"}
 	allowed := map[[2]State]bool{
-		{Queued, Running}: true, {Queued, Cancelled}: true,
+		{Queued, Running}: true, {Queued, Cancelled}: true, {Queued, Failed}: true,
 		{Running, Success}: true, {Running, Failed}: true, {Running, Cancelled}: true,
 	}
 	for _, from := range states {

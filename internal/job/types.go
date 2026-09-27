@@ -3,6 +3,7 @@ package job
 
 import (
 	"patchbay/internal/action"
+	"patchbay/pkg/protocol"
 	"time"
 )
 
@@ -17,17 +18,18 @@ const (
 )
 
 func CanTransition(from, to State) bool {
-	return from == Queued && (to == Running || to == Cancelled) ||
+	return from == Queued && (to == Running || to == Cancelled || to == Failed) ||
 		from == Running && (to == Success || to == Failed || to == Cancelled)
 }
 
 type Job struct {
-	ID         string         `json:"id"`
-	Action     string         `json:"action"`
-	State      State          `json:"state"`
-	Generation uint64         `json:"generation"`
-	CreatedAt  time.Time      `json:"created_at"`
-	StartedAt  *time.Time     `json:"started_at,omitempty"`
-	FinishedAt *time.Time     `json:"finished_at,omitempty"`
-	Result     *action.Result `json:"result,omitempty"`
+	ID         string          `json:"id"`
+	Action     string          `json:"action"`
+	State      State           `json:"state"`
+	Generation uint64          `json:"generation"`
+	CreatedAt  time.Time       `json:"created_at"`
+	StartedAt  *time.Time      `json:"started_at,omitempty"`
+	FinishedAt *time.Time      `json:"finished_at,omitempty"`
+	Result     *action.Result  `json:"result,omitempty"`
+	Error      *protocol.Error `json:"error,omitempty"`
 }

@@ -1,5 +1,5 @@
 // Package parameter defines typed parameter metadata and pure value validation.
-// Synchronized mutation, rotation, and persistence belong to Phase 1.
+// Synchronized mutation and persistence are coordinated by internal/runtime.
 package parameter
 
 import (

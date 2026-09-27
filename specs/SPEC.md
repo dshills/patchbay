@@ -568,3 +568,14 @@ The delivery sequence in §33 is authoritative. Initial Git operations
 belong to the headless V1 runtime; Phase 4 refines them. Offline validation
 and version/help commands are included in the foundation; the complete
 reference CLI remains Phase 2.
+
+## 39. Headless Runtime Decisions
+
+Phase 1 is implemented as documented in [RUNTIME.md](RUNTIME.md). That document
+defines configuration generation ownership, the bounded scheduler and workflow
+expansion limit, process-group cancellation, typed Git options, restart-only
+settings, and private socket/state locking. Queue wait counts toward invocation
+timeouts; expiry before execution transitions a queued job directly to failed
+with code `timeout`. JSON request field names are case-sensitive and all explicit
+null values are rejected. Measurements and review evidence live in
+[reviews/PHASE1.md](reviews/PHASE1.md). The complete `deckctl` remains Phase 2.

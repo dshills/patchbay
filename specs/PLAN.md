@@ -202,11 +202,11 @@ Follow the published sequence by default. Phases 4 and 5 must remain usable thro
 
 **Depends on:** Phase 0 schemas and core types.
 
-- [ ] Implement project lookup and zero-or-one active selection, context defaults, updates, and defensive snapshot copies.
-- [ ] Implement all five parameter types, typed reads/writes, bounds, enums, numeric rotation, and persistent flags.
-- [ ] Implement state loading, reconciliation with configuration, dirty-state tracking, coalesced atomic writes, and shutdown flush.
-- [ ] Define the local state path and precedence: valid persisted values override configuration defaults; new values fall back to defaults.
-- [ ] Ensure state mutation remains responsive during disk writes. Report write failures and retain dirty state for bounded retry rather than silently declaring persistence successful.
+- [x] Implement project lookup and zero-or-one active selection, context defaults, updates, and defensive snapshot copies.
+- [x] Implement all five parameter types, typed reads/writes, bounds, enums, numeric rotation, and persistent flags.
+- [x] Implement state loading, reconciliation with configuration, dirty-state tracking, coalesced atomic writes, and shutdown flush.
+- [x] Define the local state path and precedence: valid persisted values override configuration defaults; new values fall back to defaults.
+- [x] Ensure state mutation remains responsive during disk writes. Report write failures and retain dirty state for bounded retry rather than silently declaring persistence successful.
 
 **Verify:** Concurrent reads/updates, copy isolation, integer/float edges, persisted/nonpersistent behavior, restart recovery, missing/corrupt state, permission failures, failed writes/rename, and interruption leaving a complete previous state file.
 
@@ -216,11 +216,11 @@ Follow the published sequence by default. Phases 4 and 5 must remain usable thro
 
 **Depends on:** Phase 0 contracts; uses state services from 1.1.
 
-- [ ] Implement subscriptions, bounded queues, cancellation/unsubscribe, overflow accounting, and explicit bus shutdown.
-- [ ] Implement the binding matcher and overlap validation using SPEC §12 precedence.
-- [ ] Route control events to semantic action requests or parameter mutations through interfaces; action dispatch can use a test fake until 1.3 is complete.
-- [ ] Derive device-independent feedback states and display values; preserve optional progress without claiming precision a provider cannot supply.
-- [ ] Publish project, context, and parameter changes after state commit. Document owners and stop paths for subscription goroutines.
+- [x] Implement subscriptions, bounded queues, cancellation/unsubscribe, overflow accounting, and explicit bus shutdown.
+- [x] Implement the binding matcher and overlap validation using SPEC §12 precedence.
+- [x] Route control events to semantic action requests or parameter mutations through interfaces; action dispatch can use a test fake until 1.3 is complete.
+- [x] Derive device-independent feedback states and display values; preserve optional progress without claiming precision a provider cannot supply.
+- [x] Publish project, context, and parameter changes after state commit. Document owners and stop paths for subscription goroutines.
 
 **Verify:** Multiple subscribers, stalled subscribers, concurrent unsubscribe/publish, full queues, ordered per-job events, ambiguous predicates, all binding tiers, unmatched controls, and simultaneous dial updates.
 
@@ -230,11 +230,11 @@ Follow the published sequence by default. Phases 4 and 5 must remain usable thro
 
 **Depends on:** 1.1 and Phase 0 action contracts.
 
-- [ ] Implement action registration with duplicate rejection and stable action discovery metadata.
-- [ ] Resolve exact names, active-project overrides, declared argument schemas, working directories, and allowlisted templates.
-- [ ] Build the prepared invocation with immutable definitions and server-owned context; reject attempts to substitute executable paths, safety flags, or raw provider operations through undeclared arguments.
-- [ ] Implement the shared permission gate for direct actions, bound events, workflow steps, and later provider/plugin entry points.
-- [ ] Add configuration generation and correlation IDs to prepared invocations and safe diagnostics.
+- [x] Implement action registration with duplicate rejection and stable action discovery metadata.
+- [x] Resolve exact names, active-project overrides, declared argument schemas, working directories, and allowlisted templates.
+- [x] Build the prepared invocation with immutable definitions and server-owned context; reject attempts to substitute executable paths, safety flags, or raw provider operations through undeclared arguments.
+- [x] Implement the shared permission gate for direct actions, bound events, workflow steps, and later provider/plugin entry points.
+- [x] Add configuration generation and correlation IDs to prepared invocations and safe diagnostics.
 
 **Verify:** Duplicate names, unknown actions, absent/invalid projects, missing template variables, argument injection attempts, all three safety classes, override classification, and confirmation isolation between requests.
 
@@ -244,14 +244,14 @@ Follow the published sequence by default. Phases 4 and 5 must remain usable thro
 
 **Depends on:** 1.3; job integration follows in 1.5.
 
-- [ ] Implement provider lifecycle and health summaries with small interfaces and deterministic cleanup.
-- [ ] Implement exec using `os/exec.CommandContext` and argument arrays. Validate command, cwd, environment, timeout, and output limits; never add implicit shell interpretation.
-- [ ] Implement macOS process cancellation with a documented process-group strategy, bounded termination grace, forced cleanup where required, and child reaping. Isolate platform-specific code.
-- [ ] Implement open using the macOS opener with separate arguments, validated file/directory targets, and an explicit supported URL scheme allowlist. Return a structured launch result.
-- [ ] Implement Git using the installed Git executable and typed semantic operations for status, diff, log, pull, push, branch, stash, and stash-pop.
-- [ ] Define the supported branch/stash suboperations and arguments. Use command-specific validation and `--` where supported; never accept an arbitrary Git subcommand string under a safe operation.
-- [ ] Mark read-only Git operations safe; require confirmation for mutations such as pull, push, branch creation/deletion, stash, and stash-pop. Disallow or separately classify stronger options such as force operations.
-- [ ] Use machine-readable Git output where available, bound diff/log output, disable interactive credential/editor prompts, and report conflicts or missing tools as structured failures.
+- [x] Implement provider lifecycle and health summaries with small interfaces and deterministic cleanup.
+- [x] Implement exec using `os/exec.CommandContext` and argument arrays. Validate command, cwd, environment, timeout, and output limits; never add implicit shell interpretation.
+- [x] Implement macOS process cancellation with a documented process-group strategy, bounded termination grace, forced cleanup where required, and child reaping. Isolate platform-specific code.
+- [x] Implement open using the macOS opener with separate arguments, validated file/directory targets, and an explicit supported URL scheme allowlist. Return a structured launch result.
+- [x] Implement Git using the installed Git executable and typed semantic operations for status, diff, log, pull, push, branch, stash, and stash-pop.
+- [x] Define the supported branch/stash suboperations and arguments. Use command-specific validation and `--` where supported; never accept an arbitrary Git subcommand string under a safe operation.
+- [x] Mark read-only Git operations safe; require confirmation for mutations such as pull, push, branch creation/deletion, stash, and stash-pop. Disallow or separately classify stronger options such as force operations.
+- [x] Use machine-readable Git output where available, bound diff/log output, disable interactive credential/editor prompts, and report conflicts or missing tools as structured failures.
 
 **Verify:** Use a compiled helper process for exit codes, large output, timeouts, cancellation, and descendant cleanup. Inject an opener fake. Exercise Git in temporary repositories with local bare remotes, covering each named operation, dirty trees, conflicts, invalid refs, missing executables, and cancellation. Require no external network or user repository mutation.
 
@@ -261,12 +261,12 @@ Follow the published sequence by default. Phases 4 and 5 must remain usable thro
 
 **Depends on:** 1.3–1.4; uses 1.2 lifecycle events.
 
-- [ ] Implement bounded admission and workers, unique IDs, timestamps, progress/result snapshots, and configurable terminal history.
-- [ ] Keep queued/running jobs discoverable; trim only terminal history. Bound output and associated retained memory per job.
-- [ ] Implement queued and running cancellation, timeout propagation, deterministic terminal transitions, and repeated cancellation behavior.
-- [ ] Isolate provider panics at the job boundary, sanitize diagnostics, release capacity, and finalize the failed job without crashing the daemon.
-- [ ] Expose a shared wait mechanism for synchronous API calls and independent lifetime for asynchronous jobs.
-- [ ] Document each worker, dispatcher, watcher, and output reader's owner and shutdown path.
+- [x] Implement bounded admission and workers, unique IDs, timestamps, progress/result snapshots, and configurable terminal history.
+- [x] Keep queued/running jobs discoverable; trim only terminal history. Bound output and associated retained memory per job.
+- [x] Implement queued and running cancellation, timeout propagation, deterministic terminal transitions, and repeated cancellation behavior.
+- [x] Isolate provider panics at the job boundary, sanitize diagnostics, release capacity, and finalize the failed job without crashing the daemon.
+- [x] Expose a shared wait mechanism for synchronous API calls and independent lifetime for asynchronous jobs.
+- [x] Document each worker, dispatcher, watcher, and output reader's owner and shutdown path.
 
 **Verify:** Admission under load, queue saturation, configured maximum concurrency, cancellation before start/during execution/after completion, simultaneous finish/cancel, provider panic, history trimming, bounded output, and repeated startup/shutdown without goroutine leaks.
 
@@ -276,12 +276,12 @@ Follow the published sequence by default. Phases 4 and 5 must remain usable thro
 
 **Depends on:** 1.3–1.5.
 
-- [ ] Execute named workflows through the same prepared-action, permission, and job paths as direct actions.
-- [ ] Snapshot the workflow definition/context once and preflight its complete reachable action graph before starting.
-- [ ] Record each attempted step's index, action, timing, result, and error, and distinguish unstarted steps after failure/cancellation.
-- [ ] Implement sequential execution, both stop-on-error modes, cancellation, aggregate results, and workflow display feedback.
-- [ ] Run steps within the parent job's execution capacity. Do not queue child jobs and wait while holding the only worker permit.
-- [ ] Enforce cycle detection and a documented defensive nesting limit if nested workflow actions are allowed.
+- [x] Execute named workflows through the same prepared-action, permission, and job paths as direct actions.
+- [x] Snapshot the workflow definition/context once and preflight its complete reachable action graph before starting.
+- [x] Record each attempted step's index, action, timing, result, and error, and distinguish unstarted steps after failure/cancellation.
+- [x] Implement sequential execution, both stop-on-error modes, cancellation, aggregate results, and workflow display feedback.
+- [x] Run steps within the parent job's execution capacity. Do not queue child jobs and wait while holding the only worker permit.
+- [x] Enforce cycle detection and a documented defensive nesting limit if nested workflow actions are allowed.
 
 **Verify:** Successful workflow, first/middle/last-step failure, continue-on-error, cancellation between and within steps, nested permission requirements, cycles, project overrides, and concurrency set to one.
 
@@ -291,14 +291,14 @@ Follow the published sequence by default. Phases 4 and 5 must remain usable thro
 
 **Depends on:** 1.1–1.6.
 
-- [ ] Implement every route in SPEC §19, using request size limits, strict JSON validation, appropriate HTTP methods/statuses, and the stable error envelope.
-- [ ] Define context patch semantics for project, mode, and values; ensure project changes use the same validation as the dedicated project endpoint.
-- [ ] Return bounded job collections and structured output; validate unknown resources, malformed path values, duplicate/conflicting invocation options, and cancellation requests.
-- [ ] Protect socket creation and cleanup; reject a second daemon on a live socket and handle stale sockets conservatively. Start no TCP listener.
-- [ ] Expose version, uptime, config path, active project/mode, running jobs, and sanitized provider health through status.
-- [ ] Wire startup order: parse flags -> load/validate config -> restore state -> prepare providers/services -> create listener -> report readiness.
-- [ ] Wire SIGINT/SIGTERM handling: close admission -> cancel queued/running jobs -> stop/retire providers -> flush state -> close listener/subscriptions -> exit within the grace period. Drain existing handlers within the same bounded shutdown budget.
-- [ ] Use a temporary socket directory and ephemeral daemon fixture for API tests.
+- [x] Implement every route in SPEC §19, using request size limits, strict JSON validation, appropriate HTTP methods/statuses, and the stable error envelope.
+- [x] Define context patch semantics for project, mode, and values; ensure project changes use the same validation as the dedicated project endpoint.
+- [x] Return bounded job collections and structured output; validate unknown resources, malformed path values, duplicate/conflicting invocation options, and cancellation requests.
+- [x] Protect socket creation and cleanup; reject a second daemon on a live socket and handle stale sockets conservatively. Start no TCP listener.
+- [x] Expose version, uptime, config path, active project/mode, running jobs, and sanitized provider health through status.
+- [x] Wire startup order: parse flags -> load/validate config -> acquire private listener -> restore state -> prepare services -> serve and report readiness (see RUNTIME.md for the locking rationale).
+- [x] Wire SIGINT/SIGTERM handling: close admission -> cancel queued/running jobs -> stop/retire providers -> flush state -> close listener/subscriptions -> exit within the grace period. Drain existing handlers within the same bounded shutdown budget.
+- [x] Use a temporary socket directory and ephemeral daemon fixture for API tests.
 
 **Verify:** Every endpoint's normal/error cases, socket permissions, live/stale socket handling, malformed and oversized bodies, unsupported methods, client disconnect semantics, timeout mapping, forged internal events, status fields, and signal shutdown.
 
@@ -308,12 +308,12 @@ Follow the published sequence by default. Phases 4 and 5 must remain usable thro
 
 **Depends on:** 1.1–1.7.
 
-- [ ] Implement reload as read -> validate -> prepare -> reconcile -> atomic activation -> publish. Keep reconciliation invisible until activation succeeds.
-- [ ] Retain prior configuration/resources on every failure; release unused candidate resources.
-- [ ] Test action/parameter/project removal and edits while requests, jobs, and state writes are active.
-- [ ] Verify that accepted jobs retain their captured definitions and new jobs use the new configuration generation. Document that a policy reload affects new admissions rather than retroactively undoing admitted work.
-- [ ] Add end-to-end fixtures combining bindings, actions, workflows, cancellation, persistence, reload, and shutdown.
-- [ ] Benchmark dispatch separately from action execution; measure startup, idle resource use, and rotary parameter update latency on documented hardware.
+- [x] Implement reload as read -> validate -> prepare -> reconcile -> atomic activation -> publish. Keep reconciliation invisible until activation succeeds.
+- [x] Retain prior configuration/resources on every failure; release unused candidate resources.
+- [x] Test action/parameter/project removal and edits while requests, jobs, and state writes are active.
+- [x] Verify that accepted jobs retain their captured definitions and new jobs use the new configuration generation. Document that a policy reload affects new admissions rather than retroactively undoing admitted work.
+- [x] Add end-to-end fixtures combining bindings, actions, workflows, cancellation, persistence, reload, and shutdown.
+- [x] Benchmark dispatch separately from action execution; measure startup, idle resource use, and rotary parameter update latency on documented hardware.
 
 **Deliverables:** Working `deckd`, complete V1 API, built-in providers, state file, example configuration, integration suite, and initial performance report.
 

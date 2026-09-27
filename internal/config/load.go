@@ -60,7 +60,23 @@ func Load(path string) (*Config, error) {
 	if err != nil {
 		return nil, &Error{Path: "$", Message: "cannot read configuration file"}
 	}
-	return Parse(data, filepath.Dir(path), home)
+	c, err := Parse(data, filepath.Dir(path), home)
+	if err != nil {
+		return nil, err
+	}
+	if c.State.Path == path || c.Server.Socket == path || c.State.Path+".lock" == path || c.Server.Socket+".lock" == path {
+		return nil, &Error{Path: "$", Message: "configuration, socket, state, and lock paths must differ"}
+	}
+	return c, nil
+}
+
+// FilePath expands the supported home prefix and returns an absolute filename.
+func FilePath(path string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", &Error{Path: "$", Message: "cannot determine home directory"}
+	}
+	return resolvePath(path, ".", home)
 }
 
 // Parse returns an independently owned, normalized configuration. The caller

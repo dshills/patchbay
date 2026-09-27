@@ -5,10 +5,10 @@ executables are `deckd` and `deckctl`; this repository is named Patchbay.
 
 ## Current status
 
-Phase 0 provides a buildable Go foundation, strict offline YAML validation, core
-domain and wire types, safe structured logging, build metadata, and automated
-checks. The event bus, action execution, persistence, jobs, and Unix-socket server
-are scheduled for Phase 1. The full CLI follows in Phase 2.
+Phase 1 implements the headless runtime: context and persistent parameters,
+bindings and events, exec/open/Git actions, sequential workflows, bounded jobs,
+cancellation, atomic reload, and the complete Unix-socket HTTP API. The full
+`deckctl` command surface follows in Phase 2; offline validation is available now.
 
 ## Build and validate
 
@@ -34,6 +34,28 @@ override it. Flags are accepted before `config validate` or after that command.
 Copy and customize [configs/example.yaml](configs/example.yaml) before using a
 different project. Paths are relative to the configuration file, so the example's
 project path `..` points at this checkout.
+
+## Run the daemon
+
+```sh
+./bin/deckd --config configs/example.yaml
+# In a second terminal:
+curl --unix-socket "$HOME/.deckd/deckd.sock" http://deckd/v1/status
+curl --unix-socket "$HOME/.deckd/deckd.sock" \
+  -H 'Content-Type: application/json' -d '{"mode":"sync"}' \
+  http://deckd/v1/actions/project.status
+```
+
+Socket and state parent directories must be owned by your user and private
+(0700). The daemon creates missing directories and uses 0600 socket/state files.
+SIGINT or SIGTERM cancels jobs, flushes state, and removes the owned socket.
+Adjacent `.lock` files stay on disk; they are advisory locks, not stale daemons.
+
+Commands run as your user with explicit argument arrays. Action output is bounded
+and available in job results. Confirmation and dangerous-action policy are checked
+by the daemon. Opening an application reports launch completion; cancelling that
+job does not close the application. See the [API](specs/API.md) and
+[runtime decisions](specs/RUNTIME.md) for invocation, reload, and cancellation rules.
 
 ## Development checks
 
@@ -68,6 +90,8 @@ uses `dev`, `unknown`, and `unknown` defaults.
 - [Foundation decisions and configuration schema](specs/FOUNDATION.md)
 - [V1 API contract](specs/API.md)
 - [Phase 0 verification and Prism review](specs/reviews/PHASE0.md)
+- [Phase 1 runtime decisions](specs/RUNTIME.md)
+- [Phase 1 verification, performance, and Prism review](specs/reviews/PHASE1.md)
 
 The local module is `patchbay` because the repository has no configured remote.
 Set a canonical published module path before exposing packages to external Go

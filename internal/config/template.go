@@ -10,7 +10,7 @@ var namePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
 var valueKeyPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 // ValidateTemplate accepts substitutions only, never Go template expressions.
-// inputs is the allowlist of declared invocation arguments. Rendering is Phase 1.
+// inputs is the allowlist of declared invocation arguments.
 func ValidateTemplate(text string, inputs map[string]Input) error {
 	for {
 		start := strings.Index(text, "{{")

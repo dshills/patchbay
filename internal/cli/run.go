@@ -1,4 +1,4 @@
-// Package cli provides only Phase 0 version/help and offline validation commands.
+// Package cli provides daemon startup and the current deckctl command surface.
 package cli
 
 import (
@@ -10,13 +10,18 @@ import (
 	"time"
 
 	"patchbay/internal/config"
+	"patchbay/internal/daemon"
 	"patchbay/internal/logging"
 	"patchbay/internal/version"
 	"patchbay/pkg/protocol"
 )
 
-// Run returns a process exit code and owns no goroutines or external resources.
+// Run returns a process exit code. Daemon callers should use RunContext.
 func Run(program string, args []string, stdout, stderr io.Writer) int {
+	return RunContext(context.Background(), program, args, stdout, stderr)
+}
+
+func RunContext(ctx context.Context, program string, args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet(program, flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	var versionFlag, validateFlag, jsonFlag bool
@@ -28,11 +33,11 @@ func Run(program string, args []string, stdout, stderr io.Writer) int {
 		flags.BoolVar(&validateFlag, "validate", false, "validate configuration and exit")
 	}
 	flags.Usage = func() {
-		_, _ = fmt.Fprintf(stderr, "%s: Deckd Phase 0 foundation\n", program)
+		_, _ = fmt.Fprintf(stderr, "%s: Deckd local automation runtime\n", program)
 		if program == "deckctl" {
 			_, _ = fmt.Fprintln(stderr, "Usage: deckctl [flags] config validate [flags]")
 		} else {
-			_, _ = fmt.Fprintln(stderr, "Usage: deckd [flags] --validate")
+			_, _ = fmt.Fprintln(stderr, "Usage: deckd [flags] [--validate]")
 		}
 		flags.PrintDefaults()
 	}
@@ -67,6 +72,14 @@ func Run(program string, args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 	if !validateFlag {
+		if program == "deckd" {
+			if err := daemon.Run(ctx, configPath, stderr); err != nil {
+				logging.New(stderr).Operation(context.Background(), logging.Record{Component: "daemon", Outcome: "failed", Err: err})
+				_, _ = fmt.Fprintln(stderr, "Daemon could not start or shut down cleanly; check configuration and private socket/state paths.")
+				return 1
+			}
+			return 0
+		}
 		_, _ = fmt.Fprintln(stderr, "Runtime commands are available in later phases. Use --help for offline foundation commands.")
 		return 2
 	}

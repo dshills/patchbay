@@ -179,7 +179,8 @@ declared separately. Unmatched valid input is an accepted no-op at runtime.
   sync jobs inherit the request's cancellation. The CLI submits async work and
   waits by polling, with explicit cancellation on Ctrl-C.
 - States are queued -> running -> success/failed/cancelled, or queued -> cancelled.
-  Terminal states cannot change. Timeout is failed with error code `timeout`.
+  Queued deadlines may also transition directly to failed. Terminal states
+  cannot change. Timeout is failed with error code `timeout`, including queue wait.
 - Results use success/failed/cancelled. Failed workflow steps aggregate to failure;
   cancellation always stops later steps. Steps run within the parent's worker
   capacity, so a nested workflow does not require an additional worker permit.

@@ -1,4 +1,4 @@
-// Package permission defines action safety classifications. Enforcement follows in Phase 1.
+// Package permission defines and enforces action safety classifications.
 package permission
 
 type Permission string

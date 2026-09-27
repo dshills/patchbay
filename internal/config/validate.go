@@ -11,6 +11,7 @@ import (
 	"patchbay/internal/binding"
 	"patchbay/internal/parameter"
 	"patchbay/internal/permission"
+	"patchbay/internal/provider"
 )
 
 func keys[V any](m map[string]V) []string { return slices.Sorted(maps.Keys(m)) }
@@ -31,8 +32,12 @@ func (v *validator) normalize(c *Config, baseDir, home string) error {
 		}
 		*entry.value = resolved
 	}
-	if c.Server.Socket == c.State.Path {
-		return v.fail("state.path", "state and socket paths must differ")
+	paths := map[string]bool{}
+	for _, path := range []string{c.Server.Socket, c.State.Path, c.Server.Socket + ".lock", c.State.Path + ".lock"} {
+		if paths[path] {
+			return v.fail("state.path", "state, socket, and lock paths must differ")
+		}
+		paths[path] = true
 	}
 	for _, entry := range []struct {
 		path    string
@@ -252,6 +257,12 @@ func (v *validator) action(path string, a *Action, c *Config, baseDir, home stri
 			}
 		}
 	case "git":
+		schema := provider.GitInputs(a.Operation)
+		for key, input := range a.Inputs {
+			if string(input.Type) != schema[key] {
+				return v.fail(path+".inputs", "inputs must match the Git operation schema")
+			}
+		}
 		if a.Command != "" || len(a.Args) != 0 || a.Target != "" || a.Workflow != "" {
 			return v.fail(path, "git does not accept command, args, target, or workflow")
 		}
@@ -379,6 +390,7 @@ func (v *validator) workflowGraph(c *Config, actions map[string]Action) error {
 	}
 	visiting := map[string]bool{}
 	depths := map[string]int{}
+	sizes := map[string]int{}
 	var visit func(string) (int, error)
 	visit = func(name string) (int, error) {
 		if visiting[name] {
@@ -389,6 +401,7 @@ func (v *validator) workflowGraph(c *Config, actions map[string]Action) error {
 		}
 		visiting[name] = true
 		depth := 1
+		size := 1
 		for _, step := range c.Workflows[name].Steps {
 			if a := actions[step.Action]; a.Type == "workflow" {
 				childDepth, err := visit(a.Workflow)
@@ -396,6 +409,12 @@ func (v *validator) workflowGraph(c *Config, actions map[string]Action) error {
 					return 0, err
 				}
 				depth = max(depth, childDepth+1)
+				size += sizes[a.Workflow]
+			} else {
+				size++
+			}
+			if size > 1024 {
+				return 0, v.fail("workflows."+name, "workflow expands beyond 1024 actions")
 			}
 		}
 		if depth > 32 {
@@ -403,6 +422,7 @@ func (v *validator) workflowGraph(c *Config, actions map[string]Action) error {
 		}
 		visiting[name] = false
 		depths[name] = depth
+		sizes[name] = size
 		return depth, nil
 	}
 	for _, name := range keys(c.Workflows) {

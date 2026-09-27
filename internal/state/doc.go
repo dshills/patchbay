@@ -1,2 +1,2 @@
-// Package state will own atomic runtime state persistence in Phase 1.
+// Package state owns versioned state recovery and coalesced atomic persistence.
 package state
