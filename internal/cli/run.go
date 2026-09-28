@@ -37,7 +37,7 @@ func RunContext(ctx context.Context, program string, args []string, stdout, stde
 	flags.StringVar(&configPath, "config", config.DefaultPath, "configuration file")
 	flags.BoolVar(&validateFlag, "validate", false, "validate configuration and exit")
 	flags.Usage = func() {
-		_, _ = fmt.Fprintf(stderr, "%s: Deckd local automation runtime\n", program)
+		_, _ = fmt.Fprintf(stderr, "%s: Patchbay local automation runtime\n", program)
 		_, _ = fmt.Fprintln(stderr, "Usage: deckd [flags] [--validate]")
 		flags.PrintDefaults()
 	}

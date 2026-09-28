@@ -1,4 +1,4 @@
-# Deckd — Phased Implementation Plan
+# Patchbay — Phased Implementation Plan
 
 **Source:** [SPEC.md](SPEC.md), version 0.1, dated 2026-09-27
 

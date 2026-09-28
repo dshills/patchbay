@@ -1,4 +1,4 @@
-# Operating and releasing Deckd on macOS
+# Operating and releasing Patchbay on macOS
 
 ## Configuration and runtime behavior
 
@@ -33,7 +33,7 @@ exit-code contracts. Use [QUICKSTART.md](QUICKSTART.md) for a disposable project
 ## User-level launchd agent
 
 Apple documents per-user agents in `~/Library/LaunchAgents`, with executable
-arguments in `ProgramArguments`. The supplied template runs Deckd continuously
+arguments in `ProgramArguments`. The supplied template runs Patchbay continuously
 as the logged-in user. It uses its own Unix listener; socket activation is not
 implemented. [Apple launchd guide](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html)
 

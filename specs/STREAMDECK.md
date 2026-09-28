@@ -6,7 +6,7 @@ Recorded before Phase 3 implementation, 2026-09-27.
 
 Use a native Go plugin launched by Elgato Stream Deck, isolated in
 `adapters/streamdeck` with a `cmd/decksd` entry point. It connects to the app's
-loopback WebSocket and Deckd's private Unix socket. The daemon never imports
+loopback WebSocket and Patchbay's private Unix socket. The daemon never imports
 adapter code. No listener, HID driver, shell bridge, or Node runtime is added.
 Gorilla WebSocket v1.5.3 supplies framing and connection handling; the existing
 Unix client supplies bounded HTTP requests. License notices ship with the plugin.
@@ -125,7 +125,7 @@ shutil.copytree('dist/local.patchbay.deckd.sdPlugin', target)
 PY
 ```
 
-Reopen Stream Deck. Drag **Deckd Control** onto Stream Deck+ keys and dials. The
+Reopen Stream Deck. Drag **Patchbay Control** onto Stream Deck+ keys and dials. The
 default names match their positions; set a custom control name in the inspector
 when using semantic bindings. The same instance on another page gets fresh
 feedback when it appears. Multi-actions and key-logic wrappers are disabled so
@@ -141,7 +141,7 @@ cp configs/streamdeck.yaml "$DECKD_SD_DEMO/config.yaml"
 ```
 
 In the inspector, set **Daemon socket** to the absolute path
-`<DECKD_SD_DEMO>/private/deckd.sock`. This setting applies to all Deckd controls.
+`<DECKD_SD_DEMO>/private/deckd.sock`. This setting applies to all Patchbay controls.
 The plugin waits for saved global settings before accepting input. Key 1 runs a
 description (hold starts a ten-second task), key 2 requires confirmation, key 3
 is disabled by dangerous-action policy, and dial 1 rotates the persistent level.

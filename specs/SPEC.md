@@ -1,4 +1,4 @@
-# Deckd --- Formal Engineering Specification
+# Patchbay --- Formal Engineering Specification
 
 **Document:** SPEC.md\
 **Version:** 0.1\
@@ -10,10 +10,11 @@
 
 ## 1. Purpose
 
-Deckd is a local automation runtime connecting physical controls,
+Patchbay is a local automation runtime connecting physical controls,
 developer tools, AI agents, OS functions, and laboratory equipment
 through a common event/action model. Stream Deck+ is the first physical
-UI, but the daemon MUST remain device-independent.
+UI, but the daemon MUST remain device-independent. The project is named
+Patchbay; `deckd` is the daemon executable and `deckctl` is its CLI.
 
 > Physical controls invoke semantic actions; they do not encode
 > implementation details.
@@ -22,7 +23,7 @@ A key invokes `project.validate`; it does not contain `go test ./...`.
 
 ## 2. Goals
 
-Deckd SHALL provide a persistent local Go daemon; semantic actions
+Patchbay SHALL provide a persistent local Go daemon; semantic actions
 independent of clients; active project/context state; synchronous and
 asynchronous execution; deterministic workflows; structured job
 feedback; typed parameters for rotary controls; daemon-enforced safety;
@@ -357,7 +358,7 @@ test/debug client.
 The adapter SHALL ultimately support key press/release, encoder
 rotation/press, long press where practical, touch interactions where
 available, dynamic labels, job feedback, parameter values, and context
-changes. It translates device input to Deckd semantics and feedback to
+changes. It translates device input to Patchbay semantics and feedback to
 presentation. It MUST NOT own business logic. V1 daemon development MUST
 NOT block on hardware integration.
 
@@ -557,7 +558,7 @@ committed.
 
 ## 37. Future Direction
 
-Deckd may eventually become a local physical automation platform where
+Patchbay may eventually become a local physical automation platform where
 the same semantic action can be invoked from Stream Deck, CLI, Raycast,
 MCP, voice, or an AI agent, while the same runtime safely coordinates
 development tools and laboratory equipment.

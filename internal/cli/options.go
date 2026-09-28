@@ -169,7 +169,7 @@ func (o ctlOptions) validate(command []string) error {
 	return nil
 }
 
-const ctlHelp = `deckctl: Deckd local automation client
+const ctlHelp = `deckctl: Patchbay local automation client
 Usage: deckctl [options] <command> [options]
 
   status

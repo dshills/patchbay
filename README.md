@@ -1,7 +1,7 @@
-# Deckd
+# Patchbay
 
-Deckd connects physical controls and local clients to semantic actions. The
-core executables are `deckd` and `deckctl`; this repository is named Patchbay.
+Patchbay connects physical controls and local clients to semantic actions. The
+daemon executable is `deckd`, and its command-line client is `deckctl`.
 
 ## Current status
 
@@ -126,10 +126,11 @@ uses `dev`, `unknown`, and `unknown` defaults.
 - [Phase 6 verification and Prism review](specs/reviews/PHASE6.md)
 - [Phase 7 release hardening and verification](specs/reviews/PHASE7.md)
 
-The local module is `patchbay` because the repository has no configured remote.
-Set a canonical published module path before exposing packages to external Go
-consumers. Application behavior is internal; `pkg/protocol` contains only wire
-contracts and depends exclusively on the standard library.
+The Go module currently uses the local path `patchbay`. The repository is
+[github.com/dshills/patchbay](https://github.com/dshills/patchbay). Adopt a canonical
+Go module path before exposing packages to external Go consumers. Application
+behavior is internal; `pkg/protocol` contains only wire contracts and depends
+exclusively on the standard library.
 
 The core runtime dependency is `go.yaml.in/yaml/v3`, pinned to v3.0.5. YAML
 decoding is absent from the standard library. This security-maintained v3 line

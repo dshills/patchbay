@@ -1,4 +1,4 @@
-# Deckd local API v1 contract
+# Patchbay local API v1 contract
 
 Wire types live in `pkg/protocol`; Phase 1 implements the server and transport.
 All routes use JSON over HTTP on a Unix domain socket;
@@ -223,7 +223,7 @@ partial `result` with status `running`, a progress message, and bounded `data`:
 `provider`, `model`, `stdout`, and `truncated`. Poll the ordinary job endpoint;
 there is no new streaming daemon endpoint. Terminal state and cancellation use
 the existing contract. Neither output nor an API tool item can invoke another
-Deckd action. Prompt reloads increment the existing generation.
+Patchbay action. Prompt reloads increment the existing generation.
 
 Git status/log results retain raw `stdout` and add `operation`, plus `git_status`
 records (`index`, `worktree`, `path`, optional `original_path`) or `git_log`
