@@ -577,6 +577,16 @@ func (v *validator) bindings(c *Config) error {
 				continue
 			}
 			p := path + "." + gesture.name
+			if target.Baseline != "" || target.Result != "" {
+				id := target.Baseline
+				if id == "" {
+					id = target.Result
+				}
+				if _, exists := c.Experiments[id]; !exists || target.Baseline != "" && target.Result != "" || target.Action != "" || target.Parameter != "" || len(target.Args) != 0 || gesture.name == "rotate" {
+					return v.fail(p, "baseline/result gestures require exactly one known experiment and no action, parameter or arguments")
+				}
+				continue
+			}
 			if gesture.name == "rotate" {
 				param, exists := c.Parameters[target.Parameter]
 				if target.Action != "" || len(target.Args) != 0 || !exists || (param.Type != parameter.Integer && param.Type != parameter.Float) {

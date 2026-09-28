@@ -185,3 +185,30 @@ readback plus synchronization state. Unsynchronized values show a warning, even
 following a successful older job. Rotation stages the desired value; an explicitly
 bound press action applies it under the usual confirmation policy. Changing the
 desired value invalidates an outstanding confirmation. See [SCPI.md](SCPI.md).
+
+## Capture, baseline, and result controls
+
+The bench example adds three semantic controls:
+
+```yaml
+- control: bench.capture
+  press: {action: bench.save} # experiment wrapper for bench.trace
+- control: bench.baseline
+  press: {baseline: bench.trace}
+- control: bench.result
+  press: {result: bench.trace}
+```
+
+A guarded experiment gesture prepares the complete capture and returns an expiring
+confirmation containing that exact preview. A later hold admits the same preparation;
+parameter/context/config changes invalidate it. A hold never silently prepares a
+replacement. The preparation uses the wrapper's timeout and the stronger confirmation
+floor. The existing five-second gesture window and no-replay policy still apply.
+
+Result/baseline controls display the latest saved run's state, short ID or first
+measurement, and baseline membership. Selecting a baseline sends the exact displayed
+run ID with the current guard. A newer run completing between render and input does
+not change the target. Missing/failed/incompatible runs cannot become baselines. The
+result gesture selects evidence only; it does not execute an action or open a URL.
+Refresh after disconnect, project change or another client's baseline update before
+new input. Physical display/latency checks remain pending.

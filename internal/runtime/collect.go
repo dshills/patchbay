@@ -49,6 +49,11 @@ func captureCollector(store *evidence.Store, run *protocol.Run, plan *prepared, 
 		leaf := indices[p]
 
 		outcome := protocol.StepOutcome{Index: leaf, Action: p.name, State: string(result.Status), StartedAt: &started, FinishedAt: &finished, Truncated: result.Data["truncated"] == true, Error: fault.Safe(executeErr)}
+		if p.kind == "scpi" {
+			if observation, ok := result.Data["instrument"].(*protocol.InstrumentObservation); ok {
+				outcome.Instrument = evidence.Clone(observation)
+			}
+		}
 		if executeErr != nil {
 			outcome.State = "failed"
 			if fault.Safe(executeErr).Code == protocol.Cancelled {

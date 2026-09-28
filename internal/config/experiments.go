@@ -102,6 +102,14 @@ func (v *validator) experiments(c *Config) error {
 			return v.fail(path, "requires schema_version 1, matching ID, title, and exactly one action or workflow")
 		}
 		e.ID = id
+		seenParameters := map[string]bool{}
+		for _, name := range e.Parameters {
+			p, ok := c.Parameters[name]
+			if !ok || p.Sensitive || seenParameters[name] || len(e.Parameters) > 128 {
+				return v.fail(path+".parameters", "requires at most 128 unique non-sensitive parameters")
+			}
+			seenParameters[name] = true
+		}
 		if len(e.Collectors) == 0 || len(e.Collectors) > 32 || len(e.Layout) > 32 || len(e.Inputs) > 128 {
 			return v.fail(path, "requires 1–32 collectors, at most 32 widgets, and at most 128 input mappings")
 		}

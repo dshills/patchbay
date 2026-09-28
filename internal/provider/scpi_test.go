@@ -5,6 +5,7 @@ import (
 	"math"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -374,5 +375,52 @@ func TestSCPIScientificNotationReadbackMatchesExactly(t *testing.T) {
 		if err != nil || result.Data["observed"].(map[string]any)[r.Operation] != r.Value {
 			t.Fatal(result, err)
 		}
+	}
+}
+
+func TestScopePostTransferStatePreservesSuspectEvidence(t *testing.T) {
+	for _, final := range []string{"STOP\n", "RUN\n", "UNKNOWN\n", "!disconnect"} {
+		t.Run(final, func(t *testing.T) {
+			var queries atomic.Int32
+			server := scpitest.New(t, func(command string) string {
+				if command == ":TRIG:STAT?" && queries.Add(1) == 3 {
+					return final
+				}
+				return scpitest.Scope(command)
+			})
+			d := scpiFixture(t, server.Address)
+			d.Profile = "rigol-mho900"
+			d.Model = "MHO954"
+			d.Limits = SCPILimits{}
+			p := NewSCPI(map[string]SCPIDevice{"scope": d})
+			result, err := p.Run(context.Background(), SCPIRequest{"scope", "scope.capture", 1, nil}, NewBudget(8192), nil)
+			if (err == nil) != (final == "STOP\n") {
+				t.Fatal("unexpected final-state decision", err)
+			}
+			wave, ok := result.Data["waveform"].(map[string]any)
+			if !ok {
+				t.Fatal("lost bounded diagnostic waveform")
+			}
+			series := wave["series"].(protocol.Series)
+			if series.X[0] != -0.1 || series.Y[0] != -0.01 || len(series.X) != 3 {
+				t.Fatal("bad scaling", series)
+			}
+			if (series.Quality == "valid") != (final == "STOP\n") {
+				t.Fatal("suspect trace accepted")
+			}
+			observation := result.Data["instrument"].(*protocol.InstrumentObservation)
+			if observation.Model != "MHO954" || observation.Firmware != "01.00" || observation.Waveform.AcquisitionTime != "unknown" || observation.Waveform.Before.State != "STOP" || observation.Waveform.After.ObservedAt.Before(observation.Waveform.Before.ObservedAt) {
+				t.Fatal(observation)
+			}
+			commands := server.Commands()
+			for i, command := range commands {
+				if command == ":WAV:DATA?" && (i == 0 || i+1 >= len(commands) || commands[i-1] != ":TRIG:STAT?" || commands[i+1] != ":TRIG:STAT?") {
+					t.Fatal("transfer not bracketed by observations", commands)
+				}
+				if command == ":STOP" || command == ":RUN" || command == ":SING" {
+					t.Fatal("automatic acquisition", commands)
+				}
+			}
+		})
 	}
 }

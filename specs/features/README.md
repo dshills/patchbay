@@ -1,6 +1,6 @@
 # Patchbay feature roadmap
 
-**Status:** Implementation underway. CC-1–CC-4 capture, comparison, export, browser workbench, and demo packaging software are implemented. External release gates and the later features remain pending.\
+**Status:** Implementation underway. CC-1–CC-4 capture, comparison, export, browser workbench, and demo packaging software are implemented. CC-5 software has simulator coverage; physical and external release gates remain pending. Recipes and agent controls are in progress/planned.\
 **Date:** 2026-09-28\
 **Baseline:** [Core specification](../SPEC.md), [foundation implementation plan](../PLAN.md), and the current macOS daemon, CLI, Stream Deck+, agent, SCPI, and plugin contracts.
 

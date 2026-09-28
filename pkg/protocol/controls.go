@@ -18,10 +18,18 @@ type ControlSnapshotRequest struct {
 }
 
 type ControlTarget struct {
-	Action    string     `json:"action,omitempty"`
-	Safety    string     `json:"safety,omitempty"`
-	Enabled   bool       `json:"enabled"`
-	Parameter *Parameter `json:"parameter,omitempty"`
+	Result    *ControlResult `json:"result,omitempty"`
+	Action    string         `json:"action,omitempty"`
+	Safety    string         `json:"safety,omitempty"`
+	Enabled   bool           `json:"enabled"`
+	Parameter *Parameter     `json:"parameter,omitempty"`
+}
+type ControlResult struct {
+	Experiment  string       `json:"experiment"`
+	RunID       string       `json:"run_id,omitempty"`
+	State       string       `json:"state"`
+	Baseline    bool         `json:"baseline"`
+	Measurement *Measurement `json:"measurement,omitempty"`
 }
 
 type ControlView struct {
@@ -37,7 +45,8 @@ type ControlSnapshot struct {
 }
 
 type ControlConfirmation struct {
-	Token     string    `json:"token"`
-	Action    string    `json:"action"`
-	ExpiresAt time.Time `json:"expires_at"`
+	Capture   *CapturePreview `json:"capture,omitempty"`
+	Token     string          `json:"token"`
+	Action    string          `json:"action"`
+	ExpiresAt time.Time       `json:"expires_at"`
 }

@@ -2,6 +2,8 @@
 package binding
 
 type Target struct {
+	Baseline  string         `yaml:"baseline,omitempty"`
+	Result    string         `yaml:"result,omitempty"`
 	Action    string         `yaml:"action,omitempty"`
 	Parameter string         `yaml:"parameter,omitempty"`
 	Args      map[string]any `yaml:"args,omitempty"`

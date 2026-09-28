@@ -6,6 +6,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"time"
 
 	"patchbay/internal/fault"
 	"patchbay/pkg/protocol"
@@ -228,11 +229,12 @@ func generatorEnableChecks(w *scpiWire, d SCPIDevice, source, output string) err
 	return instrumentErrors(w)
 }
 
-func scopeCapture(w *scpiWire, channel int) (map[string]any, error) {
+func scopeCapture(w *scpiWire, channel int, observation *protocol.WaveformObservation) (map[string]any, error) {
 	state, err := w.query(":TRIG:STAT?")
 	if err != nil {
 		return nil, err
 	}
+	observation.Before = acquisitionState(state)
 	if state != "STOP" {
 		return nil, fault.New(protocol.PermissionDenied, "Stop scope acquisition before capture.")
 	}
@@ -266,24 +268,51 @@ func scopeCapture(w *scpiWire, channel int) (map[string]any, error) {
 	if p[0] != 0 || p[1] != 0 || p[2] < 1 || p[2] > 1000 || p[2] != math.Trunc(p[2]) || p[3] < 1 || p[3] != math.Trunc(p[3]) || p[4] <= 0 || p[7] <= 0 {
 		return nil, scpiInvalid()
 	}
+	observation.Preamble = append([]float64{}, p[:]...)
+	// Settings/preamble queries may take time. Check immediately before the transfer.
+	state, err = w.query(":TRIG:STAT?")
+	observation.Before = acquisitionState(state)
+	if err != nil {
+		return nil, err
+	}
+	if state != "STOP" {
+		return nil, fault.New(protocol.PermissionDenied, "Acquisition changed before transfer; stop it and review again.")
+	}
 	data, err := w.block(":WAV:DATA?", 1000)
 	if err != nil {
 		return nil, err
 	}
+	state, finalErr := w.query(":TRIG:STAT?")
+	observation.After = acquisitionState(state)
+	if finalErr == nil && state != "STOP" {
+		finalErr = fault.New(protocol.ExecutionFailed, "Acquisition changed during transfer; the retained trace is suspect.")
+	}
 	if len(data) != int(p[2]) {
 		return nil, scpiInvalid()
 	}
-	if err := instrumentErrors(w); err != nil {
-		return nil, err
+	if finalErr == nil {
+		finalErr = instrumentErrors(w)
 	}
 	samples := make([]float64, len(data))
+	times := make([]float64, len(data))
 	for i, value := range data {
 		samples[i] = (float64(value) - p[8] - p[9]) * p[7]
-		if !finite(samples[i]) {
+		times[i] = (float64(i)-p[6])*p[4] + p[5]
+		if !finite(samples[i]) || !finite(times[i]) {
 			return nil, scpiInvalid()
 		}
 	}
-	return map[string]any{"channel": channel, "samples_v": samples, "points": len(samples), "x_increment_s": p[4], "x_origin_s": p[5], "x_reference": p[6], "y_increment_v": p[7], "y_origin": p[8], "y_reference": p[9]}, nil
+	series := protocol.Series{SchemaVersion: 1, Name: "waveform", X: times, Y: samples, XUnit: "s", YUnit: "V", Quantity: "voltage", Quality: "valid"}
+	if finalErr != nil {
+		series.Quality, series.Reason = "suspect", "Post-transfer acquisition or instrument status was changed or unavailable."
+	}
+	return map[string]any{"series": series, "channel": channel, "samples_v": samples, "points": len(samples), "x_increment_s": p[4], "x_origin_s": p[5], "x_reference": p[6], "y_increment_v": p[7], "y_origin": p[8], "y_reference": p[9]}, finalErr
+}
+func acquisitionState(value string) protocol.AcquisitionState {
+	if value != "STOP" && value != "RUN" && value != "WAIT" && value != "TD" && value != "AUTO" {
+		value = "unknown"
+	}
+	return protocol.AcquisitionState{State: value, ObservedAt: time.Now().UTC()}
 }
 func reserveSCPIResult(b *Budget, value map[string]any) bool {
 	data, err := json.Marshal(value)

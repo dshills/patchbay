@@ -49,6 +49,7 @@ actions:
   generator.off: {type: scpi, device: generator, channel: 1, operation: generator.disable}
   generator.off2: {type: scpi, device: generator, channel: 2, operation: generator.disable}
   scope.capture: {type: scpi, device: scope, channel: 1, operation: scope.capture}
+  bench.save: {type: experiment, experiment: bench.trace, safety: confirm}
 workflows:
   bench.prepare:
     steps:
@@ -57,10 +58,33 @@ workflows:
       - {action: generator.frequency}
       - {action: generator.amplitude}
   bench.capture:
+    stop_on_error: false
     steps:
       - {action: generator.inspect}
       - {action: scope.capture}
+      - {action: generator.inspect}
+experiments:
+  bench.trace:
+    schema_version: 1
+    title: Rigol stopped-trace comparison
+    description: "Physical verification pending. Disable both outputs before applying settings; separately confirm output enable, acquire and stop at the scope, then capture. This transfers an existing stopped trace; acquisition time is unknown. Record your acquisition assertion in the run note. Desired values below do not apply settings."
+    workflow: bench.capture
+    parameters: [bench.frequency, bench.amplitude]
+    collectors:
+      - {name: frequency.before, step: 0, action: generator.inspect, kind: measurement, source: native, path: [observed, generator.set_frequency], unit: Hz, quantity: frequency}
+      - {name: amplitude.before, step: 0, action: generator.inspect, kind: measurement, source: native, path: [observed, generator.set_amplitude], unit: Vpp, quantity: amplitude}
+      - {name: waveform, step: 1, action: scope.capture, kind: series, source: native, path: [waveform, series], unit: V, quantity: voltage}
+      - {name: frequency.after, step: 2, action: generator.inspect, kind: measurement, source: native, path: [observed, generator.set_frequency], unit: Hz, quantity: frequency}
+      - {name: amplitude.after, step: 2, action: generator.inspect, kind: measurement, source: native, path: [observed, generator.set_amplitude], unit: Vpp, quantity: amplitude}
+    layout:
+      - {id: trace, kind: series, title: Stopped trace, reference: waveform}
 bindings:
   - control: bench.frequency
     rotate: {parameter: bench.frequency}
     press: {action: generator.frequency}
+  - control: bench.capture
+    press: {action: bench.save}
+  - control: bench.baseline
+    press: {baseline: bench.trace}
+  - control: bench.result
+    press: {result: bench.trace}

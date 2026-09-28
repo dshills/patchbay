@@ -23,6 +23,7 @@ const confirmationTTL = 5 * time.Second
 const maxConfirmations = 256
 
 type controlConfirmation struct {
+	capture                          *protocol.CapturePreview
 	source, device, control, gesture string
 	guard                            protocol.ControlGuard
 	expires                          time.Time
@@ -63,7 +64,9 @@ func (r *Runtime) ControlSnapshot(ctx context.Context, request protocol.ControlS
 				continue
 			}
 			wire := protocol.ControlTarget{Action: target.Action, Enabled: true}
-			if target.Parameter != "" {
+			if target.Baseline != "" || target.Result != "" {
+				wire = r.evidenceControlView(target)
+			} else if target.Parameter != "" {
 				p := r.parameters[target.Parameter]
 				wire.Parameter = &protocol.Parameter{Name: target.Parameter, Type: string(p.Type), Value: p.Value, Min: p.Min, Max: p.Max, Step: p.Step, Enum: slices.Clone(p.Enum), Unit: p.Unit, Persistent: p.Persistent}
 				if p.Instrument != nil {
@@ -84,6 +87,7 @@ func (r *Runtime) ControlSnapshot(ctx context.Context, request protocol.ControlS
 }
 
 type controlPayload struct {
+	RunID        string                 `json:"run_id,omitempty"`
 	Device       string                 `json:"device"`
 	Control      string                 `json:"control"`
 	Delta        *int64                 `json:"delta,omitempty"`
@@ -110,6 +114,7 @@ func (r *Runtime) Control(ctx context.Context, request protocol.EventRequest) (p
 		return protocol.EventResponse{}, fault.New(protocol.InvalidRequest, "Control snapshot is stale; refresh before new input.")
 	}
 	confirmed := payload.Confirmed != nil && *payload.Confirmed
+	var approvedCapture *protocol.CapturePreview
 	if payload.Confirmation != "" {
 		ticket, ok := r.confirmations[payload.Confirmation]
 		delete(r.confirmations, payload.Confirmation)
@@ -117,11 +122,24 @@ func (r *Runtime) Control(ctx context.Context, request protocol.EventRequest) (p
 			return protocol.EventResponse{}, fault.New(protocol.InvalidRequest, "Confirmation expired or does not match this input.")
 		}
 		confirmed = true
+		approvedCapture = ticket.capture
 	}
 	target := binding.Resolve(r.cfg.Bindings, payload.Device, payload.Control, request.Type, r.context)
 	response := protocol.EventResponse{EventID: identity.New(), Matched: target != nil}
 	if target != nil {
-		if target.Parameter != "" {
+		if target.Baseline != "" || target.Result != "" {
+			id, err := r.evidenceControl(target, payload)
+			if err != nil {
+				return protocol.EventResponse{}, err
+			}
+			response.RunID = id
+		} else if definition, exists := r.registries[r.context.Project].Get(target.Action); exists && definition.Type == "experiment" && payload.Guard != nil {
+			value, err := r.captureControl(ctx, request, payload, target.Action, definition, approvedCapture)
+			if err != nil {
+				return protocol.EventResponse{}, err
+			}
+			response.JobID, response.RunID = value.JobID, value.RunID
+		} else if target.Parameter != "" {
 			if _, err := r.setParameter(target.Parameter, nil, payload.Delta); err != nil {
 				return protocol.EventResponse{}, err
 			}

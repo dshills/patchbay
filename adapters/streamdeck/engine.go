@@ -285,7 +285,11 @@ func (e *Engine) emit(ctx context.Context, c *control, gesture string, delta *in
 		Delta        *int64                `json:"delta,omitempty"`
 		Guard        protocol.ControlGuard `json:"guard"`
 		Confirmation string                `json:"confirmation,omitempty"`
-	}{c.ref, delta, e.snapshot.Guard, token}
+		RunID        string                `json:"run_id,omitempty"`
+	}{c.ref, delta, e.snapshot.Guard, token, ""}
+	if target.Result != nil {
+		payload.RunID = target.Result.RunID
+	}
 	data, _ := json.Marshal(payload)
 	response, err := e.backend.Control(ctx, protocol.EventRequest{Type: gesture, Source: "streamdeck", Payload: data})
 	if err != nil {
@@ -455,6 +459,16 @@ func (e *Engine) frame(c *control, now time.Time) Frame {
 				if s.Status != "matched" {
 					f.State = "warning"
 				}
+			}
+		}
+		if t.Result != nil {
+			f.Detail = t.Result.State
+			if t.Result.Baseline {
+				f.Detail += " · baseline"
+			}
+			f.Value = clean(t.Result.RunID, 8)
+			if m := t.Result.Measurement; m != nil && m.Value != nil && m.Status == "valid" {
+				f.Value = fmt.Sprintf("%.4g %s", *m.Value, m.Unit)
 			}
 		}
 		if !t.Enabled {

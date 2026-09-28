@@ -37,7 +37,7 @@ function options(element,items,value){const stamp=JSON.stringify(items);if(eleme
 function experiment(){return state.data?.experiments.experiments.find(e=>e.id===state.experiment);}
 function parameters(){
  const e=experiment();$('description').textContent=e?.description||'Choose an experiment to begin.';
- const names=[...new Set((e?.inputs||[]).map(i=>i.parameter))];const definitions=names.map(name=>state.data.parameters.parameters.find(p=>p.name===name)).filter(Boolean);
+ const names=[...new Set([...(e?.inputs||[]).map(i=>i.parameter),...(e?.parameters||[])])];const definitions=names.map(name=>state.data.parameters.parameters.find(p=>p.name===name)).filter(Boolean);
  const signature=JSON.stringify(definitions.map(p=>({...p,value:undefined,synchronization:undefined})))+state.experiment;
  if($('parameters').dataset.signature!==signature){
   $('parameters').replaceChildren();$('parameters').dataset.signature=signature;
@@ -46,10 +46,10 @@ function parameters(){
    else{input=document.createElement('input');input.type=p.type==='boolean'?'checkbox':['integer','float'].includes(p.type)?'number':'text';if(p.min!==undefined)input.min=p.min;if(p.max!==undefined)input.max=p.max;input.step=p.step??(p.type==='integer'?1:'any');}
    input.id=id;input.dataset.name=p.name;input.setAttribute('aria-label',label.textContent);
    input.addEventListener('change',()=>mutation(async()=>{let value=p.type==='boolean'?input.checked:input.value;if(p.type==='integer'||p.type==='float'){value=Number(value);if(!Number.isFinite(value)||(p.type==='integer'&&!Number.isSafeInteger(value)))throw new Error('Enter a finite value within the declared bounds.');}await api('parameters/'+encodeURIComponent(p.name),'PUT',{value});clearPreview();}));
-   $('parameters').append(label,input);
+   $('parameters').append(label,input);if(p.instrument){const readback=text('p','','muted');readback.id='observed-'+p.name;$('parameters').append(readback);}
   }
  }
- for(const p of definitions){const input=$('param-'+p.name);if(!input||document.activeElement===input)continue;if(p.type==='boolean')input.checked=!!p.value;else input.value=p.value;}
+ for(const p of definitions){const observation=$('observed-'+p.name);if(observation){const sync=p.synchronization;observation.textContent='Desired setting only. Readback: '+(sync?.observed??'unknown')+' '+(p.unit||'')+' · '+(sync?.status||'unknown')+'. Apply and output enable are separate actions.';}const input=$('param-'+p.name);if(!input||document.activeElement===input)continue;if(p.type==='boolean')input.checked=!!p.value;else input.value=p.value;}
 }
 function renderHistory(){
  const entries=[...state.data.runs.runs,...state.extra].filter((r,i,a)=>a.findIndex(x=>x.id===r.id)===i);const signature=JSON.stringify(entries);
@@ -68,8 +68,10 @@ function chart(series){
 async function selectRun(id,update=false){
  const run=await api('runs/'+encodeURIComponent(id));if(update&&state.selected?.id!==id){if(terminal(run.state))state.active=null;return;}state.selected=run;$('detail').hidden=false;
  $('run-title').textContent=run.annotation.title||run.experiment.title;$('run-status').textContent=run.state+(run.error?' · '+run.error.message:'')+(run.source_changed?' · Source changed during capture.':'');
+ const observed=new Map();for(const outcome of run.outcomes||[]){const o=outcome.instrument;if(!o?.values)continue;const key=o.device+':'+o.channel;const serialized=JSON.stringify(o.values);if(observed.has(key)&&observed.get(key)!==serialized)$('run-status').textContent+=' · Instrument readback changed during capture.';observed.set(key,serialized);}
  $('metrics').replaceChildren(table(['Measurement','Value','Unit','Repeats / range','Status'],run.measurements.map(m=>[m.name,m.value,m.unit,m.repeats?m.repeats+' / '+(m.spread===undefined?'unavailable':Number(m.spread.toPrecision(6))):'—',m.status+(m.reason?' · '+m.reason:'')])));
- if(!update){$('annotation-title').value=run.annotation.title;$('note').value=run.annotation.note;$('pinned').checked=run.annotation.pinned;$('series').replaceChildren();clearExport();
+ if(!update){$('annotation-title').value=run.annotation.title;$('note').value=run.annotation.note;$('pinned').checked=run.annotation.pinned;clearExport();}
+ const seriesSignature=JSON.stringify([run.id,run.artifacts,run.outcomes]);if($('series').dataset.signature!==seriesSignature){$('series').dataset.signature=seriesSignature;$('series').replaceChildren();for(const outcome of run.outcomes||[]){if(outcome.instrument){const details=document.createElement('details');details.append(text('summary','Instrument observation · step '+outcome.index),text('pre',JSON.stringify(outcome.instrument,null,2)));$('series').append(details);}}
   for(const artifact of run.artifacts){if(artifact.media_type!=='application/json')continue;const value=await api('runs/'+encodeURIComponent(id)+'/artifacts/'+encodeURIComponent(artifact.id));if(state.selected?.id!==id)return;try{const data=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(value.data_base64),c=>c.charCodeAt(0))));if(data.schema_version===1&&Array.isArray(data.x)&&data.x.length<=10000)$('series').append(chart(data));}catch(error){$('series').append(text('p','Series could not be displayed: '+error.message));}}
  }
  if(!terminal(run.state))state.active={run_id:run.id,job_id:run.job_id};else if(state.active?.run_id===run.id)state.active=null;

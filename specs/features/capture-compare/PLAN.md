@@ -1,6 +1,6 @@
 # Capture & Compare implementation plan
 
-**Status:** CC-1–CC-4 software implemented; external CC-4 release gates and CC-5 remain pending. Manual screen-reader verification remains pending.\
+**Status:** CC-1–CC-4 software implemented; CC-5 software and simulator checks complete; external release and physical verification gates remain pending. Manual screen-reader verification remains pending.\
 **Specification:** [Capture & Compare](SPEC.md)\
 **Dependencies:** Existing runtime/release tooling; no recipes or agent execution required.
 
@@ -182,22 +182,23 @@ MHO954, and Stream Deck+ within verified equipment capabilities.
 **Depends on:** CC-4 and the pending physical checks in [SCPI](../../SCPI.md) and
 [Stream Deck](../../STREAMDECK.md). Simulator work can proceed before hardware access.
 
-- [ ] Add typed SCPI-result collectors and a bench experiment with generator inspection
+- [x] Add typed SCPI-result collectors and a bench experiment with generator inspection
   before/after transfer, waveform scaling, observation times, firmware evidence, and
   explicit unknown acquisition time/operator assertion.
-- [ ] Preserve the provider's stopped-acquisition check immediately before transfer
+- [x] Preserve the provider's stopped-acquisition check immediately before transfer
   and add a post-transfer check. Retain both observations; reject invalid initial
   state and fail captures with changed/unknown final state without auto-stop/trigger.
   Preserve bounded suspect traces for diagnostics, excluded from baselines/deltas.
-- [ ] Present the actual sequence: disable outputs before changing settings, explicit
+- [x] Present the actual sequence: disable outputs before changing settings, explicit
   apply, separate confirmed enable, operator acquisition/stop, then capture. Never
   label transfer of an old stopped trace as a fresh automatic acquisition.
-- [ ] Add semantic capture/baseline/result controls and Stream Deck feedback. Reuse
+- [x] Add semantic capture/baseline/result controls and Stream Deck feedback. Reuse
   existing gesture guards and bind approval to exact prepared capture identity.
-- [ ] Show desired/readback disagreement, observation changes, partial capture,
+- [x] Show desired/readback disagreement, observation changes, partial capture,
   cancellation, and disconnected hardware without implying output-off guarantees.
-- [ ] Test first against stateful SCPI fakes and the adapter fake app. Perform bounded
-  real-hardware checks only with an operator-authorized setup and documented load.
+- [x] Test against stateful SCPI fakes and the adapter fake app.
+- [ ] Perform bounded real-hardware checks with an operator-authorized setup and
+  documented load.
 - [ ] Record device model, firmware, transport/adapter, channel, limits, date, command
   outcomes, waveform comparison, disconnect behavior, and physical control latency.
 
@@ -213,6 +214,9 @@ updated SCPI guide, and a real capture/comparison demonstration.
 unavailable, leave CC-5 pending and release the software experience with that label.
 
 **Commit boundary:** Native collectors/bench UI; adapter controls; hardware evidence.
+
+**Evidence:** [CC-5 software review](../../reviews/CC5.md). Hardware acceptance
+CC-A07 remains pending; simulator coverage does not establish physical compatibility.
 
 ## Acceptance traceability
 

@@ -65,7 +65,11 @@ func (s *SCPI) run(ctx context.Context, request SCPIRequest, budget *Budget, obs
 		return result, fault.New(protocol.ShuttingDown, "Instrument provider is shutting down.")
 	}
 	values := map[string]any{}
+	observation := &protocol.InstrumentObservation{Device: request.Device, Channel: request.Channel}
 	defer func() {
+		observation.ObservedAt = time.Now().UTC()
+		observation.Values = values
+		result.Data["instrument"] = observation
 		err = scpiError(ctx, err)
 		d.mu.Lock()
 		d.health = Health{Available: err == nil}
@@ -110,13 +114,15 @@ func (s *SCPI) run(ctx context.Context, request SCPIRequest, budget *Budget, obs
 		return result, fault.New(protocol.PermissionDenied, "Instrument identity does not match its configured profile, model or firmware.")
 	}
 	result.Data["model"], result.Data["firmware"] = d.settings.Model, strings.TrimSpace(parts[3])
+	observation.Model, observation.Firmware = d.settings.Model, strings.TrimSpace(parts[3])
 	d.mu.Lock()
 	d.used = true
 	d.mu.Unlock()
 	if request.Operation == "scope.capture" {
 		var capture map[string]any
-		capture, err = scopeCapture(w, request.Channel)
-		if err == nil {
+		observation.Waveform = &protocol.WaveformObservation{AcquisitionTime: "unknown", Before: protocol.AcquisitionState{State: "unknown"}, After: protocol.AcquisitionState{State: "unknown"}}
+		capture, err = scopeCapture(w, request.Channel, observation.Waveform)
+		if capture != nil {
 			if !reserveSCPIResult(budget, capture) {
 				return result, fault.New(protocol.ExecutionFailed, "Waveform exceeds the remaining job output budget.")
 			}

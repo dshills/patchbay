@@ -92,6 +92,9 @@ func (r *Runtime) prepareCapture(ctx context.Context, request protocol.CapturePr
 	}
 	bindings := &inputBindings{values: map[int]map[string]any{}}
 	parameters := map[string]any{}
+	for _, name := range e.Parameters {
+		parameters[name] = r.parameters[name].Value
+	}
 	for _, mapping := range e.Inputs {
 		p := r.parameters[mapping.Parameter]
 		if p.Sensitive {
@@ -191,6 +194,9 @@ func privatePlan(p *prepared) any {
 func (r *Runtime) SetBaseline(project, experiment string, update protocol.BaselineUpdate) (protocol.Baseline, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	return r.setBaseline(project, experiment, update)
+}
+func (r *Runtime) setBaseline(project, experiment string, update protocol.BaselineUpdate) (protocol.Baseline, error) {
 	if r.closed || r.runs == nil {
 		return protocol.Baseline{}, fault.New(protocol.RecordingFailed, "Run storage is unavailable.")
 	}

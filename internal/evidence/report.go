@@ -21,6 +21,7 @@ var reportTemplate = template.Must(template.New("report").Funcs(template.FuncMap
 {{range .Runs}}<section><h2>{{.Title}}</h2><p>{{.Origin}} · {{.State}} · {{.CreatedAt}}</p><small>Run {{.ID}} · experiment {{.Experiment}}</small><h3>Measurements</h3><table><thead><tr><th>Name</th><th>Value</th><th>Unit</th><th>Status</th><th>Reason</th></tr></thead><tbody>{{range .Measurements}}<tr><td>{{.Name}}</td><td>{{if .Value}}{{.Value}}{{else}}Unavailable{{end}}</td><td>{{.Unit}}</td><td>{{.Status}}</td><td>{{.Reason}}</td></tr>{{end}}</tbody></table>
 {{if .Parameters}}<h3>Selected inputs</h3><pre>{{json .Parameters}}</pre>{{end}}{{if .Note}}<h3>Note</h3><p>{{.Note}}</p>{{end}}{{if .Logs}}<h3>Selected text outputs</h3><pre>{{json .Logs}}</pre>{{end}}{{if .SourceStart}}<h3>Observed source context</h3><pre>{{json .SourceStart}}
 {{json .SourceEnd}}</pre><p>Source changed: {{.SourceChanged}}</p>{{end}}
+{{if .Instruments}}<h3>Selected instrument observations</h3><pre>{{json .Instruments}}</pre>{{end}}
 {{range .Series}}<h3>{{.Name}}</h3><p>{{.Quality}} · X: {{.XUnit}} · Y: {{.YUnit}}</p><details><summary>Complete series data</summary><pre>{{json .}}</pre></details>{{end}}</section>{{end}}
 {{if .Comparison}}<section><h2>Comparison</h2><p>Delta is candidate − baseline. Units must match exactly; a zero baseline has no percent delta.</p><pre>{{json .Comparison}}</pre></section>{{end}}<footer>Patchbay · offline report · schema {{.SchemaVersion}}</footer></body></html>`))
 

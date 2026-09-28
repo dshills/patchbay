@@ -235,3 +235,19 @@ all text and contains no scripts, remote resources, or active form actions. Outp
 capped at 16 MiB. `export save` checks integrity and creates a new 0600 file with
 exclusive creation and directory durability; it refuses overwrites, traversal and
 symlinked parent paths. The daemon never accepts an export filesystem destination.
+
+## Instrument context and physical selection
+
+Experiments may declare `parameters: [name, ...]` to record and display up to 128
+non-sensitive desired values without mapping them into action inputs. Changing these
+values does not implicitly apply hardware settings. Instrument-backed step outcomes
+include optional typed `instrument` observations (identity without serial/address,
+channel, time, values, and waveform pre/post state/preamble). The native SCPI provider
+exposes `waveform.series`, schema 1, collector name `waveform`, units s/V.
+
+Baseline/result bindings reference an experiment; their control snapshots include
+`result` metadata. Event requests carry `run_id` and a guard for exact selection.
+Guarded experiment challenges include `confirmation.capture`, and admission consumes
+the retained preparation. A stale capture returns `stale_preparation`; a stale or
+replayed control challenge returns `invalid_request`. Details: [SCPI](SCPI.md) and
+[physical controls](STREAMDECK.md).

@@ -216,3 +216,37 @@ firmware, date and outcome before claiming physical validation:
 
 The simulator suite covers these software paths without bench equipment. Physical
 DG812/MHO954 and the earlier Stream Deck+ smoke gates remain open.
+
+## Durable stopped-trace captures
+
+`configs/bench.yaml` now declares `bench.trace`. Capture it from the workbench or
+`deckctl experiment run bench.trace --confirm --socket ~/.deckd/bench.sock`.
+The capture workflow inspects DG812 channel 1, transfers MHO954 channel 1, and
+inspects the generator again. It continues to the final inspection after a failed
+transfer, but cancellation or a recording failure can still prevent later steps.
+All step outcomes remain explicit.
+
+Use the existing sequence: disable both outputs, explicitly apply desired frequency
+and amplitude, separately authorize output enable, acquire and stop using the scope,
+then capture. The capture action never enables outputs, stops/starts acquisition,
+or triggers a new trace. Generator settings are observations at two different times,
+not an atomic snapshot. Changing a workbench input changes the desired value only.
+
+The scope is checked for STOP before setup and immediately before and after waveform
+transfer. Unknown/changed post-transfer state fails the operation. A complete bounded
+trace is retained with `quality: suspect` for diagnosis; comparisons and baseline
+selection reject it. STOP on both sides cannot prove that the front panel was not
+changed between queries. Acquisition time remains `unknown`; an operator can record
+an acquisition assertion in the saved run's note.
+
+Run outcomes retain model, firmware, channel, observation times, generator readbacks,
+pre/post acquisition state, and the waveform preamble. Serial numbers and endpoint
+addresses are excluded from these observations. The series uses volts and seconds,
+with x = (index − x_reference) × x_increment + x_origin and the existing voltage
+scaling. Selecting source context during report preview includes these observations;
+default reports omit them. The workbench shows desired/readback disagreement and
+changed readbacks and offers complete trace tables.
+
+Simulator evidence is in [CC-5](reviews/CC5.md). Physical verification of the DG812,
+MHO954 firmware/adapter and Stream Deck+ remains pending. No equipment was operated
+by the implementation tests, and shutdown does not guarantee outputs are off.

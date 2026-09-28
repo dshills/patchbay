@@ -73,6 +73,11 @@ func (r *Runtime) PrepareExport(ctx context.Context, request protocol.ExportPrep
 		}
 		if request.Options.Source {
 			exported.SourceStart, exported.SourceEnd, exported.SourceChanged = run.SourceStart, run.SourceEnd, run.SourceChanged
+			for _, outcome := range run.Outcomes {
+				if outcome.Instrument != nil {
+					exported.Instruments = append(exported.Instruments, *outcome.Instrument)
+				}
+			}
 		}
 		if request.Options.Logs {
 			exported.Logs = map[string]string{}

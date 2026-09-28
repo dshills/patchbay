@@ -13,20 +13,21 @@ type ExportPrepare struct {
 	Options ExportOptions `json:"options"`
 }
 type ExportRun struct {
-	ID            string             `json:"id"`
-	Origin        string             `json:"origin"`
-	Experiment    string             `json:"experiment"`
-	Title         string             `json:"title"`
-	State         string             `json:"state"`
-	CreatedAt     time.Time          `json:"created_at"`
-	Measurements  []Measurement      `json:"measurements"`
-	Series        []Series           `json:"series"`
-	Parameters    map[string]any     `json:"parameters,omitempty"`
-	Note          string             `json:"note,omitempty"`
-	Logs          map[string]string  `json:"logs,omitempty"`
-	SourceStart   *SourceObservation `json:"source_start,omitempty"`
-	SourceEnd     *SourceObservation `json:"source_end,omitempty"`
-	SourceChanged bool               `json:"source_changed,omitempty"`
+	Instruments   []InstrumentObservation `json:"instruments,omitempty"`
+	ID            string                  `json:"id"`
+	Origin        string                  `json:"origin"`
+	Experiment    string                  `json:"experiment"`
+	Title         string                  `json:"title"`
+	State         string                  `json:"state"`
+	CreatedAt     time.Time               `json:"created_at"`
+	Measurements  []Measurement           `json:"measurements"`
+	Series        []Series                `json:"series"`
+	Parameters    map[string]any          `json:"parameters,omitempty"`
+	Note          string                  `json:"note,omitempty"`
+	Logs          map[string]string       `json:"logs,omitempty"`
+	SourceStart   *SourceObservation      `json:"source_start,omitempty"`
+	SourceEnd     *SourceObservation      `json:"source_end,omitempty"`
+	SourceChanged bool                    `json:"source_changed,omitempty"`
 }
 type ExportDocument struct {
 	SchemaVersion int         `json:"schema_version"`

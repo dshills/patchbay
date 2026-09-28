@@ -406,3 +406,23 @@ func TestInstrumentFrameKeepsDesiredAndObservedAfterJobSuccess(t *testing.T) {
 		}
 	}
 }
+
+func TestEvidenceControlUsesDisplayedRun(t *testing.T) {
+	e, b, d := engineFixture(t)
+	value := 1.25
+	target := protocol.ControlTarget{Action: "baseline.bench", Enabled: true, Result: &protocol.ControlResult{Experiment: "bench", RunID: "saved-run", State: "success", Measurement: &protocol.Measurement{Value: &value, Unit: "ms", Status: "valid"}}}
+	b.snapshot.Controls[0].Targets = map[string]protocol.ControlTarget{Press: target}
+	input(t, e, d, message("Keypad", "willAppear"))
+	frames := e.Render(d.now)
+	if len(frames) != 1 || frames[0].Frame.Value != "1.25 ms" || frames[0].Frame.Detail != "success" {
+		t.Fatal(frames)
+	}
+	click(t, e, d, "Keypad", 10*time.Millisecond)
+	if len(b.requests) != 1 {
+		t.Fatal(b.requests)
+	}
+	var payload protocol.ControlPayload
+	if json.Unmarshal(b.requests[0].Payload, &payload) != nil || payload.RunID != "saved-run" || payload.Guard == nil {
+		t.Fatal("missing exact displayed selection")
+	}
+}

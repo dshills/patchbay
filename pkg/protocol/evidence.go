@@ -13,6 +13,7 @@ type Experiment struct {
 	Action        string            `json:"action,omitempty" yaml:"action,omitempty"`
 	Workflow      string            `json:"workflow,omitempty" yaml:"workflow,omitempty"`
 	Inputs        []ExperimentInput `json:"inputs,omitempty" yaml:"inputs,omitempty"`
+	Parameters    []string          `json:"parameters,omitempty" yaml:"parameters,omitempty"`
 	Collectors    []Collector       `json:"collectors" yaml:"collectors"`
 	Layout        []Widget          `json:"layout,omitempty" yaml:"layout,omitempty"`
 }
@@ -143,13 +144,35 @@ type SourceObservation struct {
 }
 
 type StepOutcome struct {
-	Index      int        `json:"index"`
-	Action     string     `json:"action"`
-	State      string     `json:"state"`
-	StartedAt  *time.Time `json:"started_at,omitempty"`
-	FinishedAt *time.Time `json:"finished_at,omitempty"`
-	Truncated  bool       `json:"truncated,omitempty"`
-	Error      *Error     `json:"error,omitempty"`
+	Instrument *InstrumentObservation `json:"instrument,omitempty"`
+	Index      int                    `json:"index"`
+	Action     string                 `json:"action"`
+	State      string                 `json:"state"`
+	StartedAt  *time.Time             `json:"started_at,omitempty"`
+	FinishedAt *time.Time             `json:"finished_at,omitempty"`
+	Truncated  bool                   `json:"truncated,omitempty"`
+	Error      *Error                 `json:"error,omitempty"`
+}
+
+// Instrument observations describe a transfer, never an inferred acquisition.
+type InstrumentObservation struct {
+	Device     string               `json:"device"`
+	Model      string               `json:"model"`
+	Firmware   string               `json:"firmware"`
+	Channel    int                  `json:"channel"`
+	ObservedAt time.Time            `json:"observed_at"`
+	Values     map[string]any       `json:"values,omitempty"`
+	Waveform   *WaveformObservation `json:"waveform,omitempty"`
+}
+type AcquisitionState struct {
+	State      string    `json:"state"`
+	ObservedAt time.Time `json:"observed_at"`
+}
+type WaveformObservation struct {
+	AcquisitionTime string           `json:"acquisition_time"`
+	Before          AcquisitionState `json:"before"`
+	After           AcquisitionState `json:"after"`
+	Preamble        []float64        `json:"preamble,omitempty"`
 }
 
 type Run struct {

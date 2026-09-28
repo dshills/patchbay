@@ -263,6 +263,7 @@ type EventRequest struct {
 	Payload json.RawMessage `json:"payload"`
 }
 type ControlPayload struct {
+	RunID        string        `json:"run_id,omitempty"`
 	Device       string        `json:"device,omitempty"`
 	Control      string        `json:"control"`
 	Delta        int64         `json:"delta,omitempty"`
@@ -271,6 +272,7 @@ type ControlPayload struct {
 	Confirmation string        `json:"confirmation,omitempty"`
 }
 type EventResponse struct {
+	RunID   string `json:"run_id,omitempty"`
 	EventID string `json:"event_id"`
 	Matched bool   `json:"matched"`
 	JobID   string `json:"job_id,omitempty"`
