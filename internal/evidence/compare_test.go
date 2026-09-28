@@ -69,3 +69,20 @@ func TestSeriesGridAndSuspectData(t *testing.T) {
 		t.Fatal("suspect trace compared")
 	}
 }
+
+func BenchmarkCompareThousandPointSeries(b *testing.B) {
+	a := protocol.Series{SchemaVersion: 1, Name: "trace", X: make([]float64, 1000), Y: make([]float64, 1000), XUnit: "s", YUnit: "V", Quality: "valid"}
+	for i := range a.X {
+		a.X[i], a.Y[i] = float64(i)/1000, math.Sin(float64(i))
+	}
+	c := Clone(a)
+	for i := range c.Y {
+		c.Y[i] += 0.1
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		if len(CompareSeries(a, c).Delta) != 1000 {
+			b.Fatal("missing difference")
+		}
+	}
+}

@@ -26,17 +26,19 @@ import (
 var assets embed.FS
 
 type Server struct {
-	listener net.Listener
-	http     *http.Server
-	client   *client.Client
-	token    string
-	origin   string
-	quit     chan struct{}
-	once     sync.Once
-	cancel   context.CancelFunc
+	ownedDaemon bool
+	listener    net.Listener
+	http        *http.Server
+	client      *client.Client
+	token       string
+	origin      string
+	quit        chan struct{}
+	once        sync.Once
+	cancel      context.CancelFunc
 }
 
-func Start(socket string) (*Server, error) {
+func Start(socket string) (*Server, error) { return StartOwned(socket, false) }
+func StartOwned(socket string, owned bool) (*Server, error) {
 	c, err := client.New(client.Options{Socket: socket, Timeout: 5 * time.Second, MaxResponseBytes: 32 << 20})
 	if err != nil {
 		return nil, err
@@ -53,7 +55,7 @@ func Start(socket string) (*Server, error) {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	s := &Server{listener: listener, client: c, token: base64.RawURLEncoding.EncodeToString(secret), origin: "http://" + listener.Addr().String(), quit: make(chan struct{}), cancel: cancel}
+	s := &Server{ownedDaemon: owned, listener: listener, client: c, token: base64.RawURLEncoding.EncodeToString(secret), origin: "http://" + listener.Addr().String(), quit: make(chan struct{}), cancel: cancel}
 	s.http = &http.Server{Handler: s, ReadHeaderTimeout: 2 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 15 * time.Second, MaxHeaderBytes: 8192, BaseContext: func(net.Listener) context.Context { return ctx }}
 	go func() { _ = s.http.Serve(listener); s.once.Do(func() { close(s.quit) }) }()
 	return s, nil
@@ -117,6 +119,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	mutation := r.Method != "GET"
 	if mutation && (r.Header.Get("Origin") != s.origin || r.Header.Get("Content-Type") != "application/json") {
 		fail(403, "Mutations require the session origin and JSON content type.")
+		return
+	}
+	if r.URL.Path == "/api/session" && r.Method == "GET" {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(struct {
+			Owned bool `json:"owned_daemon"`
+		}{s.ownedDaemon})
 		return
 	}
 	if r.URL.Path == "/session/quit" && r.Method == "POST" {

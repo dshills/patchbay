@@ -20,7 +20,7 @@ MAX_FILE = 128 * 1024 * 1024
 MAX_TOTAL = 256 * 1024 * 1024
 MAX_MANIFEST = 1024 * 1024
 CPU = {"arm64": 0x0100000C, "amd64": 0x01000007}
-CONFIGS = ("example", "quickstart", "streamdeck", "developer", "bench", "plugins")
+CONFIGS = ("example", "quickstart", "streamdeck", "developer", "bench", "plugins", "benchmark")
 
 
 def require(condition, message):
@@ -134,7 +134,7 @@ def verify_archive(path, allow_dirty=False):
         required.update(binaries)
         if product == "deckd":
             required.update(f"configs/{name}.yaml" for name in CONFIGS)
-            required.update({"README.md", "configs/local.patchbay.deckd.plist", "specs/OPERATIONS.md",
+            required.update({"share/workbench/index.html", "share/workbench/app.js", "share/workbench/style.css", "scripts/verify_workbench.py", "README.md", "Patchbay.command", "specs/WORKBENCH.md", "specs/EVIDENCE.md", "configs/local.patchbay.deckd.plist", "specs/OPERATIONS.md",
                              "scripts/verify_v1.py", "scripts/benchmark_runtime.py", "scripts/verify_release.py",
                              "scripts/release_common.py"})
         else:
@@ -148,7 +148,7 @@ def verify_archive(path, allow_dirty=False):
             name = entry.filename
             data = archive.read(entry)
             mode = stat.S_IMODE(entry.external_attr >> 16)
-            require(mode == (0o755 if name in binaries else 0o644), "unexpected executable mode")
+            require(mode == (0o755 if name in binaries or product == "deckd" and name == "Patchbay.command" else 0o644), "unexpected executable mode")
             if name != manifest_name:
                 record = records[name]
                 require(isinstance(record, dict) and set(record) == {"size", "sha256", "mode"}, "invalid file record")
@@ -203,7 +203,7 @@ def smoke(metadata, files):
             output = subprocess.check_output([str(root / PLUGIN / "bin/decksd"), "--version"], timeout=10, text=True)
             require(all(value in output for value in expected.values()), "adapter version mismatch")
             return
-        for name in ("deckd", "deckctl", "deckplugincheck"):
+        for name in ("deckd", "deckctl", "deckplugincheck", "deckdemo"):
             output = subprocess.check_output([str(root / "bin" / name), "--version", "--json"], timeout=10)
             require(decode(output) == expected, "binary version mismatch: " + name)
         for name in CONFIGS:
@@ -211,6 +211,7 @@ def smoke(metadata, files):
                             "--config", str(root / f"configs/{name}.yaml")], check=True, timeout=10)
         subprocess.run([sys.executable, str(Path(__file__).with_name("verify_v1.py")),
                         "--bundle", str(root), "--samples", "5"], check=True, timeout=90)
+        subprocess.run([sys.executable, str(Path(__file__).with_name("verify_workbench.py")), "--bundle", str(root)], check=True, timeout=90)
         subprocess.run([str(root / "bin/deckplugincheck"), "--config", str(root / "configs/plugins.yaml")],
                        cwd=root, check=True, timeout=15)
 

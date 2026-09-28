@@ -23,9 +23,11 @@ test('real workbench: capture, baseline, comparison, export, token loss, and sta
   const testBinary=path.join(dir,'browser-helper');execFileSync('go',['test','-c','-o',testBinary,'./internal/workbench'],{cwd:root,stdio:'pipe'});
   helper=spawn(testBinary,['-test.run=^TestServeBrowser$'],{cwd:root,env:{...process.env,PATCHBAY_BROWSER_TEST_SOCKET:socket},stdio:['ignore','ignore','pipe','pipe']});
   const launch=await new Promise((resolve,reject)=>{let data='';const timer=setTimeout(()=>reject(Error('Browser helper did not start.')),10000);helper.stdio[3].on('data',chunk=>{data+=chunk;if(data.includes('\n')){clearTimeout(timer);resolve(data.trim());}});helper.once('exit',()=>{clearTimeout(timer);reject(Error('Browser helper exited.'));});});
-  browser=await chromium.launch({headless:true});const context=await browser.newContext({acceptDownloads:true,viewport:{width:1280,height:1000}});const page=await context.newPage();const errors=[];page.on('pageerror',error=>errors.push(error.message));
-  await page.goto(launch);await page.waitForFunction(()=>document.querySelector('#connection').textContent==='Connected · local daemon');
-  assert.equal(new URL(page.url()).hash,'');assert.equal(await page.evaluate(()=>localStorage.length),0);assert.equal(await page.locator('.run-row').count(),0);
+  browser=await chromium.launch({headless:true});const context=await browser.newContext({acceptDownloads:true,viewport:{width:1280,height:1000}});let page;const errors=[];
+  const renderTimes=[];
+  for(let sample=0;sample<10;sample++){if(page)await page.close();page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));const began=performance.now();await page.goto(launch);await page.waitForFunction(()=>document.querySelector('#connection').textContent==='Connected · local daemon');renderTimes.push(performance.now()-began);}
+  renderTimes.sort((a,b)=>a-b);console.log(JSON.stringify({first_render_samples:10,median_ms:renderTimes[5],p95_ms:renderTimes[9],platform:process.platform,arch:process.arch}));
+  assert.equal(new URL(page.url()).hash==='',true,'Launch fragment must be erased.');assert.equal(await page.evaluate(()=>localStorage.length),0);assert.equal(await page.locator('.run-row').count(),0);
   await focusByKeyboard(page,'prepare');await page.keyboard.press('Enter');await page.locator('#preview').waitFor({state:'visible'});await focusByKeyboard(page,'confirm');await page.keyboard.press('Space');await focusByKeyboard(page,'capture');await page.keyboard.press('Enter');await page.waitForFunction(()=>document.querySelector('#run-status').textContent.startsWith('success'));
   await page.locator('#baseline').click();await page.waitForFunction(()=>document.querySelector('#baseline-label').textContent.startsWith('Baseline:'));
   await page.locator('#param-iterations').fill('20000');await page.locator('#param-iterations').press('Tab');await page.waitForFunction(()=>!document.querySelector('#prepare').disabled);

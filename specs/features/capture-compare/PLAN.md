@@ -1,6 +1,6 @@
 # Capture & Compare implementation plan
 
-**Status:** CC-1–CC-3 software complete; CC-4 in progress. Manual screen-reader verification remains pending.\
+**Status:** CC-1–CC-4 software implemented; external CC-4 release gates and CC-5 remain pending. Manual screen-reader verification remains pending.\
 **Specification:** [Capture & Compare](SPEC.md)\
 **Dependencies:** Existing runtime/release tooling; no recipes or agent execution required.
 
@@ -135,18 +135,19 @@ is recorded. The client performs no execution that bypasses daemon policy.
 
 **Depends on:** CC-3.
 
-- [ ] Include workbench assets, demo executable/configuration, sample data, required
+- [x] Include workbench assets, demo executable/configuration, sample data, required
   licenses, provenance, and hashes in both architecture bundles. Update verifiers.
-- [ ] Add an explicit launcher path that prepares a private demo workspace and starts
+- [x] Add an explicit launcher path that prepares a private demo workspace and starts
   a compatible daemon/helper when needed. Detect an existing incompatible daemon;
   report the conflict without replacing configuration or killing another service.
-- [ ] Document whether launched processes are owned by this session and how to stop
+- [x] Document whether launched processes are owned by this session and how to stop
   them. Closing the browser leaves jobs running; explicit Quit cancels/waits according
   to the normal bounded shutdown policy. Do not silently install a login service.
-- [ ] Verify extracted bundles, upgrade compatibility, durable-run backup/recovery,
-  uninstall data handling, and missing/corrupt browser assets.
-- [ ] Provide a short first-run guide and a 30-second adjust/run/compare demonstration.
-  Conduct the five-user walkthrough and record obstacles and results by consent.
+- [x] Verify extracted bundles and missing/corrupt assets; test compatible reuse and
+  incompatible demo configuration; document stopped backup/restore and uninstall.
+- [ ] Verify upgrade/restore on a fresh user account and native Intel Mac.
+- [x] Provide a short first-run guide and adjust/run/compare demonstration.
+- [ ] Conduct the five-user walkthrough and record obstacles and results by consent.
 - [ ] Assess signing/notarization and Gatekeeper on a clean Mac; record actual status
   and installation friction before public distribution. Publishing is a separate step.
 
@@ -168,6 +169,10 @@ notes, performance evidence, and Prism review report.
 signing, or usability targets remain explicit release limitations.
 
 **Commit boundary:** Packaging/launcher; onboarding and release evidence.
+
+**Evidence:** [CC-4 review and release evidence](../../reviews/CC4.md). The local
+candidate is unsigned; no release was published. Native Intel, fresh-account,
+screen-reader, polling-load/chart-limit, and usability checks remain pending.
 
 ## CC-5 — Rigol and physical controls
 

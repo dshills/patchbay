@@ -15,7 +15,7 @@ import zlib
 ROOT = Path(__file__).resolve().parent.parent
 STAMP = (1980, 1, 1, 0, 0, 0)
 MANIFEST = "RELEASE.json"
-COMMANDS = {"deckd": "cmd/deckd", "deckctl": "cmd/deckctl",
+COMMANDS = {"deckd": "cmd/deckd", "deckctl": "cmd/deckctl", "deckdemo": "cmd/deckdemo",
             "deckplugincheck": "cmd/deckplugincheck", "deckplugin-example": "examples/plugin"}
 PLUGIN = "local.patchbay.deckd.sdPlugin"
 

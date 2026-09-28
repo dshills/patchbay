@@ -230,3 +230,30 @@ Release bundles also include `bin/deckplugincheck` and the optional
 started automatically. The bundled example path resolves within the extracted
 bundle. See [PLUGINS.md](PLUGINS.md) for explicit conformance probes and the
 permissions and isolation limits of installed plugin code.
+
+## Demo workspaces and durable evidence
+
+`deckctl demo` owns only a daemon that it starts. Its default workspace is
+`~/.deckd/demo`; a separately launched `deckd` is managed by its own terminal or
+service. Close the owning launcher and confirm shutdown before backup or upgrade.
+Copy the entire private workspace, including configuration, state, `runs/`, and
+manifests, into a private backup directory. A live file-by-file copy can combine
+inconsistent revisions. Preserve mode 0700 on directories and 0600 on data.
+
+Restore a stopped workspace together with its matching configuration and binaries.
+Interrupted queued/running records become interrupted; no capture is replayed.
+Unsupported newer or corrupt stores are diagnostic/read-only. Preserve the original
+files before attempting repair. Deleting the application bundle does not delete
+saved results. Remove a workspace only by a separate, deliberate data-retention
+decision. Exported reports live wherever the user saved them.
+
+The demo launcher never rewrites an existing configuration to match a moved bundle.
+For an upgrade, retain the old bundle and backup, choose a fresh `--demo-dir` for a
+trial, or deliberately update your stopped configuration and use `deckd`/`workbench`.
+The release verifier checks missing/corrupt assets and binary metadata before
+extraction. Serving uses embedded assets; editing extracted `share/workbench` does
+not change the running application.
+
+The current candidate is unsigned and unnotarized. Clean-account Gatekeeper tests,
+native Intel execution, manual screen-reader checks, and the five-user onboarding
+study are pending. Do not represent archive verification as evidence for these gates.

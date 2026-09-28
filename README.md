@@ -1,14 +1,15 @@
 # Patchbay
 
-Run project checks, switch projects, and adjust lab settings from your terminal
-or Stream Deck+.
+Change a setting, capture a result, and see what improved — from your browser,
+terminal, or Stream Deck+.
 
 Patchbay brings the tasks you repeat into one place. Define an action once, then
 run it from the command line or assign it to a physical control. A button can
 start your project checks; a dial can adjust a value; switching projects can
 change what those controls do.
 
-You can get started entirely from the terminal, with no hardware attached.
+Try the local benchmark playground with no equipment or AI account. Save a
+baseline, change the workload, compare the results, and share an offline report.
 
 ## What can you do with it?
 
@@ -24,12 +25,27 @@ You can get started entirely from the terminal, with no hardware attached.
 - **Connect and extend your setup.** Try the instrument profiles for the Rigol
   DG812 and MHO954, or add your own actions through executable plugins.
 
-**Current status:** Patchbay is in early development and currently built from
-source on macOS. The terminal workflow has automated test coverage. Stream Deck+
-and Rigol integrations are implemented, but physical-device validation is still
-pending. Start with the terminal example below to get a feel for how it works.
+**Current status:** Early development on macOS. The browser workbench, local
+benchmark, and terminal workflows have automated coverage. Release candidates
+include a demo launcher; public signed releases and physical Stream Deck+/Rigol
+validation are still pending.
 
-## Get started
+## Try the workbench
+
+In an extracted, verified release candidate, double-click **Patchbay.command** or
+run `./bin/deckctl demo`. It opens your browser and saves results privately in
+`~/.deckd/demo`. No Go installation, API key, or hardware is needed for the demo.
+
+1. Choose **Review capture**, inspect the steps, and capture your first run.
+2. Choose **Use as baseline**, increase **Iterations**, and capture again.
+3. Choose **Compare with baseline** to see the difference. Preview and download
+   an HTML report to keep or share.
+
+**Quit demo** stops the daemon started by that launcher. Closing just the browser
+tab leaves it running. Keep the launcher terminal open while using the workbench.
+See the [workbench guide](specs/WORKBENCH.md) for existing daemons and saved data.
+
+## Build from source
 
 You'll need **macOS, Git, Go 1.27 or later, and Make**.
 
@@ -41,7 +57,8 @@ cd patchbay
 make build
 ```
 
-This creates the programs in `bin/`. The two you'll use first are:
+Run `./bin/deckctl demo` to open the benchmark playground. To try your own project
+actions, continue below. The two programs you'll use are:
 
 - **`deckd`** — runs the local Patchbay service.
 - **`deckctl`** — lets you choose projects, run actions, and see results.
@@ -122,19 +139,3 @@ verification. For the technical details, see the [specification](specs/SPEC.md),
 ## License
 
 Patchbay is available under the [MIT License](LICENSE).
-
-## Capture and compare
-
-The new local workbench lets you change a parameter, save a run, choose a baseline,
-and see what changed. Start with the offline benchmark playground:
-
-```sh
-make build
-bin/deckd --config configs/benchmark.yaml
-# In another terminal:
-bin/deckctl workbench --socket .cache/benchmark/deckd.sock
-```
-
-No equipment or AI account is needed. Save notes, pin useful results, and download
-an offline HTML report after reviewing exactly what it includes.
-See the [workbench guide](specs/WORKBENCH.md) and [CLI walkthrough](specs/EVIDENCE.md).

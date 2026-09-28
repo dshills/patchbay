@@ -1,5 +1,38 @@
 # Local workbench
 
+## Packaged demo
+
+Keep the extracted bundle together, then open `Patchbay.command` or run:
+
+```
+./bin/deckctl demo
+# Optional separate private workspace:
+./bin/deckctl demo --demo-dir /tmp/my-patchbay-demo
+```
+
+The launcher creates a private workspace (default `~/.deckd/demo`), checks the
+sibling demo executable's build metadata, and creates its benchmark configuration
+only when absent. It starts an in-process daemon and the loopback browser helper.
+It uses neither Go nor an AI provider at runtime. Samples and browser assets are
+embedded, so it works offline after download. No login service is installed.
+
+An existing compatible daemon is reused. A different configuration, incompatible
+version, or unexpected file is reported without replacement. When moving bundles
+or changing the demo configuration, choose a new `--demo-dir`, or manage the
+existing configuration with `deckd` and connect with `workbench` below.
+
+The page and terminal identify ownership. **Quit demo** or Ctrl-C closes a daemon
+owned by that launcher, cancels its jobs, and waits for bounded shutdown. Saved
+results remain. A reused daemon keeps running when that helper closes. Closing a
+browser tab alone never stops the daemon. Do not delete its live lock files.
+
+A quick demonstration: capture the default workload, select **Use as baseline**,
+change Iterations to 20000, capture again, and compare. The benchmark measures
+actual runtime on your computer; thermal state and other work affect it. Review
+repeat count and spread alongside the result.
+
+## Connect to a running daemon
+
 Start the browser client while a compatible daemon is running:
 
 ```

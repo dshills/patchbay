@@ -63,6 +63,9 @@ func runDeckctl(ctx context.Context, args []string, stdout, stderr io.Writer) in
 		}
 		return report(validationResult{true}, nil, options, stdout, stderr)
 	}
+	if command[0] == "demo" {
+		return runDemo(ctx, options.demoDir, stdout, stderr)
+	}
 	if command[0] == "workbench" {
 		return runWorkbench(ctx, options.socket, stdout, stderr)
 	}
