@@ -362,13 +362,13 @@ func (s *Store) lookup(request, digest string) (protocol.CaptureResponse, bool, 
 		if r.RequestDigest != digest {
 			return protocol.CaptureResponse{}, true, fault.New(protocol.RequestConflict, "Request ID was already used for different content.")
 		}
-		return protocol.CaptureResponse{RunID: id, JobID: r.JobID}, true, nil
+		return protocol.CaptureResponse{RequestID: request, RunID: id, JobID: r.JobID}, true, nil
 	}
 	if receipt, ok := s.meta.Deleted[request]; ok {
 		if receipt.Digest != digest {
 			return protocol.CaptureResponse{}, true, fault.New(protocol.RequestConflict, "Request ID was already used for different content.")
 		}
-		return protocol.CaptureResponse{RunID: receipt.RunID, JobID: receipt.JobID, Deleted: true}, true, nil
+		return protocol.CaptureResponse{RequestID: request, RunID: receipt.RunID, JobID: receipt.JobID, Deleted: true}, true, nil
 	}
 	return protocol.CaptureResponse{}, false, nil
 }
@@ -437,7 +437,7 @@ func (s *Store) Reserve(run protocol.Run) (protocol.CaptureResponse, bool, error
 		return protocol.CaptureResponse{}, false, err
 	}
 	s.runs[run.ID], s.requests[run.RequestID] = Clone(run), run.ID
-	return protocol.CaptureResponse{RunID: run.ID, JobID: run.JobID}, false, nil
+	return protocol.CaptureResponse{RequestID: run.RequestID, RunID: run.ID, JobID: run.JobID}, false, nil
 }
 
 func (s *Store) Get(id string) (protocol.Run, error) {
@@ -451,6 +451,24 @@ func (s *Store) Get(id string) (protocol.Run, error) {
 	return Clone(run), nil
 }
 
+// RecordingFailure keeps the known external outcome inspectable for this process.
+// It cannot claim persistence after a failed fsync. Restart uses the last committed
+// manifest, recovering a nonterminal one as interrupted without replay.
+func (s *Store) RecordingFailure(id string, completed protocol.Run) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	old, ok := s.runs[id]
+	if !ok {
+		return
+	}
+	completed.ID = old.ID
+	completed.State = "recording_failed"
+	now := s.options.Now().UTC()
+	completed.FinishedAt = &now
+	completed.Error = fault.New(protocol.RecordingFailed, "External work may have completed; terminal evidence could not be saved. Do not retry automatically.")
+	s.runs[id] = Clone(completed)
+	s.issue("Terminal evidence could not be saved. Restart may report this run as interrupted.")
+}
 func (s *Store) Update(run protocol.Run) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -792,15 +810,7 @@ func sameJSON(a, b any) bool {
 	return bytes.Equal(left, right)
 }
 func immutable(run protocol.Run) any {
-	return struct {
-		ID, Origin, Project, Instance, JobID, RequestID, RequestDigest, PlanDigest, ExperimentDigest string
-		Version                                                                                      int
-		Generation                                                                                   uint64
-		Created                                                                                      time.Time
-		Experiment                                                                                   protocol.Experiment
-		Parameters                                                                                   map[string]any
-		Steps                                                                                        []protocol.PreparedStep
-	}{run.ID, run.Origin, run.Project, run.Instance, run.JobID, run.RequestID, run.RequestDigest, run.PlanDigest, run.ExperimentDigest, run.SchemaVersion, run.Generation, run.CreatedAt, run.Experiment, run.Parameters, run.Steps}
+	return map[string]any{"id": run.ID, "origin": run.Origin, "project": run.Project, "context": run.Context, "instance": run.Instance, "job_id": run.JobID, "request_id": run.RequestID, "request_digest": run.RequestDigest, "plan_digest": run.PlanDigest, "experiment_digest": run.ExperimentDigest, "schema_version": run.SchemaVersion, "generation": run.Generation, "created_at": run.CreatedAt, "experiment": run.Experiment, "parameters": run.Parameters, "steps": run.Steps}
 }
 
 func validMetadata(meta metadata) bool {

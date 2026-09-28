@@ -4,11 +4,63 @@ import (
 	"net/http"
 	"strconv"
 
+	"patchbay/internal/evidence"
 	"patchbay/internal/fault"
 	"patchbay/pkg/protocol"
 )
 
 func (h *Handler) evidenceRoutes() {
+	h.route("/v1/samples", "GET", func(w http.ResponseWriter, r *http.Request) { respond(w, 200, evidence.Samples()) })
+	h.route("/v1/exports/prepare", "POST", func(w http.ResponseWriter, r *http.Request) {
+		var req protocol.ExportPrepare
+		if !h.decode(w, r, &req) {
+			return
+		}
+		value, err := h.runtime.PrepareExport(r.Context(), req)
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, value)
+	})
+	h.route("/v1/exports", "POST", func(w http.ResponseWriter, r *http.Request) {
+		var req protocol.ExportRequest
+		if !h.decode(w, r, &req) {
+			return
+		}
+		value, err := h.runtime.Export(r.Context(), req)
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, value)
+	})
+
+	h.route("/v1/captures", "POST", func(w http.ResponseWriter, r *http.Request) {
+		var req protocol.CaptureRequest
+		if !h.decode(w, r, &req) {
+			return
+		}
+		value, err := h.runtime.Capture(r.Context(), req)
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 202, value)
+	})
+	h.route("/v1/comparisons", "POST", func(w http.ResponseWriter, r *http.Request) {
+		var req protocol.ComparisonRequest
+		if !h.decode(w, r, &req) {
+			return
+		}
+		value, err := h.runtime.Compare(r.Context(), req)
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, value)
+	})
+
 	h.route("/v1/capabilities", "GET", func(w http.ResponseWriter, r *http.Request) { respond(w, 200, h.runtime.Capabilities()) })
 	h.route("/v1/experiments", "GET", func(w http.ResponseWriter, r *http.Request) { respond(w, 200, h.runtime.Experiments()) })
 	h.route("/v1/captures/prepare", "POST", func(w http.ResponseWriter, r *http.Request) {

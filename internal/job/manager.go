@@ -20,13 +20,21 @@ import (
 type Work func(context.Context, string) (action.Result, error)
 type Limits struct{ Concurrency, Queue, History int }
 
+// Lifecycle callbacks run under the manager lock and must not call the manager
+// or acquire the runtime lock. Before publishes identity before queue visibility;
+// Completed persists the terminal result before waiters see completion.
+type Lifecycle struct {
+	Before    func(string) error
+	Completed func(Job)
+}
 type entry struct {
-	job    Job
-	ctx    context.Context
-	cancel context.CancelFunc
-	stop   func() bool
-	work   Work
-	done   chan struct{}
+	lifecycle Lifecycle
+	job       Job
+	ctx       context.Context
+	cancel    context.CancelFunc
+	stop      func() bool
+	work      Work
+	done      chan struct{}
 }
 
 // Handle pins a job for a submitting synchronous waiter even if terminal history
@@ -70,6 +78,9 @@ func NewManager(limits Limits, bus *event.Bus, log *logging.Logger) *Manager {
 }
 
 func (m *Manager) Submit(parent context.Context, name string, generation uint64, timeout time.Duration, work Work) (*Handle, error) {
+	return m.SubmitDurable(parent, name, generation, timeout, work, Lifecycle{})
+}
+func (m *Manager) SubmitDurable(parent context.Context, name string, generation uint64, timeout time.Duration, work Work, lifecycle Lifecycle) (*Handle, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.closed {
@@ -88,7 +99,13 @@ func (m *Manager) Submit(parent context.Context, name string, generation uint64,
 		ctx, cancel = deadlineCtx, func() { deadlineCancel(); baseCancel() }
 	}
 	id := identity.New()
-	e := &entry{job: Job{ID: id, Action: name, Generation: generation, State: Queued, CreatedAt: time.Now().UTC()}, ctx: ctx, cancel: cancel, work: work, done: make(chan struct{})}
+	if lifecycle.Before != nil {
+		if err := lifecycle.Before(id); err != nil {
+			cancel()
+			return nil, err
+		}
+	}
+	e := &entry{job: Job{ID: id, Action: name, Generation: generation, State: Queued, CreatedAt: time.Now().UTC()}, ctx: ctx, cancel: cancel, work: work, lifecycle: lifecycle, done: make(chan struct{})}
 	m.entries[id] = e
 	m.queue = append(m.queue, e)
 	e.stop = context.AfterFunc(ctx, func() { m.cancelQueued(id) })
@@ -171,6 +188,10 @@ func (m *Manager) finish(e *entry, result action.Result, err error) {
 	} else {
 		e.job = copy
 	}
+	if e.lifecycle.Completed != nil {
+		e.lifecycle.Completed(e.job)
+	}
+	e.lifecycle = Lifecycle{}
 	e.work = nil // release pinned generation, environment, and prepared workflow
 	m.history = append(m.history, e.job.ID)
 	m.trim()

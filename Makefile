@@ -12,6 +12,7 @@ build:
 	mkdir -p bin
 	$(GO) build -trimpath -buildvcs=false -ldflags '$(LDFLAGS)' -o bin/deckd ./cmd/deckd
 	$(GO) build -trimpath -buildvcs=false -ldflags '$(LDFLAGS)' -o bin/deckctl ./cmd/deckctl
+	$(GO) build -trimpath -buildvcs=false -ldflags '$(LDFLAGS)' -o bin/deckdemo ./cmd/deckdemo
 	$(GO) build -trimpath -buildvcs=false -ldflags '$(LDFLAGS)' -o bin/decksd ./cmd/decksd
 	$(GO) build -trimpath -buildvcs=false -ldflags '$(LDFLAGS)' -o bin/deckplugincheck ./cmd/deckplugincheck
 plugin-example:

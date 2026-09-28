@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"patchbay/internal/config"
 	"patchbay/internal/evidence"
 	"patchbay/internal/fault"
 	"patchbay/internal/identity"
@@ -26,7 +27,7 @@ type capturePreparation struct {
 }
 
 func (r *Runtime) Capabilities() protocol.Capabilities {
-	return protocol.Capabilities{Features: map[string]int{"experiment_preparation": 1, "run_store": 1}, Schemas: map[string]int{"experiment": 1, "run": 1, "series": 1, "artifact": 1}}
+	return protocol.Capabilities{Features: map[string]int{"experiment_preparation": 1, "run_store": 1, "capture": 1, "comparison": 1, "export": 1}, Schemas: map[string]int{"experiment": 1, "run": 1, "series": 1, "artifact": 1}}
 }
 func (r *Runtime) Experiments() protocol.ExperimentList {
 	r.mu.Lock()
@@ -42,6 +43,7 @@ func (r *Runtime) Experiments() protocol.ExperimentList {
 }
 func (r *Runtime) Evidence() (*evidence.Store, error) {
 	r.mu.Lock()
+	r.expireExports()
 	defer r.mu.Unlock()
 	if r.closed {
 		return nil, fault.New(protocol.ShuttingDown, "Daemon is shutting down.")
@@ -66,6 +68,9 @@ func (r *Runtime) Storage() protocol.StoreStatus {
 func (r *Runtime) PrepareCapture(ctx context.Context, request protocol.CapturePrepare) (protocol.CapturePreview, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	return r.prepareCapture(ctx, request, nil)
+}
+func (r *Runtime) prepareCapture(ctx context.Context, request protocol.CapturePrepare, wrapper *config.Action) (protocol.CapturePreview, error) {
 	if err := r.writable(ctx); err != nil {
 		return protocol.CapturePreview{}, err
 	}
@@ -108,6 +113,15 @@ func (r *Runtime) PrepareCapture(ctx context.Context, request protocol.CapturePr
 	}
 	if err != nil {
 		return protocol.CapturePreview{}, err
+	}
+	if wrapper != nil {
+		plan.risk = permission.Strongest(plan.risk, wrapper.Safety)
+		if wrapper.Timeout != "" {
+			timeout, _ := time.ParseDuration(wrapper.Timeout)
+			if plan.timeout == 0 || timeout < plan.timeout {
+				plan.timeout = timeout
+			}
+		}
 	}
 	if plan.risk == permission.Dangerous && !r.cfg.Security.AllowDangerousActions {
 		return protocol.CapturePreview{}, fault.New(protocol.PermissionDenied, "Dangerous actions are disabled.")

@@ -32,12 +32,14 @@ import (
 )
 
 type Options struct {
-	Log    io.Writer
-	Runner provider.Runner
-	Opener string
-	Agent  provider.Agent
+	Evidence evidence.Options
+	Log      io.Writer
+	Runner   provider.Runner
+	Opener   string
+	Agent    provider.Agent
 }
 type Runtime struct {
+	exports         map[string]exportPreparation
 	runs            *evidence.Store
 	storageError    error
 	captureKey      []byte
@@ -154,7 +156,7 @@ func NewConfigured(path string, c *config.Config, options Options) (*Runtime, er
 			}
 		}
 	}
-	r.runs, r.storageError = evidence.Open(c.Runs.Path, evidence.Limits{MaxRuns: c.Runs.MaxRuns, MaxBytes: c.Runs.MaxBytes, MaxRunBytes: c.Runs.MaxRunBytes, MaxArtifactBytes: c.Runs.MaxArtifactBytes, MaxReceipts: c.Runs.MaxReceipts}, evidence.Options{})
+	r.runs, r.storageError = evidence.Open(c.Runs.Path, evidence.Limits{MaxRuns: c.Runs.MaxRuns, MaxBytes: c.Runs.MaxBytes, MaxRunBytes: c.Runs.MaxRunBytes, MaxArtifactBytes: c.Runs.MaxArtifactBytes, MaxReceipts: c.Runs.MaxReceipts}, options.Evidence)
 	r.captureKey = []byte(identity.New() + identity.New())
 	r.captures = map[string]capturePreparation{}
 	r.bus = event.New(c.Events.SubscriberCapacity)
@@ -401,6 +403,10 @@ func (r *Runtime) Status() protocol.Status {
 func (r *Runtime) Close(ctx context.Context) error {
 	r.mu.Lock()
 	r.closed = true
+	for id, p := range r.exports {
+		p.release()
+		delete(r.exports, id)
+	}
 	r.mu.Unlock()
 	jobErr := r.jobs.Shutdown(ctx)
 	if jobErr == nil && r.runs != nil {

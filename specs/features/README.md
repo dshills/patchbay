@@ -1,6 +1,6 @@
 # Patchbay feature roadmap
 
-**Status:** Implementation underway. CC-1 contracts and durable evidence are implemented; later phases remain planned.\
+**Status:** Implementation underway. CC-1/CC-2 capture, comparison, and export are implemented; the workbench is in progress.\
 **Date:** 2026-09-28\
 **Baseline:** [Core specification](../SPEC.md), [foundation implementation plan](../PLAN.md), and the current macOS daemon, CLI, Stream Deck+, agent, SCPI, and plugin contracts.
 

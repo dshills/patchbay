@@ -9,10 +9,12 @@ import (
 	"net/url"
 	"patchbay/internal/client"
 	"patchbay/internal/config"
+	"patchbay/internal/evidence"
 	"patchbay/internal/jsonstrict"
 	"patchbay/internal/version"
 	"patchbay/pkg/protocol"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -76,6 +78,9 @@ func call[T any](ctx context.Context, c *client.Client, method string, request a
 	return value, err
 }
 func executeCommand(ctx context.Context, c *client.Client, o ctlOptions, command []string) (any, error) {
+	if command[0] == "request-id" {
+		return map[string]string{"request_id": evidence.NewRequestID(time.Now())}, nil
+	}
 	if command[0] == "capabilities" {
 		return call[protocol.Capabilities](ctx, c, "GET", nil, "capabilities")
 	}
@@ -83,6 +88,59 @@ func executeCommand(ctx context.Context, c *client.Client, o ctlOptions, command
 		return call[protocol.Status](ctx, c, "GET", nil, "status")
 	}
 	switch command[0] + " " + command[1] {
+	case "export prepare":
+		return call[protocol.ExportPreview](ctx, c, "POST", protocol.ExportPrepare{Runs: []string{command[2], command[3]}}, "exports", "prepare")
+	case "export save":
+		return exportFile(ctx, c, command)
+	case "experiment run":
+		preview, err := call[protocol.CapturePreview](ctx, c, "POST", protocol.CapturePrepare{Experiment: command[2]}, "captures", "prepare")
+		if err != nil {
+			return nil, err
+		}
+		req := protocol.CaptureRequest{Preparation: preview.ID, Digest: preview.Digest, RequestID: evidence.NewRequestID(time.Now()), Confirmed: o.confirm}
+		response, err := call[protocol.CaptureResponse](ctx, c, "POST", req, "captures")
+		if err != nil {
+			var known *protocol.Error
+			if !errors.As(err, &known) {
+				failure := classify(err)
+				confirmation := ""
+				if req.Confirmed {
+					confirmation = " --confirm"
+				}
+				failure.Message += fmt.Sprintf(" Admission outcome is unknown. Retry this exact request: deckctl experiment capture %s %s %s%s", req.Preparation, req.Digest, req.RequestID, confirmation)
+				return nil, failure
+			}
+			return nil, err
+		}
+		if o.async {
+			return response, nil
+		}
+		for {
+			saved, err := call[protocol.Run](ctx, c, "GET", nil, "runs", response.RunID)
+			if err != nil {
+				return nil, err
+			}
+			if evidence.Terminal(saved.State) {
+				if saved.Error != nil {
+					return saved, saved.Error
+				}
+				return saved, nil
+			}
+			select {
+			case <-ctx.Done():
+				cancelCtx, cancel := context.WithTimeout(context.Background(), cancelBudget)
+				defer cancel()
+				_, _ = call[protocol.Job](cancelCtx, c, "DELETE", nil, "jobs", response.JobID)
+				return nil, ctx.Err()
+			case <-time.After(pollInterval):
+			}
+		}
+	case "experiment capture":
+		return call[protocol.CaptureResponse](ctx, c, "POST", protocol.CaptureRequest{Preparation: command[2], Digest: command[3], RequestID: command[4], Confirmed: o.confirm}, "captures")
+	case "run compare":
+		return call[protocol.Comparison](ctx, c, "POST", protocol.ComparisonRequest{Baseline: resultReference(command[2]), Candidate: resultReference(command[3])}, "comparisons")
+	case "sample list":
+		return call[protocol.SampleList](ctx, c, "GET", nil, "samples")
 	case "experiment list":
 		return call[protocol.ExperimentList](ctx, c, "GET", nil, "experiments")
 	case "experiment prepare":
@@ -400,4 +458,11 @@ func report(value any, err error, o ctlOptions, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+func resultReference(value string) protocol.ResultReference {
+	if id, ok := strings.CutPrefix(value, "sample:"); ok {
+		return protocol.ResultReference{Kind: "sample", ID: id}
+	}
+	return protocol.ResultReference{Kind: "run", ID: value}
 }

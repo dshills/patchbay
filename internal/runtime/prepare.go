@@ -15,6 +15,7 @@ import (
 	"patchbay/internal/action"
 	"patchbay/internal/config"
 	"patchbay/internal/event"
+	"patchbay/internal/evidence"
 	"patchbay/internal/fault"
 	"patchbay/internal/identity"
 	"patchbay/internal/job"
@@ -53,6 +54,31 @@ func (r *Runtime) invoke(ctx context.Context, name string, isWorkflow bool, invo
 	}
 	if invocation.Mode != "" && invocation.Mode != protocol.Sync && invocation.Mode != protocol.Async || invocation.TimeoutMS < 0 || invocation.TimeoutMS > math.MaxInt64/int64(time.Millisecond) {
 		return nil, fault.New(protocol.InvalidRequest, "Invalid execution mode or timeout.")
+	}
+	if !isWorkflow {
+		if definition, exists := r.registries[r.context.Project].Get(name); exists && definition.Type == "experiment" {
+			if len(invocation.Args) > 0 {
+				return nil, fault.New(protocol.InvalidRequest, "Experiment inputs come from declared parameters.")
+			}
+			if invocation.TimeoutMS > 0 {
+				requested := time.Duration(invocation.TimeoutMS) * time.Millisecond
+				existing, _ := time.ParseDuration(definition.Timeout)
+				if existing == 0 || requested < existing {
+					definition.Timeout = requested.String()
+				}
+			}
+			preview, err := r.prepareCapture(ctx, protocol.CapturePrepare{Experiment: definition.Experiment}, &definition)
+			if err != nil {
+				return nil, err
+			}
+			var handle *job.Handle
+			parent := context.Background()
+			if invocation.Mode == protocol.Sync {
+				parent = ctx
+			}
+			_, err = r.capture(ctx, protocol.CaptureRequest{Preparation: preview.ID, Digest: preview.Digest, RequestID: evidence.NewRequestID(time.Now()), Confirmed: invocation.Confirmed}, &handle, parent)
+			return handle, err
+		}
 	}
 	remaining := 1024
 	var plan *prepared
@@ -311,7 +337,12 @@ func (r *Runtime) prepareCommand(definition config.Action, args map[string]any) 
 	return command, risk, nil
 }
 
-func (r *Runtime) execute(ctx context.Context, jobID string, plan *prepared, budget *provider.Budget, allow, confirmed bool) (result action.Result, err error) {
+type resultCollector func(*prepared, action.Result, error, time.Time, time.Time) error
+
+func (r *Runtime) execute(ctx context.Context, jobID string, plan *prepared, budget *provider.Budget, allow, confirmed bool) (action.Result, error) {
+	return r.executeObserved(ctx, jobID, plan, budget, allow, confirmed, nil)
+}
+func (r *Runtime) executeObserved(ctx context.Context, jobID string, plan *prepared, budget *provider.Budget, allow, confirmed bool, collected resultCollector) (result action.Result, err error) {
 	if err := ctx.Err(); err != nil {
 		return action.Result{}, fault.Safe(err)
 	}
@@ -323,6 +354,7 @@ func (r *Runtime) execute(ctx context.Context, jobID string, plan *prepared, bud
 		ctx, cancel = context.WithTimeout(ctx, plan.timeout)
 		defer cancel()
 	}
+	startedAt := time.Now().UTC()
 	actionID := identity.New()
 	r.bus.Emit(event.ActionStarted, map[string]string{"action_id": actionID, "job_id": jobID, "action": plan.name})
 	defer func() {
@@ -337,6 +369,24 @@ func (r *Runtime) execute(ctx context.Context, jobID string, plan *prepared, bud
 			result.Status = action.Failed
 			if fault.Safe(err).Code == protocol.Cancelled {
 				result.Status = action.Cancelled
+			}
+		}
+		if collected != nil && plan.steps == nil {
+			if collectionErr := collected(plan, result, err, startedAt, time.Now().UTC()); collectionErr != nil {
+				if result.Data == nil {
+					result.Data = map[string]any{}
+				}
+				status := result.Status
+				if status == "" {
+					status = action.Success
+				}
+				result.Data["execution_outcome"] = struct {
+					Status action.Status   `json:"status"`
+					Error  *protocol.Error `json:"error,omitempty"`
+				}{status, fault.Safe(err)}
+				result.Data["collection_error"] = fault.Safe(collectionErr)
+				err = collectionErr
+				result.Status = action.Failed
 			}
 		}
 		r.bus.Emit(event.ActionFinished, map[string]any{"action_id": actionID, "job_id": jobID, "action": plan.name, "status": result.Status})
@@ -358,7 +408,7 @@ func (r *Runtime) execute(ctx context.Context, jobID string, plan *prepared, bud
 		steps := make([]workflow.Step, 0, len(plan.steps))
 		for _, child := range plan.steps {
 			steps = append(steps, workflow.Step{Name: child.name, Execute: func(stepCtx context.Context) (action.Result, error) {
-				return r.execute(stepCtx, jobID, child, budget, allow, confirmed)
+				return r.executeObserved(stepCtx, jobID, child, budget, allow, confirmed, collected)
 			}})
 		}
 		result, err = workflow.Run(ctx, steps, plan.stopOnError)

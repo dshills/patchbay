@@ -115,5 +115,5 @@ conformance probes against a configured plugin; see [PLUGINS.md](PLUGINS.md).
 
 ## Experiment evidence extension
 
-See [Experiments and local evidence](EVIDENCE.md) for the CC-1 schema, preparation,
-storage, API, CLI, and recovery contracts. Capture execution follows in CC-2.
+See [Experiments and local evidence](EVIDENCE.md) for the CC-1/CC-2 schema, preparation,
+storage, capture, comparison, export, API, CLI, and recovery contracts.

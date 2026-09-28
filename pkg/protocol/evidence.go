@@ -93,12 +93,15 @@ type CaptureRequest struct {
 }
 
 type CaptureResponse struct {
-	RunID   string `json:"run_id"`
-	JobID   string `json:"job_id,omitempty"`
-	Deleted bool   `json:"deleted,omitempty"`
+	RequestID string `json:"request_id"`
+	RunID     string `json:"run_id"`
+	JobID     string `json:"job_id,omitempty"`
+	Deleted   bool   `json:"deleted,omitempty"`
 }
 
 type Measurement struct {
+	Repeats    int       `json:"repeats,omitempty"`
+	Spread     *float64  `json:"spread,omitempty"`
 	Name       string    `json:"name"`
 	Value      *float64  `json:"value,omitempty"`
 	Unit       string    `json:"unit,omitempty"`
@@ -139,7 +142,19 @@ type SourceObservation struct {
 	ObservedAt   time.Time `json:"observed_at"`
 }
 
+type StepOutcome struct {
+	Index      int        `json:"index"`
+	Action     string     `json:"action"`
+	State      string     `json:"state"`
+	StartedAt  *time.Time `json:"started_at,omitempty"`
+	FinishedAt *time.Time `json:"finished_at,omitempty"`
+	Truncated  bool       `json:"truncated,omitempty"`
+	Error      *Error     `json:"error,omitempty"`
+}
+
 type Run struct {
+	Context          Context            `json:"context"`
+	Outcomes         []StepOutcome      `json:"outcomes,omitempty"`
 	SchemaVersion    int                `json:"schema_version"`
 	ID               string             `json:"id"`
 	Origin           string             `json:"origin"`

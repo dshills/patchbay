@@ -139,18 +139,18 @@ func (o ctlOptions) validate(command []string) error {
 	if len(command) > 1 {
 		key += " " + command[1]
 	}
-	lengths := map[string]int{"capabilities": 1, "experiment list": 2, "experiment prepare": 3, "storage status": 2, "run list": 2, "run show": 3, "run page": 3, "run annotate": 4, "run delete": 3, "baseline show": 3, "baseline set": 4, "status": 1, "project list": 2, "project current": 2, "project use": 3, "context show": 2, "context set": 4, "action list": 2, "action run": 3, "workflow list": 2, "workflow run": 3, "job list": 2, "job show": 3, "job cancel": 3, "param list": 2, "param get": 3, "param set": 4, "config validate": 2, "config reload": 2}
+	lengths := map[string]int{"capabilities": 1, "sample list": 2, "experiment list": 2, "experiment prepare": 3, "experiment run": 3, "experiment capture": 5, "run compare": 4, "request-id": 1, "export prepare": 4, "export save": 6, "storage status": 2, "run list": 2, "run show": 3, "run page": 3, "run annotate": 4, "run delete": 3, "baseline show": 3, "baseline set": 4, "status": 1, "project list": 2, "project current": 2, "project use": 3, "context show": 2, "context set": 4, "action list": 2, "action run": 3, "workflow list": 2, "workflow run": 3, "job list": 2, "job show": 3, "job cancel": 3, "param list": 2, "param get": 3, "param set": 4, "config validate": 2, "config reload": 2}
 	if n, ok := lengths[key]; !ok || n != len(command) {
 		return usage("Unknown command or incorrect number of arguments; use --help.")
 	}
 	for flag := range o.used {
 		switch flag {
 		case "confirm":
-			if key != "action run" && key != "workflow run" && key != "run delete" {
+			if key != "action run" && key != "workflow run" && key != "run delete" && key != "experiment run" && key != "experiment capture" {
 				return usage("--confirm requires an execution or deletion command.")
 			}
 		case "async", "timeout":
-			if key != "action run" && key != "workflow run" {
+			if key != "action run" && key != "workflow run" && (key != "experiment run" || flag == "timeout") {
 				return usage("Execution options require action run or workflow run.")
 			}
 		case "arg":
@@ -167,7 +167,7 @@ func (o ctlOptions) validate(command []string) error {
 			}
 		}
 	}
-	if len(command) > 2 && key != "context set" && key != "config validate" && key != "run page" && (key != "project use" || command[2] != "") && !config.ValidName(command[2]) {
+	if len(command) > 2 && key != "context set" && key != "config validate" && key != "run page" && key != "run compare" && (key != "project use" || command[2] != "") && !config.ValidName(command[2]) {
 		return usage("Resource names must be valid identifiers.")
 	}
 	return nil
@@ -177,7 +177,13 @@ const ctlHelp = `deckctl: Patchbay local automation client
 Usage: deckctl [options] <command> [options]
 
   status | capabilities
-  experiment list | prepare <id>
+  experiment list | prepare <id> | run <id> [--confirm] [--async]
+  experiment capture <preparation> <digest> <request-id> [--confirm]
+  request-id
+  export prepare <baseline-id> <candidate-id>
+  export save <preparation> <digest> <html|json> <new-file>
+  run compare <baseline-id> <candidate-id>
+  sample list
   storage status
   run list | page <cursor> | show <id> | annotate <id> <JSON> | delete <id> [--confirm]
   baseline show <experiment> | set <experiment> <JSON>

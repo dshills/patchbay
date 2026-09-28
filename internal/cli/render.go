@@ -36,7 +36,7 @@ func render(value any) string {
 		if v.NextCursor != "" {
 			line("Next page: deckctl run page %s", v.NextCursor)
 		}
-	case protocol.CapturePreview, protocol.Capabilities, protocol.Run, protocol.Annotation, protocol.Baseline:
+	case protocol.SampleList, protocol.ExportPreview, protocol.Comparison, protocol.CaptureResponse, map[string]string, protocol.CapturePreview, protocol.Capabilities, protocol.Run, protocol.Annotation, protocol.Baseline:
 		data, _ := json.MarshalIndent(value, "", "  ")
 		line("%s", data)
 

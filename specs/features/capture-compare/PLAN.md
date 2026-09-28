@@ -1,6 +1,6 @@
 # Capture & Compare implementation plan
 
-**Status:** CC-1 complete; CC-2 in progress\
+**Status:** CC-1 and CC-2 complete; CC-3 in progress\
 **Specification:** [Capture & Compare](SPEC.md)\
 **Dependencies:** Existing runtime/release tooling; no recipes or agent execution required.
 
@@ -62,20 +62,20 @@ results without the graphical client.
 
 **Depends on:** CC-1.
 
-- [ ] Add prepared capture admission with queue/store reservation, atomic stale-input
+- [x] Add prepared capture admission with queue/store reservation, atomic stale-input
   checks, confirmation, idempotent responses, pinned values, and existing cancellation.
   Persist identity before dispatch; expose recording failures separately from effects.
-- [ ] Bind declared experiment parameters into prepared action inputs without changing
+- [x] Bind declared experiment parameters into prepared action inputs without changing
   the existing workflow API or adding loops/expressions to workflow definitions.
-- [ ] Collect native result fields and opt-in strict JSON stdout envelopes. Preserve
+- [x] Collect native result fields and opt-in strict JSON stdout envelopes. Preserve
   step identity, partial outcomes, truncation, timestamps, and required/optional status.
-- [ ] Observe bounded Git context at start/end with explicit unavailable/changed states.
-- [ ] Add the packaged `deckdemo` workload with bounded CPU/runtime/input limits and
+- [x] Observe bounded Git context at start/end with explicit unavailable/changed states.
+- [x] Add the packaged `deckdemo` workload with bounded CPU/runtime/input limits and
   measurement JSON. Include deterministic sample results labeled as samples; live
   benchmarks record repeat count, variability, and host metadata without secrets.
-- [ ] Implement baseline selection and pure metric/series comparison: exact units,
+- [x] Implement baseline selection and pure metric/series comparison: exact units,
   finite values, signed deltas, zero baseline, grid compatibility, and partial status.
-- [ ] Implement export preview and escaped offline HTML/JSON generation with field
+- [x] Implement export preview and escaped offline HTML/JSON generation with field
   selection, destination handling, and immutable source references.
 
 **Verification:** Real ephemeral daemon and demo process; one-worker workflow behavior;
@@ -90,6 +90,9 @@ golden result/report fixtures, and updated runtime/API/CLI guides.
 evidence for applicable paths. An interrupted experiment is never silently retried.
 
 **Commit boundary:** Capture admission; collectors/demo; comparisons; report export.
+
+**Evidence:** [CC-2 review and verification](../../reviews/CC2.md),
+[CLI walkthrough and contracts](../../EVIDENCE.md).
 
 ## CC-3 — Visual workbench
 
