@@ -42,7 +42,7 @@ def universal():
 
 def fixture():
     files = {"bin/" + name: (thin("arm64"), 0o755) for name in common.COMMANDS}
-    names = ["README.md", "THIRD_PARTY_NOTICES.txt", "licenses/Go-LICENSE",
+    names = ["LICENSE", "README.md", "THIRD_PARTY_NOTICES.txt", "licenses/Go-LICENSE",
              "configs/local.patchbay.deckd.plist", "specs/OPERATIONS.md",
              "scripts/verify_v1.py", "scripts/benchmark_runtime.py", "scripts/verify_release.py",
              "scripts/release_common.py"]
@@ -99,7 +99,7 @@ class ReleaseTests(unittest.TestCase):
         verify.verify_archive(self.path, allow_dirty=True)
 
     def test_required_files_and_architecture(self):
-        for name in ("bin/deckplugin-example", "configs/bench.yaml", "licenses/Go-LICENSE"):
+        for name in ("bin/deckplugin-example", "configs/bench.yaml", "LICENSE", "licenses/Go-LICENSE"):
             with self.subTest(name=name):
                 files = fixture()
                 del files[name]
@@ -344,7 +344,8 @@ class ReleaseTests(unittest.TestCase):
         for name in ("layout.json", "inspector.html", "inspector.js", "WEBSOCKET-LICENSE.txt"):
             (plugin / name).write_bytes(b"content")
         (plugin / "WEBSOCKET-LICENSE.txt").chmod(0o444)
-        tracked = [path.relative_to(source).as_posix() for path in plugin.iterdir()]
+        (source / "LICENSE").write_bytes(b"project license")
+        tracked = [path.relative_to(source).as_posix() for path in plugin.iterdir()] + ["LICENSE"]
         (plugin / ".DS_Store").write_bytes(b"local debris")
         for name in ("specs/STREAMDECK.md", "configs/streamdeck.yaml"):
             path = source / name
@@ -377,6 +378,7 @@ class ReleaseTests(unittest.TestCase):
         metadata, files = verify.verify_archive(archive)
         verify.check_checksum(archive, "decksd")
         self.assertEqual(metadata["target"]["arch"], "universal")
+        self.assertEqual(files[common.PLUGIN + "/LICENSE"][0], b"project license")
         self.assertNotIn(common.PLUGIN + "/.DS_Store", files)
         for name, (data, mode) in files.items():
             self.assertEqual((output / name).read_bytes(), data)

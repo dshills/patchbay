@@ -114,7 +114,7 @@ def verify_archive(path, allow_dirty=False):
         modules = metadata["modules"]
         require(isinstance(modules, list) and len(modules) <= 128, "invalid module inventory")
         module_paths = set()
-        required = {prefix + "THIRD_PARTY_NOTICES.txt", prefix + "licenses/Go-LICENSE"}
+        required = {prefix + "LICENSE", prefix + "THIRD_PARTY_NOTICES.txt", prefix + "licenses/Go-LICENSE"}
         for module in modules:
             require(isinstance(module, dict) and set(module) == {"path", "version", "sum", "notices"} and
                     all(isinstance(module[key], str) and module[key] for key in ("path", "version", "sum")),

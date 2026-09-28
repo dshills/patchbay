@@ -118,3 +118,7 @@ These run formatting, static checks, tests, race checks, builds, and release-too
 verification. For the technical details, see the [specification](specs/SPEC.md),
 [implementation plan](specs/PLAN.md), [API reference](specs/API.md), and
 [verification reports](specs/reviews).
+
+## License
+
+Patchbay is available under the [MIT License](LICENSE).

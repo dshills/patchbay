@@ -19,7 +19,7 @@ def main():
         metadata = provenance(args)
         files, modules = notices()
         # Only tracked/staged release inputs are shipped, including local dirty builds.
-        files.update(tracked_files(["README.md", "configs", "specs", "scripts"], root=ROOT))
+        files.update(tracked_files(["LICENSE", "README.md", "configs", "specs", "scripts"], root=ROOT))
         destination = Path(args.output).resolve()
         destination.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix=".deckd-release-", dir=destination) as temporary:

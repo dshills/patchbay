@@ -164,7 +164,8 @@ throughout a build.
 dirty status, build time, Go/Python/zlib versions, target architecture, dependency
 versions/sums, and every payload file's SHA-256, size and mode. In a Stream Deck
 ZIP it lives inside `local.patchbay.deckd.sdPlugin/`. `THIRD_PARTY_NOTICES.txt` and
-`licenses/` include dependency notices and the Go runtime license. The manifest
+`licenses/` include dependency notices and the Go runtime license. The project's
+MIT license is included as `LICENSE` in both bundles. The manifest
 does not hash itself; the external checksum covers the entire archive.
 
 ```sh

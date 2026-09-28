@@ -59,8 +59,9 @@ def main():
             plugin = temporary / PLUGIN
             source = Path("adapters/streamdeck/plugin")
             plugin.mkdir()
-            for name, (data, _) in tracked_files([str(source)], root=ROOT).items():
-                path = plugin / Path(name).relative_to(source)
+            for name, (data, _) in tracked_files([str(source), "LICENSE"], root=ROOT).items():
+                relative = Path("LICENSE") if name == "LICENSE" else Path(name).relative_to(source)
+                path = plugin / relative
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(data)
             (plugin / "bin").mkdir()
