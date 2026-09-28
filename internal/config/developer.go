@@ -40,7 +40,7 @@ func (v *validator) developerConfig(c *Config, baseDir, home string) error {
 			return v.fail("prompts."+name, "invalid prompt substitution")
 		}
 	}
-	if c.Agents.Proposals.Enabled && c.Agents.Codex.Model == "" {
+	if c.Agents.Proposals.Enabled && !c.Agents.Proposals.Demo && c.Agents.Codex.Model == "" {
 		return v.fail("agents.proposals", "proposal mode requires an explicit codex model")
 	}
 	if len(c.Agents.Proposals.ProtectedPaths) > 100 {

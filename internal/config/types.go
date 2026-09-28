@@ -42,6 +42,7 @@ type Config struct {
 }
 
 type ProposalMode struct {
+	Demo           bool     `yaml:"demo,omitempty"`
 	Enabled        bool     `yaml:"enabled,omitempty"`
 	ProtectedPaths []string `yaml:"protected_paths,omitempty"`
 }

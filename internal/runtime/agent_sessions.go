@@ -52,8 +52,12 @@ func (r *Runtime) AgentCatalog(ctx context.Context) supervisor.Catalog {
 		out.Message = fault.Safe(err).Message
 		return out
 	}
+	out.Model, out.Destination = r.proposalDestination()
 	out.Targets = r.agentTargets()
-	out.Available = r.agent.Health(ctx).Available
+	out.Available = r.proposalProvider().Health(ctx).Available
+	if r.cfg.Agents.Proposals.Demo {
+		out.Message = "Offline demo · deterministic fixture · no provider upload or charge"
+	}
 	if !out.Available {
 		out.Message = "Set OPENAI_API_KEY in the daemon environment to enable generation. Ordinary experiments remain available."
 	}
@@ -96,7 +100,8 @@ func (r *Runtime) PrepareAgentContext(ctx context.Context, selection supervisor.
 		return supervisor.ContextPreview{}, fault.New(protocol.Busy, "Too many live context previews; wait for expiry.")
 	}
 	root := r.cfg.Projects[r.context.Project].Path
-	p := supervisor.ContextPreview{ID: identity.New(), RequestID: selection.RequestID, ExpiresAt: now.Add(time.Minute).UTC(), Project: r.context.Project, Destination: "https://api.openai.com/v1/responses", Model: r.cfg.Agents.Codex.Model, MaxOutputTokens: r.cfg.Agents.Codex.MaxOutputTokens, Items: []supervisor.Item{}, Retain: selection.Retain, Warnings: []string{}}
+	model, destination := r.proposalDestination()
+	p := supervisor.ContextPreview{ID: identity.New(), RequestID: selection.RequestID, ExpiresAt: now.Add(time.Minute).UTC(), Project: r.context.Project, Destination: destination, Model: model, MaxOutputTokens: r.cfg.Agents.Codex.MaxOutputTokens, Items: []supervisor.Item{}, Retain: selection.Retain, Warnings: []string{}}
 	remaining := supervisor.MaxContext - len(selection.Prompt)
 	seen := map[string]bool{}
 	add := func(item supervisor.Item, data []byte) error {
@@ -222,7 +227,7 @@ func (r *Runtime) StartAgent(ctx context.Context, request supervisor.Start) (sup
 	if !request.Confirmed {
 		return supervisor.Session{}, fault.New(protocol.ConfirmationRequired, "Review the exact upload and explicitly consent to this provider request.")
 	}
-	if !r.agent.Health(ctx).Available {
+	if !r.proposalProvider().Health(ctx).Available {
 		return supervisor.Session{}, fault.New(protocol.ProviderUnavailable, "Generation requires OPENAI_API_KEY in the daemon environment.")
 	}
 	if r.sessions.ActiveGenerations() >= 2 {
@@ -238,7 +243,7 @@ func (r *Runtime) StartAgent(ctx context.Context, request supervisor.Start) (sup
 	if p.preview.Retain {
 		session.Snapshot = p.preview.Input
 	}
-	agent := r.agent
+	agent := r.proposalProvider()
 	store := r.sessions
 	id := session.ID
 	var proposals []supervisor.Proposal

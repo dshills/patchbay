@@ -21,7 +21,7 @@ MAX_TOTAL = 256 * 1024 * 1024
 MAX_MANIFEST = 1024 * 1024
 CPU = {"arm64": 0x0100000C, "amd64": 0x01000007}
 RECIPES = ("benchmark", "project-checkup", "rigol-capture")
-CONFIGS = ("example", "quickstart", "streamdeck", "developer", "bench", "plugins", "benchmark")
+CONFIGS = ("example", "quickstart", "streamdeck", "developer", "bench", "plugins", "benchmark", "benchmark-agent")
 
 
 def require(condition, message):
@@ -136,7 +136,7 @@ def verify_archive(path, allow_dirty=False):
         if product == "deckd":
             required.update(f"configs/{name}.yaml" for name in CONFIGS)
             required.update(f"recipes/{name}/{file}" for name in RECIPES for file in ("recipe.yaml", "README.md", "LICENSE"))
-            required.update({"share/workbench/index.html", "share/workbench/app.js", "share/workbench/style.css", "share/workbench/recipes.js", "scripts/verify_recipes.py", "specs/RECIPES.md", "scripts/verify_workbench.py", "README.md", "Patchbay.command", "specs/WORKBENCH.md", "specs/EVIDENCE.md", "configs/local.patchbay.deckd.plist", "specs/OPERATIONS.md",
+            required.update({"share/workbench/index.html", "share/workbench/app.js", "share/workbench/style.css", "share/workbench/recipes.js", "share/workbench/agents.js", "scripts/verify_agents.py", "specs/AGENT_CONTROL.md", "configs/benchmark-agent.yaml", "scripts/verify_recipes.py", "specs/RECIPES.md", "scripts/verify_workbench.py", "README.md", "Patchbay.command", "specs/WORKBENCH.md", "specs/EVIDENCE.md", "configs/local.patchbay.deckd.plist", "specs/OPERATIONS.md",
                              "scripts/verify_v1.py", "scripts/benchmark_runtime.py", "scripts/verify_release.py",
                              "scripts/release_common.py"})
         else:
@@ -215,6 +215,7 @@ def smoke(metadata, files):
                         "--bundle", str(root), "--samples", "5"], check=True, timeout=90)
         subprocess.run([sys.executable, str(Path(__file__).with_name("verify_workbench.py")), "--bundle", str(root)], check=True, timeout=90)
         subprocess.run([sys.executable, str(Path(__file__).with_name("verify_recipes.py")), "--bundle", str(root)], check=True, timeout=90)
+        subprocess.run([sys.executable, str(Path(__file__).with_name("verify_agents.py")), "--bundle", str(root)], check=True, timeout=90)
         subprocess.run([str(root / "bin/deckplugincheck"), "--config", str(root / "configs/plugins.yaml")],
                        cwd=root, check=True, timeout=15)
 

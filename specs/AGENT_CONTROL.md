@@ -253,3 +253,45 @@ Generic `confirmed` events cannot operate agent decisions.
 
 Software fixtures exercise the adapter and daemon. A physical Stream Deck walkthrough
 remains pending; no device/app/firmware compatibility claim is inferred from fixtures.
+
+## Try the optional offline agent demo
+
+Start `deckd --config configs/benchmark-agent.yaml` and open its workbench. This
+example explicitly sets `agents.proposals.demo: true`. The destination is
+`local://patchbay/benchmark-fixture`, the model label is `offline-demo-v1`, and no
+provider request or charge occurs. It produces a fixed explanation and can suggest
+only the locally granted `benchmark` experiment. It does not analyze selected data.
+No targets are granted in the shipped file.
+
+1. Inspect `deckctl --config configs/benchmark-agent.yaml agent grant experiment
+   benchmark --json`. Review the effective command and project.
+2. Add that returned digest to `projects.benchmark.agent_grants` in the local config:
+   `{kind: experiment, target: benchmark, digest: YOUR_REVIEWED_DIGEST}`. Reload the
+   config. Digests are private to this installation and its effective environment;
+   never copy somebody else's digest or have a recipe grant itself access.
+3. Capture one ordinary baseline. In Agent control, choose a small text file or run
+   artifact, review the exact local input, and generate once.
+4. Review the proposed benchmark, approve it once, open its measured result and
+   compare with your baseline. The fixed explanation cannot establish improvement.
+
+For a real model, set `demo: false`, configure `agents.codex.model`, and provide the
+existing key through the daemon environment. Review the now-remote destination and
+exact selected bytes before consenting. The offline fixture is never an automatic
+fallback for a missing key or provider failure. It does not change legacy text-only
+agent actions. No recipe installation is needed; disabled recipe grants stay excluded.
+
+The packaged native smoke test is `python3 scripts/verify_agents.py --bundle .`.
+It removes the provider key, uses a private temporary project, grants a bounded
+local benchmark, checks duplicate generation/admission, and compares two real helper
+runs. It tests no live model, user usability, physical instrument or signed release.
+
+## Upgrades and recovery
+
+Clients check `agent_context`, `agent_proposals` and `agent_supervision` before using
+new contracts. Older daemons can still serve ordinary workbench functions. Pending
+previews are process-local and must be reviewed after restart. Session requests and
+run admissions retain their durable identities; no generation or action is replayed.
+Stored private metadata remains bounded and records unsupported/interrupted outcomes.
+Keep the state, `.agents` and run stores together when moving an installation so its
+grant signing key and retained evidence remain consistent. Explicit forgetting removes
+a terminal session; linked runs have separate retention and deletion controls.

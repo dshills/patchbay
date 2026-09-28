@@ -1,6 +1,6 @@
 # Agent Control Panel implementation plan
 
-**Status:** AC-1 through AC-3 implemented; AC-4 and AC-5 next\
+**Status:** AC-1 through AC-4 software implemented; AC-5 next; external validation pending\
 **Specification:** [Agent Control Panel](SPEC.md)\
 **Dependencies:** CC-1 through CC-4 for evidence, previews, workbench and packaged onboarding. Recipes are optional.
 
@@ -125,17 +125,17 @@ outcome using a supported packaged release.
 
 **Depends on:** AC-3. This is the first agent-control release boundary.
 
-- [ ] Ship an optional Benchmark Playground agent example with explicit local grants,
+- [x] Ship an optional Benchmark Playground agent example with explicit local grants,
   selected context, bounded proposal outputs and existing baseline comparisons.
-- [ ] Document exactly what enabling proposal mode grants and which controls require
+- [x] Document exactly what enabling proposal mode grants and which controls require
   provider access. Keep the ordinary workbench and sample data available without it.
-- [ ] Validate packaged assets, feature/version negotiation, upgrade/recovery, session
+- [x] Validate packaged assets, feature/version negotiation, upgrade/recovery, session
   and artifact retention, privacy defaults, and behavior when a recipe is absent/disabled.
-- [ ] Run the adversarial corpus and full release gate, including crash, duplicate
+- [x] Run the adversarial corpus and full release gate, including crash, duplicate
   admission, replay, protected-operation, stale-preview and cancellation tests.
 - [ ] Observe users interpreting previews and selecting the intended proposal/job.
   Resolve wrong-target behavior before release; record usability outcomes by consent.
-- [ ] Run Prism review and record all finding dispositions. Keep optional live-provider,
+- [x] Run Prism review and record all finding dispositions. Keep optional live-provider,
   device and platform evidence separate from deterministic CI results.
 
 **Verification:** Full `make check`, browser tests, native packaged demo with a fake
@@ -150,6 +150,8 @@ explain/approve/compare demo, evidence and Prism report.
 execution/approval defects. AC-F10 and AC-A08/A09 remain explicitly pending AC-5.
 
 **Commit boundary:** Example/configuration; release hardening; documentation/evidence.
+
+AC-4 software evidence: [AC4.md](../../reviews/AC4.md). User observation, live provider, physical devices, Intel execution and signed-distribution gates remain pending.
 
 ## AC-5 — Review, apply, validate a bounded patch
 

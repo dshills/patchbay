@@ -139,3 +139,14 @@ verification. For the technical details, see the [specification](specs/SPEC.md),
 ## License
 
 Patchbay is available under the [MIT License](LICENSE).
+
+### Let an agent suggest the next experiment
+
+The optional **Agent control** panel lets you choose a few files or saved results,
+review exactly what gets sent, and ask for an explanation. Each suggested action
+has its own full review and approval. Its measured result joins your normal history,
+so you can compare what actually happened.
+
+Try the [offline Benchmark agent walkthrough](specs/AGENT_CONTROL.md#try-the-optional-offline-agent-demo)
+without a provider key, or connect your configured model. The offline demo uses fixed
+suggestions; ordinary experiments, recipes and comparisons always work without AI.

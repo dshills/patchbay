@@ -1,0 +1,43 @@
+# The offline fixture specifically requires experiment ID benchmark.
+# Optional offline agent fixture. Review a local grant before proposals can execute.
+# Build once with `make build`, then `bin/deckd --config configs/benchmark.yaml`.
+version: 1
+server: {socket: ../.cache/benchmark-agent/deckd.sock}
+state: {path: ../.cache/benchmark-agent/state.json}
+context: {defaults: {project: benchmark, mode: experiment}}
+projects:
+  benchmark: {name: Benchmark Playground, path: ..}
+parameters:
+  iterations: {type: integer, value: 10000, min: 1, max: 100000, step: 1000, persistent: true}
+  repeats: {type: integer, value: 5, min: 2, max: 20, step: 1, persistent: true}
+actions:
+  benchmark.measure:
+    type: exec
+    safety: safe
+    command: ../bin/deckdemo
+    args: [--iterations, '{{ .args.iterations }}', --repeats, '{{ .args.repeats }}']
+    timeout: 15s
+    inputs:
+      iterations: {type: integer, required: true, min: 1, max: 100000}
+      repeats: {type: integer, required: true, min: 2, max: 20}
+  benchmark.capture: {type: experiment, experiment: benchmark, safety: safe}
+experiments:
+  benchmark:
+    schema_version: 1
+    title: Benchmark Playground
+    description: Change the work size and compare repeated SHA-256 timings on this computer.
+    action: benchmark.measure
+    projects: [benchmark]
+    inputs:
+      - {step: 0, input: iterations, parameter: iterations}
+      - {step: 0, input: repeats, parameter: repeats}
+    collectors:
+      - {name: duration, step: 0, action: benchmark.measure, kind: measurement, source: json_stdout, path: [duration], unit: ms, quantity: duration, direction: lower}
+      - {name: host, step: 0, action: benchmark.measure, kind: text, source: json_stdout, path: [host]}
+      - {name: work, step: 0, action: benchmark.measure, kind: text, source: json_stdout, path: [work]}
+    layout:
+      - {id: duration, kind: measurement, title: Median duration, reference: duration}
+      - {id: host, kind: text, title: Measured on, reference: host}
+
+agents:
+  proposals: {enabled: true, demo: true}

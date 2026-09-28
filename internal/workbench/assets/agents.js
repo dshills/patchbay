@@ -13,7 +13,7 @@ function agentButtons(ready){
 }
 async function showAgentSession(id){
  const s=await api('agents/sessions/'+encodeURIComponent(id));agentState.session=s;$('agent-detail').hidden=false;$('agent-session-title').textContent=s.project+' · '+s.id;
- $('agent-session-state').textContent=s.state+(s.error?' · '+s.error.code+': '+s.error.message:'');$('agent-usage').textContent=s.model+' · '+s.input_bytes+' input bytes · '+(s.usage?'Actual usage: '+JSON.stringify(s.usage):'Token usage unavailable')+' · Price unknown';
+ $('agent-session-state').textContent=s.state+(s.error?' · '+s.error.code+': '+s.error.message:'');$('agent-usage').textContent=s.model+' · '+s.input_bytes+' input bytes · '+(s.usage?'Actual usage: '+JSON.stringify(s.usage):'Token usage unavailable')+(s.destination?.startsWith('local:')?' · Offline fixture; no charge':' · Price unknown');
  $('agent-output').textContent=s.output?.summary||s.text||'Waiting for a completed response. No partial response can execute work.';
  $('agent-sources').replaceChildren(text('h4','Selected sources'));
  for(const item of s.items||[]){const row=text('p',(item.path||item.run+' / '+item.artifact)+' · SHA-256 '+item.sha256);if(item.kind==='artifact'){const b=text('button','Open source run');b.addEventListener('click',()=>mutation(()=>selectRun(item.run)));row.append(b);}$('agent-sources').append(row);}
@@ -21,6 +21,7 @@ async function showAgentSession(id){
  if(s.unsupported_refs?.length)$('agent-sources').append(text('p','Unsupported model references (no evidence link): '+s.unsupported_refs.join(', ')));
 }
 async function agentRefresh(){
+ if(state.data?.capabilities?.features?.agent_context!==1){agentState.catalog=null;$('agent-availability').textContent='This daemon does not advertise agent sessions. Ordinary workbench functions remain available.';return;}
  if(state.data?.capabilities?.features?.agent_supervision===1){
  const selection=await api('agents/selection');
  if(agentState.selection?.revision!==selection.revision){agentState.paired=false;$('agent-approve-check').checked=false;}
