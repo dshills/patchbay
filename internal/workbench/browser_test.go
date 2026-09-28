@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go.yaml.in/yaml/v3"
 	"net/http"
 	"os"
 	"os/signal"
@@ -71,14 +72,19 @@ type browserAgent struct{}
 func (browserAgent) Health(context.Context) provider.Health { return provider.Health{Available: true} }
 func (browserAgent) Run(_ context.Context, request provider.AgentRequest, _ *provider.Budget, publish func(action.Result)) (action.Result, error) {
 	var input struct {
-		Items []supervisor.Item `json:"selected_context"`
+		Items   []supervisor.Item   `json:"selected_context"`
+		Catalog []supervisor.Target `json:"catalog"`
 	}
 	_ = json.Unmarshal([]byte(request.FrozenInput), &input)
 	refs := []string{"unsupported"}
 	for _, item := range input.Items {
 		refs = append(refs, item.ID)
 	}
-	out, _ := json.Marshal(supervisor.Output{SchemaVersion: 1, Summary: "<script>window.agentInjected=true</script> Model interpretation only.", ContextRefs: refs, Proposals: []supervisor.Suggestion{}})
+	proposals := []supervisor.Suggestion{}
+	for _, target := range input.Catalog {
+		proposals = append(proposals, supervisor.Suggestion{Kind: target.Kind, Target: target.ID, Rationale: "Fixture proposes a configured echo.", Expected: "Saved execution outcome."})
+	}
+	out, _ := json.Marshal(supervisor.Output{SchemaVersion: 1, Summary: "<script>window.agentInjected=true</script> Model interpretation only.", ContextRefs: refs, Proposals: proposals})
 	publish(action.Result{Status: "running", Data: map[string]any{"stdout": "partial JSON"}})
 	return action.Result{Status: action.Success, Data: map[string]any{"stdout": string(out), "usage": map[string]int64{"input_tokens": 20, "output_tokens": 10, "total_tokens": 30}}}, nil
 }
@@ -99,6 +105,25 @@ func TestServeAgentBrowser(t *testing.T) {
 	configuration, err := config.Load(path)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if os.Getenv("PATCHBAY_BROWSER_PROPOSALS") == "1" {
+		review, err := runtime.InspectAgentGrant(context.Background(), "action", "echo")
+		if err != nil {
+			t.Fatal(err)
+		}
+		project := configuration.Projects["demo"]
+		project.AgentGrants = []config.AgentGrant{{Kind: "action", Target: "echo", Digest: review.Target.Digest}}
+		configuration.Projects["demo"] = project
+		data, err := yaml.Marshal(configuration)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = os.WriteFile(path, data, 0600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err = runtime.Reload(context.Background()); err != nil {
+			t.Fatal(err)
+		}
 	}
 	socket := configuration.Server.Socket
 	listener, err := api.Listen(socket)

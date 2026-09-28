@@ -88,7 +88,7 @@ async function refresh(){
   if(capabilities.features.capture!==1)throw new Error('This daemon does not support the workbench. Start a compatible Patchbay release.');
   const key=JSON.stringify([status.instance,status.generation,context,parameters]);if(state.resync||(state.key&&key!==state.key)){if(typeof clearAgentConsent==='function')clearAgentConsent();if(typeof clearRecipeReview==='function')clearRecipeReview();clearPreview();state.extra=[];state.cursor=runs.next_cursor||'';}state.key=key;
   if(state.data&&state.data.context.project!==context.project){state.selected=null;$('detail').hidden=true;clearExport();}
-  state.data={context,projects,experiments,parameters,runs,storage,status};
+  state.data={context,projects,experiments,parameters,runs,storage,status,capabilities};
  if(typeof recipeRefresh==='function')recipeRefresh(recipes);
   if(!experiments.experiments.some(e=>e.id===state.experiment)){state.experiment=experiments.experiments[0]?.id||'';clearPreview();}
   options($('project'),[{id:'',title:'No project'},...projects.projects.map(p=>({id:p.id,title:p.name}))],context.project||'');options($('experiment'),experiments.experiments.map(e=>({id:e.id,title:e.title})),state.experiment);

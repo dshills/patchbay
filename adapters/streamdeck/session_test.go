@@ -45,6 +45,7 @@ bindings:
 
 type wireDaemon struct {
 	path, socket string
+	options      runtimecore.Options
 	runtime      *runtimecore.Runtime
 	server       *http.Server
 	done         chan error
@@ -89,7 +90,7 @@ func startWireDaemon(t testing.TB) *wireDaemon {
 func (d *wireDaemon) start(t testing.TB) {
 	t.Helper()
 	var err error
-	d.runtime, err = runtimecore.New(d.path, runtimecore.Options{})
+	d.runtime, err = runtimecore.New(d.path, d.options)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -345,6 +345,9 @@ func (r *Runtime) AgentSession(id string) (supervisor.Session, error) {
 func (r *Runtime) CancelAgent(ctx context.Context, id string) (supervisor.Session, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	return r.cancelAgent(ctx, id)
+}
+func (r *Runtime) cancelAgent(ctx context.Context, id string) (supervisor.Session, error) {
 	if err := r.writable(ctx); err != nil {
 		return supervisor.Session{}, err
 	}

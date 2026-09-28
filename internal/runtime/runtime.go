@@ -43,6 +43,9 @@ type Options struct {
 	Agent      provider.Agent
 }
 type Runtime struct {
+	agentSelection       protocol.AgentSelection
+	agentReview          string
+	agentReviewUntil     time.Time
 	proposalPreviews     map[string]agentProposalPreparation
 	sessions             *supervisor.Store
 	sessionError         error

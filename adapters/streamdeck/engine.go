@@ -43,13 +43,14 @@ type control struct {
 // Engine is owned by the app session's main loop. Methods are intentionally
 // serialized; the WebSocket reader never accesses engine state.
 type Engine struct {
-	backend     Backend
-	now         func() time.Time
-	devices     map[string]int
-	controls    map[string]*control
-	snapshot    protocol.ControlSnapshot
-	online      bool
-	acceptAfter time.Time
+	agentReviewFloor uint64
+	backend          Backend
+	now              func() time.Time
+	devices          map[string]int
+	controls         map[string]*control
+	snapshot         protocol.ControlSnapshot
+	online           bool
+	acceptAfter      time.Time
 }
 
 func NewEngine(backend Backend, devices []Device, now func() time.Time) *Engine {
@@ -74,6 +75,7 @@ func (e *Engine) Reset(backend Backend) {
 	e.snapshot = protocol.ControlSnapshot{}
 }
 func (e *Engine) offline() {
+	e.agentReviewFloor = max(e.agentReviewFloor, e.snapshot.AgentRevision)
 	e.online = false
 	e.acceptAfter = e.now()
 	for _, c := range e.controls {
@@ -131,6 +133,7 @@ func (e *Engine) add(m Message) error {
 func (e *Engine) Handle(ctx context.Context, m Message, at time.Time) error {
 	switch m.Event {
 	case "deviceDidDisconnect":
+		e.agentReviewFloor = max(e.agentReviewFloor, e.snapshot.AgentRevision)
 		delete(e.devices, m.Device)
 		for _, c := range e.controls {
 			if c.device == m.Device {
@@ -282,11 +285,12 @@ func (e *Engine) emit(ctx context.Context, c *control, gesture string, delta *in
 	}
 	payload := struct {
 		protocol.ControlRef
-		Delta        *int64                `json:"delta,omitempty"`
-		Guard        protocol.ControlGuard `json:"guard"`
-		Confirmation string                `json:"confirmation,omitempty"`
-		RunID        string                `json:"run_id,omitempty"`
-	}{c.ref, delta, e.snapshot.Guard, token, ""}
+		Delta         *int64                `json:"delta,omitempty"`
+		Guard         protocol.ControlGuard `json:"guard"`
+		Confirmation  string                `json:"confirmation,omitempty"`
+		RunID         string                `json:"run_id,omitempty"`
+		AgentRevision uint64                `json:"agent_revision,omitempty"`
+	}{c.ref, delta, e.snapshot.Guard, token, "", e.snapshot.AgentRevision}
 	if target.Result != nil {
 		payload.RunID = target.Result.RunID
 	}
@@ -362,7 +366,10 @@ func (e *Engine) Poll(ctx context.Context) error {
 		views[view.ControlRef] = view
 	}
 	guardChanged := snapshot.Guard != e.snapshot.Guard
-	changed := !e.online || guardChanged
+	if !e.online || guardChanged {
+		e.agentReviewFloor = snapshot.AgentRevision
+	}
+	changed := !e.online || guardChanged || snapshot.AgentRevision != e.snapshot.AgentRevision
 	if changed {
 		e.acceptAfter = e.now()
 	}
@@ -374,6 +381,12 @@ func (e *Engine) Poll(ctx context.Context) error {
 			continue
 		}
 		c.view = views[c.ref]
+		for gesture, target := range c.view.Targets {
+			if target.Agent != nil && target.Action == "agent.approve" && target.Agent.Revision <= e.agentReviewFloor {
+				target.Enabled = false
+				c.view.Targets[gesture] = target
+			}
+		}
 		if changed {
 			c.pending = nil
 			c.down = time.Time{}
@@ -460,6 +473,10 @@ func (e *Engine) frame(c *control, now time.Time) Frame {
 					f.State = "warning"
 				}
 			}
+		}
+		if t.Agent != nil {
+			f.Value = clean(t.Agent.Proposal+t.Agent.Job, 8)
+			f.Detail = clean(t.Agent.Project+" · "+t.Agent.State, 40)
 		}
 		if t.Result != nil {
 			f.Detail = t.Result.State

@@ -194,3 +194,62 @@ Additional endpoints: `GET /v1/agents/grants/{kind}/{id}` and `POST
 /v1/agents/proposals/{id}/{prepare,approve,reject,duplicate}`. Prepare/reject accept
 an empty object; duplicate takes `request_id`; approve takes `preparation`, `digest`,
 `request_id` and `confirmed`. These routes never treat model text as authorization.
+
+## Review and supervise
+
+A completed session lists each suggestion with its short identity and state. Choose
+**Review** to see the full effective action, project, arguments, masked sensitive
+input positions and context references. Check the review box and choose **Approve
+once**. Open the measured result to see actual daemon outcomes; the ordinary
+baseline comparison also works for these runs. A model-supplied baseline is a link
+to an existing same-project run, never an invented measurement.
+
+The 60-second approval token can expire while you read. The full displayed review
+stays on screen. **Refresh this review and pair deck** rechecks the same suggestion
+without calling the provider. Unchanged effective content preserves your review;
+changed content clears the checkbox and returns the preview to its start. An
+expired ten-minute suggestion can be explicitly duplicated, with a new identity,
+fresh preconditions and a new review. No completed action is automatically repeated.
+
+All browser controls work with the keyboard and show text states. A lost connection
+pauses approvals. A failed approval response shows an unknown outcome and the exact
+request needed for a deliberate retry; the browser never retries it automatically.
+
+### Optional Stream Deck supervision
+
+Bindings use semantic operations, for example:
+
+```yaml
+bindings:
+  - control: key-1
+    press: {agent: select_proposal}
+  - control: key-2
+    press: {agent: review}
+  - control: key-3
+    press: {agent: approve}
+  - control: key-4
+    press: {agent: reject}
+  - control: key-5
+    press: {agent: select_job}
+  - control: key-6
+    press: {agent: cancel}
+```
+
+Select cycles through pending proposals or active jobs in the current project.
+The screen shows the project, state and short identity. **Review** opens the selected
+proposal in a connected workbench. Approval requires that full preview to remain
+open, visible and connected; its lease lasts five seconds and polling renews only
+that exact lease. A short press requests the existing five-second hold challenge.
+Hold the same control to approve the same selection. A reconnect, new selection,
+project/configuration change or expired lease requires an explicit fresh review.
+A compact deck label alone cannot authorize execution. Cancel addresses the exact
+selected job and never follows a replacement job in that session.
+
+Capability `agent_supervision:1` adds `GET|PUT /v1/agents/selection` and `POST
+/v1/agents/review`. Selection mutations require the current revision. Review links
+bind that revision, preparation and digest; `renew:true` cannot resurrect an expired
+lease. Control events carry `agent_revision` alongside the existing daemon guard.
+Generic `confirmed` events cannot operate agent decisions.
+
+Software fixtures exercise the adapter and daemon. A physical Stream Deck walkthrough
+remains pending; no device/app/firmware compatibility claim is inferred from fixtures.

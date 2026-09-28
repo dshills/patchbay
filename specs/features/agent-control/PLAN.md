@@ -1,6 +1,6 @@
 # Agent Control Panel implementation plan
 
-**Status:** AC-1 and AC-2 implemented; AC-3 through AC-5 next\
+**Status:** AC-1 through AC-3 implemented; AC-4 and AC-5 next\
 **Specification:** [Agent Control Panel](SPEC.md)\
 **Dependencies:** CC-1 through CC-4 for evidence, previews, workbench and packaged onboarding. Recipes are optional.
 
@@ -89,18 +89,18 @@ or job confidently from the screen and Stream Deck.
 
 **Depends on:** AC-2; existing adapter snapshot/guard behavior.
 
-- [ ] Add proposal queue, full effective-action preview, expiry/invalidated states,
+- [x] Add proposal queue, full effective-action preview, expiry/invalidated states,
   approve/reject, live job links, cancellation and result comparison to the workbench.
-- [ ] Preserve the displayed review after token expiry and support explicit revalidation
+- [x] Preserve the displayed review after token expiry and support explicit revalidation
   without another model call. Changed content resets review; duplicating an expired
   suggestion requires fresh identity, precondition checks, preview and approval.
-- [ ] Add semantic proposal/job selection and preview-reference DTOs for adapters.
+- [x] Add semantic proposal/job selection and preview-reference DTOs for adapters.
   Do not route agent decisions through a generic unguarded `confirmed` event.
-- [ ] Add deck controls for select, open review, approve reviewed selection, reject,
+- [x] Add deck controls for select, open review, approve reviewed selection, reject,
   and cancel selected job. Show short identities and project alongside state.
-- [ ] Bind physical approval to the active full preview token and selection revision;
+- [x] Bind physical approval to the active full preview token and selection revision;
   clear it on reconnect, new selection, context change, expiry or restart.
-- [ ] Add keyboard equivalents, visible focus, non-color status labels, missing-provider
+- [x] Add keyboard equivalents, visible focus, non-color status labels, missing-provider
   guidance and reconnect recovery; never require hardware for the core workflow.
 
 **Verification:** Browser-to-daemon proposal flow; adapter fake app plus real daemon;
@@ -115,6 +115,8 @@ fake-app regressions and separate physical verification report.
 evidence. The on-screen route remains releasable with an explicit pending hardware gate.
 
 **Commit boundary:** Proposal UI; adapter protocol/controls; UX and hardware evidence.
+
+AC-3 software review and verification: [AC3.md](../../reviews/AC3.md). The physical walkthrough remains pending.
 
 ## AC-4 — Release the supervised action loop
 

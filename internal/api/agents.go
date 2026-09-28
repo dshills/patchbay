@@ -9,6 +9,34 @@ import (
 
 func (h *Handler) agentRoutes() {
 	h.proposalRoutes()
+	h.route("/v1/agents/selection", "GET, PUT", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			respond(w, 200, h.runtime.AgentSelection())
+			return
+		}
+		var request protocol.AgentSelect
+		if !h.decode(w, r, &request) {
+			return
+		}
+		value, err := h.runtime.SelectAgent(r.Context(), request)
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, value)
+	})
+	h.route("/v1/agents/review", "POST", func(w http.ResponseWriter, r *http.Request) {
+		var request protocol.AgentReviewLink
+		if !h.decode(w, r, &request) {
+			return
+		}
+		value, err := h.runtime.LinkAgentReview(r.Context(), request)
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, value)
+	})
 	h.route("/v1/agents/catalog", "GET", func(w http.ResponseWriter, r *http.Request) { respond(w, 200, h.runtime.AgentCatalog(r.Context())) })
 	h.route("/v1/agents/context/prepare", "POST", func(w http.ResponseWriter, r *http.Request) {
 		var request supervisor.Selection

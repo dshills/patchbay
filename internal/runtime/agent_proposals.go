@@ -132,6 +132,9 @@ func approvalDigest(id string, request supervisor.Approve) string {
 func (r *Runtime) ApproveAgentProposal(ctx context.Context, id string, request supervisor.Approve) (supervisor.Admission, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	return r.approveAgentProposal(ctx, id, request)
+}
+func (r *Runtime) approveAgentProposal(ctx context.Context, id string, request supervisor.Approve) (supervisor.Admission, error) {
 	if r.runs == nil {
 		return supervisor.Admission{}, fault.New(protocol.RecordingFailed, "Run evidence unavailable; no proposal can execute.")
 	}
@@ -232,6 +235,9 @@ func (r *Runtime) ApproveAgentProposal(ctx context.Context, id string, request s
 func (r *Runtime) RejectAgentProposal(ctx context.Context, id string) (supervisor.Session, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	return r.rejectAgentProposal(ctx, id)
+}
+func (r *Runtime) rejectAgentProposal(ctx context.Context, id string) (supervisor.Session, error) {
 	if err := r.writable(ctx); err != nil {
 		return supervisor.Session{}, err
 	}

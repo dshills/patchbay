@@ -577,6 +577,12 @@ func (v *validator) bindings(c *Config) error {
 				continue
 			}
 			p := path + "." + gesture.name
+			if target.Agent != "" {
+				if !slices.Contains([]string{"select_proposal", "select_job", "review", "approve", "reject", "cancel"}, target.Agent) || target.Action != "" || target.Parameter != "" || target.Baseline != "" || target.Result != "" || len(target.Args) != 0 || gesture.name == "rotate" {
+					return v.fail(p, "agent gestures require one supported supervision operation only")
+				}
+				continue
+			}
 			if target.Baseline != "" || target.Result != "" {
 				id := target.Baseline
 				if id == "" {

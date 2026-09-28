@@ -82,3 +82,27 @@ test('agent context review and generation use an isolated fake provider',{timeou
   page.once('dialog',d=>d.accept());await page.locator('#agent-forget').click();await page.waitForFunction(()=>document.querySelectorAll('#agent-sessions button').length===0);assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
  }finally{if(browser)await browser.close();await stop(helper);fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('agent proposal review, refresh, exact approval and result use a real daemon',{timeout:60000},async()=>{
+ const dir=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'pb-agent-browser-')));fs.chmodSync(dir,0o700);
+ const config=path.join(dir,'config.yaml');fs.writeFileSync(path.join(dir,'selected.txt'),'Illustrative selected evidence.',{mode:0o600});fs.writeFileSync(config,JSON.stringify({version:1,server:{socket:path.join(dir,'socket')},state:{path:path.join(dir,'state')},context:{defaults:{project:'demo'}},projects:{demo:{name:'Demo',path:dir}},actions:{echo:{type:'exec',command:'/bin/echo',args:['reviewed'],safety:'safe'}},agents:{codex:{model:'fixture-model'},proposals:{enabled:true}}}),{mode:0o600});
+ let helper,browser;
+ try{
+  const binary=path.join(dir,'helper');execFileSync('go',['test','-c','-o',binary,'./internal/workbench'],{cwd:root,stdio:'pipe'});
+  helper=spawn(binary,['-test.run=^TestServeAgentBrowser$'],{cwd:root,env:{...process.env,PATCHBAY_BROWSER_AGENT_CONFIG:config,PATCHBAY_BROWSER_PROPOSALS:"1"},stdio:['ignore','ignore','pipe','pipe']});
+  const launch=await new Promise((resolve,reject)=>{let data='';const timer=setTimeout(()=>reject(Error('Agent helper did not start.')),10000);helper.stdio[3].on('data',b=>{data+=b;if(data.includes('\n')){clearTimeout(timer);resolve(data.trim());}});helper.once('exit',()=>{clearTimeout(timer);reject(Error('Agent helper exited.'));});});
+  browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1280,height:1000}});const errors=[],external=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(new URL(r.url()).origin!==new URL(launch).origin)external.push(r.url());});
+  await page.goto(launch);await page.waitForFunction(()=>document.querySelector('#connection').textContent==='Connected · local daemon');await page.locator('#agents-open > summary').click();await page.waitForFunction(()=>document.querySelector('#agent-availability').textContent.includes('Provider ready'));assert.equal(await page.locator('#agent-sessions button').count(),0);
+  await page.locator('#agent-question').fill('Explain this evidence.');await page.locator('#agent-files').fill('selected.txt');await page.locator('#agent-context').click();await page.locator('#agent-consent').waitFor({state:'visible'});
+  const preview=JSON.parse(await page.locator('#agent-context-text').textContent());assert.match(preview.input,/Illustrative selected evidence/);assert.equal(preview.destination,'https://api.openai.com/v1/responses');assert.equal(preview.retain_snapshots,false);assert.equal(await page.locator('#agent-start').isDisabled(),true);assert.equal(await page.locator('#agent-sessions button').count(),0);
+  await page.locator('#agent-consent-check').focus();await page.keyboard.press('Space');await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.id),'agent-start');await page.keyboard.press('Enter');await page.waitForFunction(()=>document.querySelector('#agent-session-state').textContent==='awaiting_review');
+  assert.match(await page.locator('#agent-output').textContent(),/<script>/);assert.equal(await page.evaluate(()=>window.agentInjected),undefined);assert.equal(await page.locator('#agent-output script').count(),0);assert.match(await page.locator('#agent-sources').textContent(),/Unsupported model references/);assert.match(await page.locator('#agent-usage').textContent(),/Actual usage/);assert.equal(await page.locator('#agent-sessions button').count(),1);
+  await page.locator('#agent-proposals button').first().click();await page.locator('#agent-review').waitFor({state:'visible'});await page.waitForFunction(()=>document.querySelector('#agent-review-state').textContent.includes('Deck paired'));
+  assert.match(await page.locator('#agent-review-text').textContent(),/reviewed/);assert.equal(await page.locator('#agent-approve').isDisabled(),true);
+  await page.locator('#agent-approve-check').check();await page.locator('#agent-review-refresh').click();await page.waitForFunction(()=>!document.querySelector('#agent-approve').disabled);assert.equal(await page.locator('#agent-approve-check').isChecked(),true);
+  await page.screenshot({path:path.join(root,'.cache/workbench-agent-proposals.png'),fullPage:true});
+  await page.locator('#agent-approve').click();await page.waitForFunction(()=>document.querySelector('#agent-session-state').textContent==='completed');await page.waitForFunction(()=>document.querySelector('#run-status').textContent==='success');assert.equal(await page.locator('#agent-sessions button').count(),1);assert.equal(await page.locator('#agent-approve').isDisabled(),true);
+
+  page.once('dialog',d=>d.accept());await page.locator('#agent-forget').click();await page.waitForFunction(()=>document.querySelectorAll('#agent-sessions button').length===0);assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
+ }finally{if(browser)await browser.close();await stop(helper);fs.rmSync(dir,{recursive:true,force:true});}
+});

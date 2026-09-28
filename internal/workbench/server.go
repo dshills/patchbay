@@ -230,6 +230,12 @@ func allowed(method, path string) ([]string, bool) {
 			return parts, true
 		}
 	}
+	if key == "agents/selection" && (method == "GET" || method == "PUT") || key == "agents/review" && method == "POST" {
+		return parts, true
+	}
+	if len(parts) == 4 && parts[0] == "agents" && parts[1] == "proposals" && method == "POST" && contains([]string{"prepare", "approve", "reject", "duplicate"}, parts[3]) {
+		return parts, true
+	}
 	if key == "agents/catalog" && method == "GET" || key == "agents/context/prepare" && method == "POST" || key == "agents/sessions" && (method == "GET" || method == "POST") {
 		return parts, true
 	}

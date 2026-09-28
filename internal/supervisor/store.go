@@ -411,3 +411,32 @@ func (s *Store) FindProposal(id string) (Session, int, error) {
 	}
 	return Session{}, 0, fault.New(protocol.NotFound, "Proposal not found.")
 }
+
+// SelectionChoices returns compact identities without copying retained model output.
+func (s *Store) SelectionChoices(project, kind string) []protocol.AgentSelect {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	choices := []protocol.AgentSelect{}
+	for _, session := range s.data.Sessions {
+		if session.Project != project {
+			continue
+		}
+		if kind == "select_job" && (session.State == "generating" || session.State == "executing") && session.JobID != "" {
+			choices = append(choices, protocol.AgentSelect{Session: session.ID, Job: session.JobID})
+		}
+		if kind == "select_proposal" {
+			for _, p := range session.Proposals {
+				if p.State == "pending" && time.Now().Before(p.ExpiresAt) {
+					choices = append(choices, protocol.AgentSelect{Proposal: p.ID})
+				}
+			}
+		}
+	}
+	sort.Slice(choices, func(i, j int) bool {
+		if choices[i].Proposal != choices[j].Proposal {
+			return choices[i].Proposal < choices[j].Proposal
+		}
+		return choices[i].Job < choices[j].Job
+	})
+	return choices
+}

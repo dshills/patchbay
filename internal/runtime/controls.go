@@ -23,6 +23,7 @@ const confirmationTTL = 5 * time.Second
 const maxConfirmations = 256
 
 type controlConfirmation struct {
+	agentRevision                    uint64
 	capture                          *protocol.CapturePreview
 	source, device, control, gesture string
 	guard                            protocol.ControlGuard
@@ -36,6 +37,7 @@ func (r *Runtime) controlGuard() protocol.ControlGuard {
 // Called only while holding r.mu, including away-and-back context changes.
 func (r *Runtime) invalidateControls() {
 	r.controlRevision++
+	r.clearAgentSelection()
 	r.confirmations = nil
 	r.recipePreviews = nil
 	r.recipeExports = nil
@@ -52,7 +54,7 @@ func (r *Runtime) ControlSnapshot(ctx context.Context, request protocol.ControlS
 		return protocol.ControlSnapshot{}, fault.New(protocol.InvalidRequest, "At most 64 controls may be inspected.")
 	}
 	state := cloneContext(r.context)
-	result := protocol.ControlSnapshot{Guard: r.controlGuard(), Generation: r.generation, Context: protocol.Context{Project: state.Project, Mode: state.Mode, Values: state.Values}, Controls: make([]protocol.ControlView, 0, len(request.Controls))}
+	result := protocol.ControlSnapshot{AgentRevision: r.agentSelection.Revision, Guard: r.controlGuard(), Generation: r.generation, Context: protocol.Context{Project: state.Project, Mode: state.Mode, Values: state.Values}, Controls: make([]protocol.ControlView, 0, len(request.Controls))}
 	seen := map[protocol.ControlRef]bool{}
 	for _, ref := range request.Controls {
 		if !config.ValidName(ref.Control) || ref.Device != "" && !config.ValidName(ref.Device) || seen[ref] {
@@ -66,7 +68,9 @@ func (r *Runtime) ControlSnapshot(ctx context.Context, request protocol.ControlS
 				continue
 			}
 			wire := protocol.ControlTarget{Action: target.Action, Enabled: true}
-			if target.Baseline != "" || target.Result != "" {
+			if target.Agent != "" {
+				wire = r.agentControlView(target.Agent)
+			} else if target.Baseline != "" || target.Result != "" {
 				wire = r.evidenceControlView(target)
 			} else if target.Parameter != "" {
 				p := r.parameters[target.Parameter]
@@ -89,13 +93,14 @@ func (r *Runtime) ControlSnapshot(ctx context.Context, request protocol.ControlS
 }
 
 type controlPayload struct {
-	RunID        string                 `json:"run_id,omitempty"`
-	Device       string                 `json:"device"`
-	Control      string                 `json:"control"`
-	Delta        *int64                 `json:"delta,omitempty"`
-	Confirmed    *bool                  `json:"confirmed,omitempty"`
-	Guard        *protocol.ControlGuard `json:"guard,omitempty"`
-	Confirmation string                 `json:"confirmation,omitempty"`
+	AgentRevision uint64                 `json:"agent_revision,omitempty"`
+	RunID         string                 `json:"run_id,omitempty"`
+	Device        string                 `json:"device"`
+	Control       string                 `json:"control"`
+	Delta         *int64                 `json:"delta,omitempty"`
+	Confirmed     *bool                  `json:"confirmed,omitempty"`
+	Guard         *protocol.ControlGuard `json:"guard,omitempty"`
+	Confirmation  string                 `json:"confirmation,omitempty"`
 }
 
 func (r *Runtime) Control(ctx context.Context, request protocol.EventRequest) (protocol.EventResponse, error) {
@@ -117,6 +122,7 @@ func (r *Runtime) Control(ctx context.Context, request protocol.EventRequest) (p
 	}
 	confirmed := payload.Confirmed != nil && *payload.Confirmed
 	var approvedCapture *protocol.CapturePreview
+	var approvedAgent uint64
 	if payload.Confirmation != "" {
 		ticket, ok := r.confirmations[payload.Confirmation]
 		delete(r.confirmations, payload.Confirmation)
@@ -125,11 +131,18 @@ func (r *Runtime) Control(ctx context.Context, request protocol.EventRequest) (p
 		}
 		confirmed = true
 		approvedCapture = ticket.capture
+		approvedAgent = ticket.agentRevision
 	}
 	target := binding.Resolve(r.cfg.Bindings, payload.Device, payload.Control, request.Type, r.context)
 	response := protocol.EventResponse{EventID: identity.New(), Matched: target != nil}
 	if target != nil {
-		if target.Baseline != "" || target.Result != "" {
+		if target.Agent != "" {
+			value, err := r.agentControl(ctx, request, payload, target.Agent, approvedAgent)
+			if err != nil {
+				return protocol.EventResponse{}, err
+			}
+			response.JobID, response.RunID = value.JobID, value.RunID
+		} else if target.Baseline != "" || target.Result != "" {
 			id, err := r.evidenceControl(target, payload)
 			if err != nil {
 				return protocol.EventResponse{}, err

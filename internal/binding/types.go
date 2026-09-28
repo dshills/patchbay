@@ -2,6 +2,7 @@
 package binding
 
 type Target struct {
+	Agent     string         `yaml:"agent,omitempty"`
 	Baseline  string         `yaml:"baseline,omitempty"`
 	Result    string         `yaml:"result,omitempty"`
 	Action    string         `yaml:"action,omitempty"`

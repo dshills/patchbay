@@ -426,3 +426,42 @@ func TestEvidenceControlUsesDisplayedRun(t *testing.T) {
 		t.Fatal("missing exact displayed selection")
 	}
 }
+
+func TestAgentReviewCannotSurviveReconnectOrSelectionChange(t *testing.T) {
+	e, b, d := engineFixture(t)
+	b.snapshot.AgentRevision = 3
+	b.snapshot.Controls[0].Targets = map[string]protocol.ControlTarget{Press: {Action: "agent.approve", Enabled: true, Agent: &protocol.AgentSelection{Revision: 3, Project: "demo", Proposal: "first", ReviewActive: true}}}
+	input(t, e, d, message("Keypad", "willAppear"))
+	click(t, e, d, "Keypad", 10*time.Millisecond)
+	if len(b.requests) != 0 {
+		t.Fatal("reused pre-connection review")
+	}
+	// A fresh full review pairs the deck; a new selection invalidates a hold.
+	b.snapshot.AgentRevision = 4
+	b.snapshot.Controls[0].Targets[Press] = protocol.ControlTarget{Action: "agent.approve", Enabled: true, Agent: &protocol.AgentSelection{Revision: 4, Project: "demo", Proposal: "first", ReviewActive: true}}
+	if err := e.Poll(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	click(t, e, d, "Keypad", 10*time.Millisecond)
+	if len(b.requests) != 1 || !strings.Contains(string(b.requests[0].Payload), `"agent_revision":4`) {
+		t.Fatal(b.requests)
+	}
+	input(t, e, d, message("Keypad", "keyDown"))
+	b.snapshot.AgentRevision = 5
+	if err := e.Poll(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	d.advance(HoldDuration)
+	input(t, e, d, message("Keypad", "keyUp"))
+	if len(b.requests) != 1 {
+		t.Fatal("delayed release followed selection")
+	}
+	e.offline()
+	if err := e.Poll(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	click(t, e, d, "Keypad", 10*time.Millisecond)
+	if len(b.requests) != 1 {
+		t.Fatal("reconnect reused review")
+	}
+}

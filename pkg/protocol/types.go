@@ -265,13 +265,14 @@ type EventRequest struct {
 	Payload json.RawMessage `json:"payload"`
 }
 type ControlPayload struct {
-	RunID        string        `json:"run_id,omitempty"`
-	Device       string        `json:"device,omitempty"`
-	Control      string        `json:"control"`
-	Delta        int64         `json:"delta,omitempty"`
-	Confirmed    bool          `json:"confirmed,omitempty"`
-	Guard        *ControlGuard `json:"guard,omitempty"`
-	Confirmation string        `json:"confirmation,omitempty"`
+	AgentRevision uint64        `json:"agent_revision,omitempty"`
+	RunID         string        `json:"run_id,omitempty"`
+	Device        string        `json:"device,omitempty"`
+	Control       string        `json:"control"`
+	Delta         int64         `json:"delta,omitempty"`
+	Confirmed     bool          `json:"confirmed,omitempty"`
+	Guard         *ControlGuard `json:"guard,omitempty"`
+	Confirmation  string        `json:"confirmation,omitempty"`
 }
 type EventResponse struct {
 	RunID   string `json:"run_id,omitempty"`
