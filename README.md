@@ -1,146 +1,120 @@
 # Patchbay
 
-Patchbay connects physical controls and local clients to semantic actions. The
-daemon executable is `deckd`, and its command-line client is `deckctl`.
+Run project checks, switch projects, and adjust lab settings from your terminal
+or Stream Deck+.
 
-## Current status
+Patchbay brings the tasks you repeat into one place. Define an action once, then
+run it from the command line or assign it to a physical control. A button can
+start your project checks; a dial can adjust a value; switching projects can
+change what those controls do.
 
-Phase 2 completes headless V1: the runtime and Unix-socket API are available
-through the full `deckctl` command set, with typed arguments, human/JSON output,
-job waiting and cancellation, persistence, and atomic reload. Device adapters
-now include a Phase 3 Stream Deck+ plugin with simulated/native-process checks;
-physical smoke verification remains pending. Phase 4 adds opt-in project
-conventions, named prompts, and cancellable Codex text jobs. Phase 5 adds TCP SCPI
-profiles for the Rigol DG812 and MHO954, explicit generator actions, scope capture,
-and separate desired/observed parameter state. Instrument simulator checks are
-complete; physical model/firmware validation remains pending. Phase 6 adds a
-versioned executable plugin host, explicit operation allowlists, bounded lifecycle
-handling, and a reusable conformance checker.
-Phase 7 hardens release packaging with source provenance, dependency notices,
-verified file inventories, and smoke tests against extracted native binaries.
+You can get started entirely from the terminal, with no hardware attached.
 
-Start with the [temporary-project quick start](specs/QUICKSTART.md), then see
-the [CLI reference](specs/CLI.md) and [macOS operations/release guide](specs/OPERATIONS.md).
-See [Stream Deck+ setup and capabilities](specs/STREAMDECK.md) for the adapter.
-See [developer integrations](specs/DEVELOPMENT.md) for conventions, prompt/file
-selection, credentials, and the agent permission boundary.
-See [SCPI bench setup](specs/SCPI.md) for instrument limits, transport requirements,
-output policy, and the bench example.
-See [executable plugins](specs/PLUGINS.md) for the v1 protocol, example and
-conformance checker, including the limits of process isolation.
+## What can you do with it?
 
-## Build and validate
+- **Keep everyday tasks close at hand.** Check Git status, run tests, open a
+  project, or group several steps into a workflow.
+- **Give your Stream Deck+ a role in your work.** Map buttons, dials, and touch
+  controls to actions, with feedback as jobs run.
+- **Switch between projects and modes.** Use the same controls for different
+  tasks as you move from development to your electronics bench.
+- **Add AI assistance when you need it.** Run saved Codex prompts with project
+  files you select, then read the result as it arrives. This optional integration
+  requires your own OpenAI API key and model access.
+- **Connect and extend your setup.** Try the instrument profiles for the Rigol
+  DG812 and MHO954, or add your own actions through executable plugins.
 
-Requirements: Go 1.27 or later and Make. Release tooling and its tests also require
-Python 3.10 or later. macOS is the initial supported platform.
+**Current status:** Patchbay is in early development and currently built from
+source on macOS. The terminal workflow has automated test coverage. Stream Deck+
+and Rigol integrations are implemented, but physical-device validation is still
+pending. Start with the terminal example below to get a feel for how it works.
+
+## Get started
+
+You'll need **macOS, Git, Go 1.27 or later, and Make**.
+
+### 1. Download and build
 
 ```sh
-go mod download
+git clone https://github.com/dshills/patchbay.git
+cd patchbay
 make build
-./bin/deckd --version
-./bin/deckctl --version --json
-./bin/deckctl config validate --config configs/example.yaml
-./bin/deckd --validate --config configs/example.yaml --json
 ```
 
-Validation needs no daemon, hardware, project directory, or installed action
-executable. It parses and checks configuration without running commands. A
-successful JSON response is `{"valid":true}`. Validation failures return exit code
-1; usage errors return 2. Help and version return 0. JSON results go to stdout;
-human diagnostics and daemon operation logs go to stderr.
+This creates the programs in `bin/`. The two you'll use first are:
 
-The default configuration path is `~/.config/deckd/config.yaml`. Use `--config` to
-override it. Flags are accepted before `config validate` or after that command.
-Copy and customize [configs/example.yaml](configs/example.yaml) before using a
-different project. Paths are relative to the configuration file, so the example's
-project path `..` points at this checkout.
+- **`deckd`** — runs the local Patchbay service.
+- **`deckctl`** — lets you choose projects, run actions, and see results.
 
-## Run the daemon
+### 2. Start Patchbay
+
+The included example uses this checkout as its project. Check the configuration,
+then start the service:
 
 ```sh
+./bin/deckctl config validate --config configs/example.yaml
 ./bin/deckd --config configs/example.yaml
-# In a second terminal:
-./bin/deckctl status
-./bin/deckctl action run project.status
-./bin/deckctl workflow run validate --json
 ```
 
-Socket and state parent directories must be owned by your user and private
-(0700). The daemon creates missing directories and uses 0600 socket/state files.
-SIGINT or SIGTERM cancels jobs, flushes state, and removes the owned socket.
-Adjacent `.lock` files stay on disk; they are advisory locks, not stale daemons.
+Leave that terminal open while you try the commands below.
 
-Commands run as your user with explicit argument arrays. Action output is bounded
-and available in job results. Confirmation and dangerous-action policy are checked
-by the daemon. Opening an application reports launch completion; cancelling that
-job does not close the application. See the [API](specs/API.md) and
-[runtime decisions](specs/RUNTIME.md) for invocation, reload, and cancellation rules.
+### 3. Try a few actions
 
-## Development checks
+Open a second terminal in the same `patchbay` folder:
+
+```sh
+./bin/deckctl status
+./bin/deckctl action list
+./bin/deckctl action run project.status
+./bin/deckctl workflow run validate
+```
+
+`project.status` shows the checkout's Git status. The `validate` workflow runs
+Go's code checks and tests, then reports the result. To stop Patchbay, press
+**Ctrl-C in the first terminal**.
+
+For a longer walkthrough using a temporary demo project, including cancellation
+and saved settings, follow the [quick start](specs/QUICKSTART.md).
+
+## Make it your own
+
+Your configuration describes your projects, the actions you want to run, and
+which controls trigger them. Start with [the example](configs/example.yaml),
+then adapt the project paths and commands to your own work.
+
+An **action** is one task, such as checking a project or opening a folder.
+A **workflow** runs several actions in order. A **binding** connects a button,
+dial, or touch gesture to an action or adjustable value.
+
+Actions run with your user account's permissions. Some require explicit
+confirmation, and actions classified as dangerous also require a configuration
+opt-in. Review an action before enabling it. For equipment, read the
+[bench setup guide](specs/SCPI.md) before connecting an instrument.
+
+| I want to… | Start here |
+| --- | --- |
+| Find a command or inspect a running job | [Command-line guide](specs/CLI.md) |
+| Set up buttons and dials | [Stream Deck+ setup](specs/STREAMDECK.md) |
+| Add project tasks or Codex prompts | [Developer integrations](specs/DEVELOPMENT.md) |
+| Connect a Rigol generator or oscilloscope | [Electronics bench setup](specs/SCPI.md) |
+| Add a custom plugin | [Plugin guide](specs/PLUGINS.md) |
+| Run Patchbay at login or manage an upgrade | [macOS operations guide](specs/OPERATIONS.md) |
+
+## Help shape Patchbay
+
+Found a confusing step, have a useful workflow to share, or want another device
+supported? [Open an issue](https://github.com/dshills/patchbay/issues) with what
+you're trying to do. Feedback on getting started is welcome too.
+
+If you're working on the code, the full development checks also need Python 3.10+
+and the Xcode Command Line Tools:
 
 ```sh
 make install-lint
 make check GOLANGCI_LINT="$PWD/.tools/golangci-lint"
-make coverage
-go tool cover -func=coverage.out
 ```
 
-`make check` checks formatting, runs vet, lint, unit tests, race tests, release-tool
-tests, builds all four commands, and probes the compiled example plugin.
-`make fmt` formats source. The lint version is pinned in the
-Makefile; the selected checks are `errcheck`, `govet`, `ineffassign`, `staticcheck`,
-and `unused`. These catch correctness and maintenance issues without a broad
-style policy. CI runs these commands on macOS. The race suite uses the platform's
-C toolchain; install the Xcode Command Line Tools if the toolchain is missing.
-
-To keep tool caches inside the checkout when needed:
-
-```sh
-GOCACHE="$PWD/.cache/go-build" GOLANGCI_LINT_CACHE="$PWD/.cache/lint" make check
-```
-
-Build metadata is supplied with `make build VERSION=0.1.0`; `COMMIT` and
-`BUILD_TIME` can also be overridden for reproducible builds. Direct `go build`
-uses `dev`, `unknown`, and `unknown` defaults.
-
-## Design and dependencies
-
-- [Engineering specification](specs/SPEC.md)
-- [Implementation plan](specs/PLAN.md)
-- [Foundation decisions and configuration schema](specs/FOUNDATION.md)
-- [V1 API contract](specs/API.md)
-- [Phase 0 verification and Prism review](specs/reviews/PHASE0.md)
-- [Phase 1 runtime decisions](specs/RUNTIME.md)
-- [Phase 1 verification, performance, and Prism review](specs/reviews/PHASE1.md)
-- [CLI reference](specs/CLI.md)
-- [Quick start](specs/QUICKSTART.md)
-- [macOS operation and release builds](specs/OPERATIONS.md)
-- [Phase 2 acceptance and Prism review](specs/reviews/PHASE2.md)
-- [Stream Deck+ adapter and setup](specs/STREAMDECK.md)
-- [Phase 3 verification and Prism review](specs/reviews/PHASE3.md)
-- [Developer integrations and Codex setup](specs/DEVELOPMENT.md)
-- [Phase 4 verification and Prism review](specs/reviews/PHASE4.md)
-- [SCPI profiles and bench setup](specs/SCPI.md)
-- [Phase 5 verification and Prism review](specs/reviews/PHASE5.md)
-- [Executable plugin protocol and setup](specs/PLUGINS.md)
-- [Phase 6 verification and Prism review](specs/reviews/PHASE6.md)
-- [Phase 7 release hardening and verification](specs/reviews/PHASE7.md)
-
-The Go module currently uses the local path `patchbay`. The repository is
-[github.com/dshills/patchbay](https://github.com/dshills/patchbay). Adopt a canonical
-Go module path before exposing packages to external Go consumers. Application
-behavior is internal; `pkg/protocol` contains only wire contracts and depends
-exclusively on the standard library.
-
-The core runtime dependency is `go.yaml.in/yaml/v3`, pinned to v3.0.5. YAML
-decoding is absent from the standard library. This security-maintained v3 line
-provides the stable node API needed for source locations; the loader adds strict
-schema/type checks and excludes aliases and merge keys. The upstream project's
-[version policy](https://github.com/yaml/go-yaml#version-intentions) directs new
-feature work to v4; adopting that API can be evaluated separately. No dependency
-is needed for HTTP, JSON, logging, argument parsing, or process execution.
-
-The isolated Stream Deck adapter additionally uses `github.com/gorilla/websocket`
-v1.5.3 for the vendor WebSocket protocol. It is not imported by the core daemon or
-CLI; its BSD license ships with the plugin. Inspector/vendor validation uses Node
-only during development, not at plugin runtime.
+These run formatting, static checks, tests, race checks, builds, and release-tool
+verification. For the technical details, see the [specification](specs/SPEC.md),
+[implementation plan](specs/PLAN.md), [API reference](specs/API.md), and
+[verification reports](specs/reviews).
