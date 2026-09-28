@@ -11,6 +11,8 @@ import (
 type Code string
 
 const (
+	InvalidProposal      Code = "invalid_proposal"
+	ContextChanged       Code = "context_changed"
 	InvalidConfig        Code = "invalid_config"
 	InvalidRequest       Code = "invalid_request"
 	NotFound             Code = "not_found"
@@ -40,9 +42,9 @@ func (c Code) HTTPStatus() int {
 		return http.StatusNotFound
 	case PermissionDenied:
 		return http.StatusForbidden
-	case ConfirmationRequired, Cancelled, StalePreparation, RequestConflict:
+	case ConfirmationRequired, Cancelled, StalePreparation, RequestConflict, ContextChanged:
 		return http.StatusConflict
-	case IncompatibleResults:
+	case IncompatibleResults, InvalidProposal:
 		return http.StatusUnprocessableEntity
 	case StorageFull:
 		return http.StatusInsufficientStorage
@@ -68,7 +70,7 @@ func (c Code) Valid() bool {
 	case InvalidConfig, InvalidRequest, NotFound, ActionNotFound, ProjectNotFound,
 		PermissionDenied, ConfirmationRequired, ProviderUnavailable, ExecutionFailed,
 		Cancelled, Timeout, Internal, Busy, ShuttingDown, StalePreparation,
-		RequestConflict, IncompatibleResults, StorageFull, RecordingFailed:
+		RequestConflict, IncompatibleResults, StorageFull, RecordingFailed, InvalidProposal, ContextChanged:
 		return true
 	default:
 		return false

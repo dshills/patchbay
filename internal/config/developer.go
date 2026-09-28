@@ -1,6 +1,7 @@
 package config
 
 import (
+	"path/filepath"
 	"strings"
 	"unicode/utf8"
 
@@ -37,6 +38,17 @@ func (v *validator) developerConfig(c *Config, baseDir, home string) error {
 		}
 		if err := ValidateTemplate(prompt, inputs); err != nil {
 			return v.fail("prompts."+name, "invalid prompt substitution")
+		}
+	}
+	if c.Agents.Proposals.Enabled && c.Agents.Codex.Model == "" {
+		return v.fail("agents.proposals", "proposal mode requires an explicit codex model")
+	}
+	if len(c.Agents.Proposals.ProtectedPaths) > 100 {
+		return v.fail("agents.proposals.protected_paths", "at most 100 paths")
+	}
+	for _, p := range c.Agents.Proposals.ProtectedPaths {
+		if !filepath.IsLocal(p) || filepath.Clean(p) != p {
+			return v.fail("agents.proposals.protected_paths", "expected clean relative paths")
 		}
 	}
 	if c.Agents.Codex.Model != "" && !ValidName(c.Agents.Codex.Model) {

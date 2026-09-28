@@ -1,6 +1,6 @@
 # Agent Control Panel implementation plan
 
-**Status:** Not started\
+**Status:** AC-1 implemented; AC-2 through AC-5 next\
 **Specification:** [Agent Control Panel](SPEC.md)\
 **Dependencies:** CC-1 through CC-4 for evidence, previews, workbench and packaged onboarding. Recipes are optional.
 
@@ -11,17 +11,17 @@ generation without granting the model execution authority.
 
 **Depends on:** CC-4 and the current bounded text-only agent provider.
 
-- [ ] Add explicit proposal-mode configuration, feature discovery, context selection
+- [x] Add explicit proposal-mode configuration, feature discovery, context selection
   DTOs, destination/model preview, frozen-byte digests and expiring upload consent.
   Preserve existing agent action semantics and provider/file limits.
-- [ ] Add bounded selection of CC artifacts and project text files with confinement,
+- [x] Add bounded selection of CC artifacts and project text files with confinement,
   protected-path checks, optional deterministic series summaries, and explicit local
   snapshot-retention choice. Avoid environment/config/credential dumps.
-- [ ] Add session metadata storage and links to provider jobs/CC artifacts, including
+- [x] Add session metadata storage and links to provider jobs/CC artifacts, including
   durable generation request IDs, quota handling, cancellation and interrupted recovery.
-- [ ] Implement one explicit generation request per user action; expose actual usage
+- [x] Implement one explicit generation request per user action; expose actual usage
   when available, label estimates, and make provider errors/missing-key states useful.
-- [ ] Build context preview, generation status, explanation and source-link views in
+- [x] Build context preview, generation status, explanation and source-link views in
   the workbench and `deckctl agent`. Invalid source references have no evidence link.
 
 **Verification:** Fake provider with streamed/truncated/time-limited output; exact
@@ -37,6 +37,8 @@ content can execute an action. Optional live-provider checks require a separatel
 authorized context selection; fixture evidence never claims a live account was tested.
 
 **Commit boundary:** Context/consent; durable sessions; explanation UI and CLI.
+
+AC-1 review and deterministic evidence: [AC1.md](../../reviews/AC1.md).
 
 ## AC-2 — Structured proposals and exact approval
 

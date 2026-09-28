@@ -100,7 +100,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fail(403, "Cross-site requests are disabled.")
 		return
 	}
-	static := map[string]struct{ file, media string }{"/": {"index.html", "text/html; charset=utf-8"}, "/app.js": {"app.js", "text/javascript; charset=utf-8"}, "/recipes.js": {"recipes.js", "text/javascript; charset=utf-8"}, "/style.css": {"style.css", "text/css; charset=utf-8"}}
+	static := map[string]struct{ file, media string }{"/": {"index.html", "text/html; charset=utf-8"}, "/app.js": {"app.js", "text/javascript; charset=utf-8"}, "/agents.js": {"agents.js", "text/javascript; charset=utf-8"}, "/recipes.js": {"recipes.js", "text/javascript; charset=utf-8"}, "/style.css": {"style.css", "text/css; charset=utf-8"}}
 	if asset, ok := static[r.URL.Path]; ok {
 		if r.Method != "GET" || r.URL.RawQuery != "" {
 			fail(405, "Unsupported asset request.")
@@ -229,6 +229,15 @@ func allowed(method, path string) ([]string, bool) {
 		if parts[0] == "jobs" && (method == "GET" || method == "DELETE") {
 			return parts, true
 		}
+	}
+	if key == "agents/catalog" && method == "GET" || key == "agents/context/prepare" && method == "POST" || key == "agents/sessions" && (method == "GET" || method == "POST") {
+		return parts, true
+	}
+	if len(parts) == 3 && parts[0] == "agents" && parts[1] == "sessions" && (method == "GET" || method == "DELETE") {
+		return parts, true
+	}
+	if len(parts) == 4 && parts[0] == "agents" && parts[1] == "sessions" && parts[3] == "forget" && method == "POST" {
+		return parts, true
 	}
 	if len(parts) == 3 && parts[0] == "recipes" && method == "POST" && contains([]string{"prepare", "commit", "export"}, parts[2]) {
 		return parts, true

@@ -41,8 +41,13 @@ type Config struct {
 	Plugins     map[string]provider.PluginConfig        `yaml:"plugins,omitempty"`
 }
 
+type ProposalMode struct {
+	Enabled        bool     `yaml:"enabled,omitempty"`
+	ProtectedPaths []string `yaml:"protected_paths,omitempty"`
+}
 type Agents struct {
-	Codex Codex `yaml:"codex,omitempty"`
+	Proposals ProposalMode `yaml:"proposals,omitempty"`
+	Codex     Codex        `yaml:"codex,omitempty"`
 }
 type Codex struct {
 	Model           string `yaml:"model,omitempty"`

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"patchbay/internal/recipe"
+	"patchbay/internal/supervisor"
 	"patchbay/pkg/protocol"
 	"slices"
 	"strings"
@@ -15,7 +16,7 @@ func render(value any) string {
 	var out strings.Builder
 	line := func(format string, args ...any) { _, _ = fmt.Fprintf(&out, format+"\n", args...) }
 	switch v := value.(type) {
-	case recipe.ExportPreview, recipe.List, recipe.View, recipe.Preview, recipe.ManagementResult, recipe.ImportResult:
+	case supervisor.Catalog, supervisor.ContextPreview, supervisor.Session, supervisor.List, recipe.ExportPreview, recipe.List, recipe.View, recipe.Preview, recipe.ManagementResult, recipe.ImportResult:
 		data, _ := json.MarshalIndent(value, "", "  ")
 		line("%s", data)
 	case *recipe.Package:

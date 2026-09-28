@@ -36,6 +36,8 @@ type AgentRequest struct {
 	Model, Prompt, Project, Dir string
 	Files                       []string
 	MaxOutputTokens             int
+	// FrozenInput bypasses file reads only for an already reviewed supervisor request.
+	FrozenInput string
 }
 
 type Codex struct {
@@ -68,6 +70,12 @@ func (c *Codex) Health(context.Context) Health {
 // agentInput opens explicit regular files through os.Root. Symlinks cannot
 // escape the project or selected working directory, including during a rename.
 func agentInput(ctx context.Context, request AgentRequest) (string, error) {
+	if request.FrozenInput != "" {
+		if len(request.FrozenInput) > maxAgentInput || !utf8.ValidString(request.FrozenInput) || strings.ContainsRune(request.FrozenInput, 0) || len(request.Files) != 0 || request.Prompt != "" {
+			return "", fault.New(protocol.InvalidRequest, "Invalid frozen agent input.")
+		}
+		return request.FrozenInput, nil
+	}
 	invalid := func() (string, error) {
 		return "", fault.New(protocol.InvalidRequest, "Agent context must contain bounded UTF-8 files within the project.")
 	}
@@ -185,6 +193,11 @@ type agentEvent struct {
 	} `json:"item"`
 	Response struct {
 		Status string `json:"status"`
+		Usage  *struct {
+			Input  int64 `json:"input_tokens"`
+			Output int64 `json:"output_tokens"`
+			Total  int64 `json:"total_tokens"`
+		} `json:"usage"`
 		Output []struct {
 			Type string `json:"type"`
 		} `json:"output"`
@@ -293,7 +306,11 @@ func readAgentStream(ctx context.Context, reader io.Reader, model, key string, b
 				}
 			}
 			appendText("", true)
-			return snapshot(action.Success, "Agent response completed."), nil
+			result := snapshot(action.Success, "Agent response completed.")
+			if u := event.Response.Usage; u != nil && u.Input >= 0 && u.Output >= 0 && u.Total >= 0 {
+				result.Data["usage"] = map[string]int64{"input_tokens": u.Input, "output_tokens": u.Output, "total_tokens": u.Total}
+			}
+			return result, nil
 		}
 	}
 	if ctx.Err() != nil {

@@ -276,3 +276,28 @@ func TestCodexLiveSmoke(t *testing.T) {
 	}
 	t.Log("Live provider returned a completed bounded text response; no project files sent.")
 }
+
+func TestFrozenAgentInputAndActualUsage(t *testing.T) {
+	request := AgentRequest{Model: "test-model", FrozenInput: "exact consented input", MaxOutputTokens: 64}
+	calls := 0
+	c := &Codex{key: func() string { return "test-credential" }, client: &http.Client{Transport: agentTransport(func(req *http.Request) (*http.Response, error) {
+		calls++
+		var sent map[string]any
+		if err := json.NewDecoder(req.Body).Decode(&sent); err != nil {
+			t.Fatal(err)
+		}
+		if sent["input"] != request.FrozenInput || sent["store"] != false || sent["tool_choice"] != "none" || req.GetBody != nil {
+			t.Fatal(sent)
+		}
+		stream := sse(map[string]any{"type": "response.output_text.delta", "delta": "complete"}) + sse(map[string]any{"type": "response.completed", "response": map[string]any{"status": "completed", "usage": map[string]int{"input_tokens": 9, "output_tokens": 2, "total_tokens": 11}}})
+		return &http.Response{StatusCode: 200, Header: http.Header{"Content-Type": []string{"text/event-stream"}}, Body: io.NopCloser(strings.NewReader(stream))}, nil
+	})}}
+	result, err := c.Run(context.Background(), request, NewBudget(100), nil)
+	if err != nil || calls != 1 || result.Data["usage"].(map[string]int64)["total_tokens"] != 11 {
+		t.Fatal(result, err)
+	}
+	request.Files = []string{"unexpected"}
+	if _, err := agentInput(context.Background(), request); err == nil {
+		t.Fatal("mixed frozen and filesystem context accepted")
+	}
+}

@@ -28,19 +28,24 @@ import (
 	"patchbay/internal/provider"
 	"patchbay/internal/recipe"
 	"patchbay/internal/state"
+	"patchbay/internal/supervisor"
 	"patchbay/internal/version"
 	"patchbay/pkg/protocol"
 )
 
 type Options struct {
-	Recipes  recipe.StoreOptions
-	Evidence evidence.Options
-	Log      io.Writer
-	Runner   provider.Runner
-	Opener   string
-	Agent    provider.Agent
+	Supervisor supervisor.Options
+	Recipes    recipe.StoreOptions
+	Evidence   evidence.Options
+	Log        io.Writer
+	Runner     provider.Runner
+	Opener     string
+	Agent      provider.Agent
 }
 type Runtime struct {
+	sessions             *supervisor.Store
+	sessionError         error
+	contexts             map[string]agentContextPreparation
 	baseConfig           *config.Config
 	recipes              *recipe.Store
 	recipeError          error
@@ -172,6 +177,8 @@ func NewConfigured(path string, c *config.Config, options Options) (*Runtime, er
 		}
 	}
 	r.runs, r.storageError = evidence.Open(c.Runs.Path, evidence.Limits{MaxRuns: c.Runs.MaxRuns, MaxBytes: c.Runs.MaxBytes, MaxRunBytes: c.Runs.MaxRunBytes, MaxArtifactBytes: c.Runs.MaxArtifactBytes, MaxReceipts: c.Runs.MaxReceipts}, options.Evidence)
+	r.sessions, r.sessionError = supervisor.Open(c.State.Path+".agents", options.Supervisor)
+	r.contexts = map[string]agentContextPreparation{}
 	r.captureKey = []byte(identity.New() + identity.New())
 	r.captures = map[string]capturePreparation{}
 	r.bus = event.New(c.Events.SubscriberCapacity)
@@ -432,6 +439,9 @@ func (r *Runtime) Close(ctx context.Context) error {
 	}
 	if jobErr == nil && r.recipes != nil {
 		_ = r.recipes.Close()
+	}
+	if jobErr == nil && r.sessions != nil {
+		_ = r.sessions.Close()
 	}
 	pluginErr := r.plugins.Close(ctx)
 	scpiErr := r.scpi.Close(ctx)

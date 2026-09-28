@@ -2,11 +2,15 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"patchbay/internal/evidence"
+	"patchbay/internal/supervisor"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -91,5 +95,82 @@ actions: {review: {type: agent, provider: codex, prompt: review, safety: safe}}
 	out, _ = ctl(t, d, false, 0, "job", "show", id)
 	if !strings.Contains(out, "cancelled") {
 		t.Fatal(out)
+	}
+}
+
+type cliSessionAgent struct{ calls atomic.Int32 }
+
+func (*cliSessionAgent) Health(context.Context) provider.Health {
+	return provider.Health{Available: true}
+}
+func (a *cliSessionAgent) Run(_ context.Context, request provider.AgentRequest, _ *provider.Budget, _ func(action.Result)) (action.Result, error) {
+	a.calls.Add(1)
+	return action.Result{Status: action.Success, Data: map[string]any{"stdout": `{"schema_version":1,"summary":"Fixture explanation","context_refs":[],"proposals":[]}`}}, nil
+}
+func TestAgentSessionCLIConsentAndDurableRetry(t *testing.T) {
+	dir, err := os.MkdirTemp("/private/tmp", "pb-sessions-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	d := &cliDaemon{path: filepath.Join(dir, "config.yaml"), socket: filepath.Join(dir, "private", "sock")}
+	text := fmt.Sprintf(`version: 1
+server: {socket: %q}
+state: {path: %q}
+context: {defaults: {project: demo}}
+projects: {demo: {name: Demo, path: %q}}
+agents: {proposals: {enabled: true}, codex: {model: test-model}}
+`, d.socket, filepath.Join(dir, "private", "state"), dir)
+	if err := os.WriteFile(d.path, []byte(text), 0600); err != nil {
+		t.Fatal(err)
+	}
+	a := &cliSessionAgent{}
+	r, err := runtimecore.New(d.path, runtimecore.Options{Agent: a})
+	if err != nil {
+		t.Fatal(err)
+	}
+	listener, err := api.Listen(d.socket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := &http.Server{Handler: api.NewHandler(r), ReadHeaderTimeout: time.Second}
+	go func() { _ = server.Serve(listener) }()
+	t.Cleanup(func() {
+		_ = server.Close()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = r.Close(ctx)
+	})
+	ctl(t, d, true, 0, "agent", "catalog")
+	requestID := evidence.NewRequestID(time.Now())
+	selection, _ := json.Marshal(supervisor.Selection{Prompt: "Explain fixture", RequestID: requestID})
+	out, _ := ctl(t, d, true, 0, "agent", "context", string(selection))
+	var p supervisor.ContextPreview
+	if err := json.Unmarshal([]byte(out), &p); err != nil {
+		t.Fatal(err)
+	}
+	ctl(t, d, true, 4, "agent", "start", p.ID, p.Digest, requestID)
+	out, _ = ctl(t, d, true, 0, "agent", "start", p.ID, p.Digest, requestID, "--confirm")
+	var s supervisor.Session
+	if err := json.Unmarshal([]byte(out), &s); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if _, err := r.Jobs().Wait(ctx, s.JobID); err != nil {
+		t.Fatal(err)
+	}
+	retry, _ := ctl(t, d, true, 0, "agent", "start", p.ID, p.Digest, requestID, "--confirm")
+	var got supervisor.Session
+	_ = json.Unmarshal([]byte(retry), &got)
+	if got.ID != s.ID || got.State != "completed" || a.calls.Load() != 1 {
+		t.Fatal(got)
+	}
+	ctl(t, d, true, 0, "agent", "show", s.ID)
+	ctl(t, d, true, 0, "agent", "list")
+	ctl(t, d, true, 0, "agent", "forget", s.ID, "--confirm")
+	ctl(t, d, true, 2, "agent", "start", p.ID, p.Digest, requestID, "--confirm")
+	if a.calls.Load() != 1 {
+		t.Fatal("forgotten generation replayed")
 	}
 }

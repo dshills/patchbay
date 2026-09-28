@@ -29,6 +29,7 @@ function buttons(){
  $('download-html').disabled=!ready||!state.export||Date.now()>=Date.parse(state.export.expires_at);$('download-json').disabled=$('download-html').disabled;
  $('connection').textContent=state.closed?'Session closed':live()?'Connected · local daemon':'Disconnected or stale · controls paused';
  if(typeof recipeButtons==='function')recipeButtons(ready);
+ if(typeof agentButtons==='function')agentButtons(ready);
  if(state.preview)$('expiry').textContent=Date.now()>=Date.parse(state.preview.expires_at)?'Approval expired. Review capture again to refresh it.':'Approval expires at '+new Date(state.preview.expires_at).toLocaleTimeString();
 }
 function clearPreview(){state.preview=null;$('preview').hidden=true;$('confirm').checked=false;}
@@ -85,7 +86,7 @@ async function refresh(){
   const [context,projects,experiments,parameters,runs,storage,status,capabilities,session,recipes]=await Promise.all(['context','projects','experiments','parameters','runs','storage','status','capabilities','session','recipes'].map(path=>api(path)));
   state.owned=session.owned_daemon;$('quit').textContent=state.owned?'Quit demo':'Close session';document.querySelector('footer').textContent=state.owned?'Closing this tab leaves jobs running. Quit demo stops this session’s daemon and cancels active jobs. Saved results remain available.':'Closing this tab leaves daemon jobs running. Close session revokes this browser session.';
   if(capabilities.features.capture!==1)throw new Error('This daemon does not support the workbench. Start a compatible Patchbay release.');
-  const key=JSON.stringify([status.instance,status.generation,context,parameters]);if(state.resync||(state.key&&key!==state.key)){if(typeof clearRecipeReview==='function')clearRecipeReview();clearPreview();state.extra=[];state.cursor=runs.next_cursor||'';}state.key=key;
+  const key=JSON.stringify([status.instance,status.generation,context,parameters]);if(state.resync||(state.key&&key!==state.key)){if(typeof clearAgentConsent==='function')clearAgentConsent();if(typeof clearRecipeReview==='function')clearRecipeReview();clearPreview();state.extra=[];state.cursor=runs.next_cursor||'';}state.key=key;
   if(state.data&&state.data.context.project!==context.project){state.selected=null;$('detail').hidden=true;clearExport();}
   state.data={context,projects,experiments,parameters,runs,storage,status};
  if(typeof recipeRefresh==='function')recipeRefresh(recipes);
@@ -94,6 +95,7 @@ async function refresh(){
   state.data.runs=await api('runs?project='+encodeURIComponent(context.project||'')+'&experiment='+encodeURIComponent(state.experiment));parametersUI();if(!state.extra.length)state.cursor=state.data.runs.next_cursor||'';renderHistory();await baseline();
   $('storage').textContent=storage.available?`${storage.runs}/${storage.max_runs} runs · ${(storage.bytes/1048576).toFixed(1)} MiB saved`:'Storage unavailable';if(storage.read_only)$('storage').textContent+=' · Read only: '+storage.diagnostics.join(' ');
   if(state.active){await selectRun(state.active.run_id,true);}$('active').textContent=state.active?'Capture '+state.active.run_id+' is active.':'';$('cancel').hidden=!state.active;
+  if(typeof agentRefresh==='function')await agentRefresh();
   state.lastGood=Date.now();state.resync=false;
  }catch(error){state.resync=true;notice(error.message);}finally{state.syncing=false;buttons();}
 }
@@ -115,7 +117,7 @@ for(const format of ['html','json'])$('download-'+format).addEventListener('clic
 for(const name of ['inputs','notes','logs','source'])$('include-'+name).addEventListener('change',()=>{clearExport();buttons();});
 $('more').addEventListener('click',async()=>{try{const page=await api('runs?cursor='+encodeURIComponent(state.cursor)+'&project='+encodeURIComponent(state.data.context.project||'')+'&experiment='+encodeURIComponent(state.experiment));state.extra.push(...page.runs);state.cursor=page.next_cursor||'';renderHistory();}catch(error){notice(error.message);}});
 $('refresh').addEventListener('click',()=>refresh());
-$('quit').addEventListener('click',async()=>{try{await fetch('/session/quit',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},credentials:'omit'});}finally{token='';state.closed=true;if(typeof clearRecipeReview==='function')clearRecipeReview();clearPreview();clearExport();buttons();notice(state.owned?'The demo is closing. Saved results remain in its private workspace.':'This workbench session is closed. Daemon jobs continue running.');}});
+$('quit').addEventListener('click',async()=>{try{await fetch('/session/quit',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},credentials:'omit'});}finally{token='';state.closed=true;if(typeof clearAgentConsent==='function')clearAgentConsent();if(typeof clearRecipeReview==='function')clearRecipeReview();clearPreview();clearExport();buttons();notice(state.owned?'The demo is closing. Saved results remain in its private workspace.':'This workbench session is closed. Daemon jobs continue running.');}});
 buttons();setInterval(buttons,250);
 if(!/^[A-Za-z0-9_-]{43}$/.test(token)){token='';notice('Launch deckctl workbench to open an authorized tab. A refresh deliberately removes browser access.');}
 async function poll(){await refresh();if(!state.closed)setTimeout(poll,document.hidden||state.resync?2000:500);}

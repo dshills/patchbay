@@ -2,12 +2,21 @@ package workbench
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
+	"patchbay/internal/action"
+	"patchbay/internal/api"
+	"patchbay/internal/config"
+	"patchbay/internal/provider"
 	"patchbay/internal/recipe"
+	runtimecore "patchbay/internal/runtime"
+	"patchbay/internal/supervisor"
 	"syscall"
 	"testing"
+	"time"
 )
 
 // TestServeBrowser is a test-only launcher. Descriptor 3 is private IPC to the
@@ -55,4 +64,61 @@ func TestServeBrowser(t *testing.T) {
 	case <-ctx.Done():
 	case <-server.Done():
 	}
+}
+
+type browserAgent struct{}
+
+func (browserAgent) Health(context.Context) provider.Health { return provider.Health{Available: true} }
+func (browserAgent) Run(_ context.Context, request provider.AgentRequest, _ *provider.Budget, publish func(action.Result)) (action.Result, error) {
+	var input struct {
+		Items []supervisor.Item `json:"selected_context"`
+	}
+	_ = json.Unmarshal([]byte(request.FrozenInput), &input)
+	refs := []string{"unsupported"}
+	for _, item := range input.Items {
+		refs = append(refs, item.ID)
+	}
+	out, _ := json.Marshal(supervisor.Output{SchemaVersion: 1, Summary: "<script>window.agentInjected=true</script> Model interpretation only.", ContextRefs: refs, Proposals: []supervisor.Suggestion{}})
+	publish(action.Result{Status: "running", Data: map[string]any{"stdout": "partial JSON"}})
+	return action.Result{Status: action.Success, Data: map[string]any{"stdout": string(out), "usage": map[string]int64{"input_tokens": 20, "output_tokens": 10, "total_tokens": 30}}}, nil
+}
+func TestServeAgentBrowser(t *testing.T) {
+	path := os.Getenv("PATCHBAY_BROWSER_AGENT_CONFIG")
+	if path == "" {
+		t.Skip("browser harness only")
+	}
+	runtime, err := runtimecore.New(path, runtimecore.Options{Agent: browserAgent{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = runtime.Close(ctx)
+	}()
+	configuration, err := config.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	socket := configuration.Server.Socket
+	listener, err := api.Listen(socket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	httpServer := &http.Server{Handler: api.NewHandler(runtime), ReadHeaderTimeout: time.Second}
+	go func() { _ = httpServer.Serve(listener) }()
+	defer func() { _ = httpServer.Close() }()
+	server, err := Start(socket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = server.Close() }()
+	ready := os.NewFile(3, "agent-browser-ready")
+	if _, err := fmt.Fprintln(ready, server.URL()); err != nil {
+		t.Fatal(err)
+	}
+	_ = ready.Close()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	<-ctx.Done()
 }

@@ -92,6 +92,9 @@ func call[T any](ctx context.Context, c *client.Client, method string, request a
 	return value, err
 }
 func executeCommand(ctx context.Context, c *client.Client, o ctlOptions, command []string) (any, error) {
+	if command[0] == "agent" {
+		return agentCommand(ctx, c, o, command)
+	}
 	if command[0] == "recipe" {
 		return recipeCommand(ctx, c, o, command)
 	}
@@ -420,7 +423,7 @@ func classify(err error) *commandError {
 	if errors.As(err, &apiError) {
 		exit := 1
 		switch apiError.Code {
-		case protocol.InvalidRequest, protocol.NotFound, protocol.ActionNotFound, protocol.ProjectNotFound:
+		case protocol.InvalidProposal, protocol.ContextChanged, protocol.InvalidRequest, protocol.NotFound, protocol.ActionNotFound, protocol.ProjectNotFound:
 			exit = 2
 		case protocol.ProviderUnavailable, protocol.Busy, protocol.ShuttingDown:
 			exit = 3
