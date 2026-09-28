@@ -20,8 +20,8 @@ func (r *Runtime) Compare(ctx context.Context, request protocol.ComparisonReques
 	for _, ref := range []protocol.ResultReference{request.Baseline, request.Candidate} {
 		if ref.Kind == "run" {
 			ids = append(ids, ref.ID)
-		} else if ref.Kind != "sample" {
-			return protocol.Comparison{}, fault.New(protocol.InvalidRequest, "Result references require kind run or sample.")
+		} else if ref.Kind != "sample" && ref.Kind != "recipe_sample" {
+			return protocol.Comparison{}, fault.New(protocol.InvalidRequest, "Result references require kind run, sample or recipe_sample.")
 		}
 	}
 	release, err := store.Hold(ids...)
@@ -31,6 +31,16 @@ func (r *Runtime) Compare(ctx context.Context, request protocol.ComparisonReques
 	defer release()
 	resolve := func(ref protocol.ResultReference) (protocol.Run, map[string]protocol.Series, error) {
 		values := map[string]protocol.Series{}
+		if ref.Kind == "recipe_sample" {
+			sample, err := r.RecipeSample(ctx, ref)
+			if err != nil {
+				return protocol.Run{}, nil, err
+			}
+			for _, series := range sample.Series {
+				values[series.Name] = series
+			}
+			return evidence.SampleRun(sample), values, nil
+		}
 		if ref.Kind == "sample" {
 			for _, sample := range evidence.Samples().Samples {
 				if sample.ID == ref.ID {

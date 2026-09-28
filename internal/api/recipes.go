@@ -13,6 +13,31 @@ import (
 var recipeUploads = make(chan struct{}, 2)
 
 func (h *Handler) recipeRoutes() {
+	h.route("/v1/recipes/{id}/export/prepare", "POST", func(w http.ResponseWriter, r *http.Request) {
+		var request recipe.ExportPrepare
+		if !h.decode(w, r, &request) {
+			return
+		}
+		value, err := h.runtime.PrepareRecipeExport(r.Context(), r.PathValue("id"), request)
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, value)
+	})
+	h.route("/v1/recipes/{id}/export", "POST", func(w http.ResponseWriter, r *http.Request) {
+		var request recipe.ExportRequest
+		if !h.decode(w, r, &request) {
+			return
+		}
+		value, err := h.runtime.ExportRecipe(r.Context(), r.PathValue("id"), request)
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, value)
+	})
+
 	h.route("/v1/recipes/imports", "POST", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != "application/zip" {
 			failure(w, fault.New(protocol.InvalidRequest, "Expected application/zip."))
@@ -50,7 +75,7 @@ func (h *Handler) recipeRoutes() {
 		respond(w, 200, value)
 	})
 	h.route("/v1/recipes/{id}", "GET", func(w http.ResponseWriter, r *http.Request) {
-		value, err := h.runtime.Recipe(r.Context(), r.PathValue("id"))
+		value, err := h.runtime.RecipeVersion(r.Context(), r.PathValue("id"), r.URL.Query().Get("content"))
 		if err != nil {
 			failure(w, err)
 			return

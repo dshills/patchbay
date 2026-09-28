@@ -1,6 +1,6 @@
 # Shareable Recipes implementation plan
 
-**Status:** RP-1/RP-2 implemented; RP-3 next\
+**Status:** RP-1/RP-2/RP-3 implemented; RP-4 next\
 **Specification:** [Shareable Recipes](SPEC.md)\
 **Dependencies:** CC-1 schemas; CC-2 for activation/runs; CC-3 for UI. CC-5 gates only the verified Rigol recipe.
 
@@ -90,18 +90,18 @@ without manually editing configuration files.
 
 **Depends on:** RP-2 and CC-3 workbench/browser security boundary.
 
-- [ ] Add local import, sample preview, requirement mapping, exact-action preview,
+- [x] Add local import, sample preview, requirement mapping, exact-action preview,
   control assignment, activation, updates, disable/remove and rollback screens.
-- [ ] Separate sample data from measured local history. Show which roles are unresolved
+- [x] Separate sample data from measured local history. Show which roles are unresolved
   and which compatibility claims have real evidence. Keep optional missing roles visible.
-- [ ] Add bounded upload/download routes explicitly to the bridge allowlist; retain
+- [x] Add bounded upload/download routes explicitly to the bridge allowlist; retain
   authentication, same-origin constraints, progress/cancellation and stale-session rules.
-- [ ] Build export selection and privacy preview for commands, portable defaults,
+- [x] Build export selection and privacy preview for commands, portable defaults,
   documentation, license, and sample results. Require machine-specific fields to be
   converted to requirements or removed before export.
-- [ ] Produce deterministic ZIPs and re-import them through the same verifier; retain
+- [x] Produce deterministic ZIPs and re-import them through the same verifier; retain
   sample/measurement distinctions and content identity across round trips.
-- [ ] Verify keyboard operation, focus, error recovery, large manifests within quotas,
+- [x] Verify keyboard operation, focus, error recovery, large manifests within quotas,
   no raw HTML execution, and no automatic loading when a project is opened or cloned.
 
 **Verification:** Browser-to-real-daemon import/run/export round trip; planted secrets;
@@ -116,6 +116,8 @@ and reproducible portable example.
 execute, supply their local mappings, and run a valid recipe.
 
 **Commit boundary:** Guided import/setup; lifecycle UI; portable export and privacy.
+
+**Evidence:** [RP-3 review and tests](../../reviews/RP3.md), [guided setup and export guide](../../RECIPES.md).
 
 ## RP-4 — Curated examples and release validation
 

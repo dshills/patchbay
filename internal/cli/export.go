@@ -10,6 +10,7 @@ import (
 
 	"patchbay/internal/client"
 	"patchbay/internal/evidence"
+	"patchbay/internal/localfs"
 	"patchbay/pkg/protocol"
 )
 
@@ -17,8 +18,13 @@ func exportFile(ctx context.Context, c *client.Client, command []string) (any, e
 	if command[4] != "html" && command[4] != "json" {
 		return nil, usage("Export format must be html or json.")
 	}
-	// Inspect the destination before consuming the export preview. Never overwrite.
-	path := command[5]
+	return saveExport(command[5], 16<<20, func() (protocol.ExportFile, error) {
+		return call[protocol.ExportFile](ctx, c, "POST", protocol.ExportRequest{Preparation: command[2], Digest: command[3], Format: command[4]}, "exports")
+	})
+}
+
+// Inspect and hold the destination before consuming the preview. Never overwrite.
+func saveExport(path string, limit int, fetch func() (protocol.ExportFile, error)) (any, error) {
 	for _, part := range strings.Split(filepath.ToSlash(path), "/") {
 		if part == ".." {
 			return nil, usage("Export paths cannot traverse parent directories.")
@@ -28,27 +34,23 @@ func exportFile(ctx context.Context, c *client.Client, command []string) (any, e
 	if err != nil {
 		return nil, usage("Invalid export path.")
 	}
-	dir := filepath.Dir(absolute)
-	canonical, err := filepath.EvalSymlinks(dir)
-	if err != nil || canonical != dir {
+
+	root, err := localfs.OpenDirectory(filepath.Dir(absolute))
+	if err != nil {
 		return nil, usage("Export directory must exist and contain no symlinks.")
-	}
-	if _, err := os.Lstat(absolute); !errors.Is(err, os.ErrNotExist) {
-		return nil, usage("Export destination must be a new file.")
-	}
-	file, err := call[protocol.ExportFile](ctx, c, "POST", protocol.ExportRequest{Preparation: command[2], Digest: command[3], Format: command[4]}, "exports")
-	if err != nil {
-		return nil, err
-	}
-	if len(file.Data) > 16<<20 || evidence.Digest(file.Data) != file.SHA256 {
-		return nil, &client.Error{Code: "invalid_response", Message: "Export integrity check failed."}
-	}
-	root, err := os.OpenRoot(dir)
-	if err != nil {
-		return nil, usage("Cannot open export directory.")
 	}
 	defer func() { _ = root.Close() }()
 	name := filepath.Base(absolute)
+	if _, err := root.Lstat(name); !errors.Is(err, os.ErrNotExist) {
+		return nil, usage("Export destination must be a new file.")
+	}
+	file, err := fetch()
+	if err != nil {
+		return nil, err
+	}
+	if len(file.Data) > limit || evidence.Digest(file.Data) != file.SHA256 {
+		return nil, &client.Error{Code: "invalid_response", Message: "Export integrity check failed."}
+	}
 	out, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL|syscall.O_NOFOLLOW, 0600)
 	if err != nil {
 		return nil, usage("Cannot create export file without overwriting an existing entry.")

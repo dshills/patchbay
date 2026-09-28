@@ -28,6 +28,7 @@ function buttons(){
  $('export-preview').disabled=!ready||!state.selected||!terminal(state.selected.state);
  $('download-html').disabled=!ready||!state.export||Date.now()>=Date.parse(state.export.expires_at);$('download-json').disabled=$('download-html').disabled;
  $('connection').textContent=state.closed?'Session closed':live()?'Connected · local daemon':'Disconnected or stale · controls paused';
+ if(typeof recipeButtons==='function')recipeButtons(ready);
  if(state.preview)$('expiry').textContent=Date.now()>=Date.parse(state.preview.expires_at)?'Approval expired. Review capture again to refresh it.':'Approval expires at '+new Date(state.preview.expires_at).toLocaleTimeString();
 }
 function clearPreview(){state.preview=null;$('preview').hidden=true;$('confirm').checked=false;}
@@ -81,12 +82,13 @@ async function baseline(){if(!state.experiment){state.baseline=null;return;}stat
 async function refresh(){
  if(state.syncing||state.closed||!token)return;state.syncing=true;
  try{
-  const [context,projects,experiments,parameters,runs,storage,status,capabilities,session]=await Promise.all(['context','projects','experiments','parameters','runs','storage','status','capabilities','session'].map(path=>api(path)));
+  const [context,projects,experiments,parameters,runs,storage,status,capabilities,session,recipes]=await Promise.all(['context','projects','experiments','parameters','runs','storage','status','capabilities','session','recipes'].map(path=>api(path)));
   state.owned=session.owned_daemon;$('quit').textContent=state.owned?'Quit demo':'Close session';document.querySelector('footer').textContent=state.owned?'Closing this tab leaves jobs running. Quit demo stops this session’s daemon and cancels active jobs. Saved results remain available.':'Closing this tab leaves daemon jobs running. Close session revokes this browser session.';
   if(capabilities.features.capture!==1)throw new Error('This daemon does not support the workbench. Start a compatible Patchbay release.');
-  const key=JSON.stringify([status.instance,status.generation,context,parameters]);if(state.resync||(state.key&&key!==state.key)){clearPreview();state.extra=[];state.cursor=runs.next_cursor||'';}state.key=key;
+  const key=JSON.stringify([status.instance,status.generation,context,parameters]);if(state.resync||(state.key&&key!==state.key)){if(typeof clearRecipeReview==='function')clearRecipeReview();clearPreview();state.extra=[];state.cursor=runs.next_cursor||'';}state.key=key;
   if(state.data&&state.data.context.project!==context.project){state.selected=null;$('detail').hidden=true;clearExport();}
   state.data={context,projects,experiments,parameters,runs,storage,status};
+ if(typeof recipeRefresh==='function')recipeRefresh(recipes);
   if(!experiments.experiments.some(e=>e.id===state.experiment)){state.experiment=experiments.experiments[0]?.id||'';clearPreview();}
   options($('project'),[{id:'',title:'No project'},...projects.projects.map(p=>({id:p.id,title:p.name}))],context.project||'');options($('experiment'),experiments.experiments.map(e=>({id:e.id,title:e.title})),state.experiment);
   state.data.runs=await api('runs?project='+encodeURIComponent(context.project||'')+'&experiment='+encodeURIComponent(state.experiment));parametersUI();if(!state.extra.length)state.cursor=state.data.runs.next_cursor||'';renderHistory();await baseline();
@@ -113,7 +115,7 @@ for(const format of ['html','json'])$('download-'+format).addEventListener('clic
 for(const name of ['inputs','notes','logs','source'])$('include-'+name).addEventListener('change',()=>{clearExport();buttons();});
 $('more').addEventListener('click',async()=>{try{const page=await api('runs?cursor='+encodeURIComponent(state.cursor)+'&project='+encodeURIComponent(state.data.context.project||'')+'&experiment='+encodeURIComponent(state.experiment));state.extra.push(...page.runs);state.cursor=page.next_cursor||'';renderHistory();}catch(error){notice(error.message);}});
 $('refresh').addEventListener('click',()=>refresh());
-$('quit').addEventListener('click',async()=>{try{await fetch('/session/quit',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},credentials:'omit'});}finally{token='';state.closed=true;clearPreview();clearExport();buttons();notice(state.owned?'The demo is closing. Saved results remain in its private workspace.':'This workbench session is closed. Daemon jobs continue running.');}});
+$('quit').addEventListener('click',async()=>{try{await fetch('/session/quit',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},credentials:'omit'});}finally{token='';state.closed=true;if(typeof clearRecipeReview==='function')clearRecipeReview();clearPreview();clearExport();buttons();notice(state.owned?'The demo is closing. Saved results remain in its private workspace.':'This workbench session is closed. Daemon jobs continue running.');}});
 buttons();setInterval(buttons,250);
 if(!/^[A-Za-z0-9_-]{43}$/.test(token)){token='';notice('Launch deckctl workbench to open an authorized tab. A refresh deliberately removes browser access.');}
 async function poll(){await refresh();if(!state.closed)setTimeout(poll,document.hidden||state.resync?2000:500);}

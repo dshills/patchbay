@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"patchbay/internal/config"
 	runtimecontext "patchbay/internal/context"
@@ -147,6 +148,9 @@ func (r *Runtime) recipeView(entry recipe.Installation) recipe.View {
 	return view
 }
 func (r *Runtime) Recipe(ctx context.Context, name string) (recipe.View, error) {
+	return r.RecipeVersion(ctx, name, "")
+}
+func (r *Runtime) RecipeVersion(ctx context.Context, name, content string) (recipe.View, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	store, err := r.recipeStore()
@@ -158,12 +162,31 @@ func (r *Runtime) Recipe(ctx context.Context, name string) (recipe.View, error) 
 		return recipe.View{}, recipeError(err)
 	}
 	view := r.recipeView(entry)
-	view.Package, err = store.Package(ctx, entry.Content)
+	if content == "" {
+		content = entry.Content
+	}
+	if content != entry.Content && content != entry.Candidate && content != entry.Previous {
+		return recipe.View{}, fault.New(protocol.InvalidRequest, "Select a stored version of this installation.")
+	}
+	view.Package, err = store.Package(ctx, content)
 	if err != nil {
 		return view, recipeError(err)
 	}
 	if entry.Candidate != "" {
 		view.Candidate, err = store.Package(ctx, entry.Candidate)
+	}
+	budget := 1 << 20
+	for _, name := range slices.Sorted(maps.Keys(view.Package.Files)) {
+		if name != "LICENSE" && name != "README.md" && !strings.HasPrefix(name, "docs/") {
+			continue
+		}
+		data := view.Package.Files[name]
+		limit := min(len(data), 256<<10, budget)
+		for limit > 0 && !utf8.Valid(data[:limit]) {
+			limit--
+		}
+		budget -= limit
+		view.Documents = append(view.Documents, recipe.Document{Path: name, Text: string(data[:limit]), Truncated: limit < len(data)})
 	}
 	return view, recipeError(err)
 }

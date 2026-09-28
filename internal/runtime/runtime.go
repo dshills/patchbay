@@ -46,6 +46,7 @@ type Runtime struct {
 	recipeError          error
 	recipeComposition    recipe.Composition
 	recipePreviews       map[string]recipePreparation
+	recipeExports        map[string]recipeExportPreparation
 	compositionUncertain bool
 	exports              map[string]exportPreparation
 	runs                 *evidence.Store

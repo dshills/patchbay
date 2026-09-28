@@ -7,6 +7,7 @@ import (
 	"patchbay/internal/evidence"
 	"patchbay/internal/jsonstrict"
 	"patchbay/internal/recipe"
+	"patchbay/pkg/protocol"
 )
 
 func recipeCommand(ctx context.Context, c *client.Client, o ctlOptions, command []string) (any, error) {
@@ -29,6 +30,16 @@ func recipeCommand(ctx context.Context, c *client.Client, o ctlOptions, command 
 		var response recipe.ImportResult
 		err = c.Upload(ctx, []string{"recipes", "imports"}, query, data, &response)
 		return response, err
+	case "export-preview":
+		var request recipe.ExportPrepare
+		if jsonstrict.Decode([]byte(command[3]), &request) != nil {
+			return nil, usage("Recipe export requires strict JSON.")
+		}
+		return call[recipe.ExportPreview](ctx, c, "POST", request, "recipes", command[2], "export", "prepare")
+	case "export-save":
+		return saveExport(command[5], recipe.MaxPackage, func() (protocol.ExportFile, error) {
+			return call[protocol.ExportFile](ctx, c, "POST", recipe.ExportRequest{Preparation: command[3], Digest: command[4], Confirmed: o.confirm}, "recipes", command[2], "export")
+		})
 	case "list":
 		return call[recipe.List](ctx, c, "GET", nil, "recipes")
 	case "show":

@@ -115,3 +115,12 @@ The harness runs a real temporary daemon and uses a test-only helper with a priv
 IPC descriptor for its launch token. Tokens are never written to screenshots, disk,
 stdout, or test logs. Screenshots go to `.cache/workbench-*.png`. CI runs the same
 workflow and retains its screenshots as test artifacts.
+
+## Recipes
+
+The Recipes section imports local ZIPs, maps requirements, previews exact lifecycle
+changes, compares separate illustrative samples, and exports reviewed portable ZIPs.
+See [the recipe guide](RECIPES.md) for setup, version selection and privacy choices.
+ZIP upload alone accepts application/zip and 20 MiB; it retains the session token,
+Host/Origin checks, two-upload limit and 30-second deadline. JSON routes keep their
+existing 1 MiB request ceiling. No page visit imports or activates anything.

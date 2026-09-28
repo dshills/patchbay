@@ -19,6 +19,7 @@ import (
 
 	"patchbay/internal/client"
 	"patchbay/internal/jsonstrict"
+	"patchbay/internal/recipe"
 	"patchbay/pkg/protocol"
 )
 
@@ -27,6 +28,8 @@ var assets embed.FS
 
 type Server struct {
 	ownedDaemon bool
+	socket      string
+	uploads     chan struct{}
 	listener    net.Listener
 	http        *http.Server
 	client      *client.Client
@@ -55,7 +58,7 @@ func StartOwned(socket string, owned bool) (*Server, error) {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	s := &Server{ownedDaemon: owned, listener: listener, client: c, token: base64.RawURLEncoding.EncodeToString(secret), origin: "http://" + listener.Addr().String(), quit: make(chan struct{}), cancel: cancel}
+	s := &Server{socket: socket, uploads: make(chan struct{}, 2), ownedDaemon: owned, listener: listener, client: c, token: base64.RawURLEncoding.EncodeToString(secret), origin: "http://" + listener.Addr().String(), quit: make(chan struct{}), cancel: cancel}
 	s.http = &http.Server{Handler: s, ReadHeaderTimeout: 2 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 15 * time.Second, MaxHeaderBytes: 8192, BaseContext: func(net.Listener) context.Context { return ctx }}
 	go func() { _ = s.http.Serve(listener); s.once.Do(func() { close(s.quit) }) }()
 	return s, nil
@@ -97,7 +100,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fail(403, "Cross-site requests are disabled.")
 		return
 	}
-	static := map[string]struct{ file, media string }{"/": {"index.html", "text/html; charset=utf-8"}, "/app.js": {"app.js", "text/javascript; charset=utf-8"}, "/style.css": {"style.css", "text/css; charset=utf-8"}}
+	static := map[string]struct{ file, media string }{"/": {"index.html", "text/html; charset=utf-8"}, "/app.js": {"app.js", "text/javascript; charset=utf-8"}, "/recipes.js": {"recipes.js", "text/javascript; charset=utf-8"}, "/style.css": {"style.css", "text/css; charset=utf-8"}}
 	if asset, ok := static[r.URL.Path]; ok {
 		if r.Method != "GET" || r.URL.RawQuery != "" {
 			fail(405, "Unsupported asset request.")
@@ -116,9 +119,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fail(401, "Launch a new workbench session to authorize this tab.")
 		return
 	}
+	upload := r.Method == "POST" && r.URL.Path == "/api/recipes/imports"
+	media := "application/json"
+	if upload {
+		media = "application/zip"
+	}
 	mutation := r.Method != "GET"
-	if mutation && (r.Header.Get("Origin") != s.origin || r.Header.Get("Content-Type") != "application/json") {
-		fail(403, "Mutations require the session origin and JSON content type.")
+	if mutation && (r.Header.Get("Origin") != s.origin || r.Header.Get("Content-Type") != media) {
+		fail(403, "Mutations require the session origin and the route-specific content type.")
 		return
 	}
 	if r.URL.Path == "/api/session" && r.Method == "GET" {
@@ -141,6 +149,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path, ok := allowed(r.Method, r.URL.Path)
 	if !ok {
 		fail(404, "Route is not exposed by the workbench.")
+		return
+	}
+	if upload {
+		s.uploadRecipe(w, r, fail)
 		return
 	}
 	var request any
@@ -188,7 +200,7 @@ func allowed(method, path string) ([]string, bool) {
 	}
 	key := strings.Join(parts, "/")
 	if len(parts) == 1 {
-		if method == "GET" && contains([]string{"capabilities", "status", "context", "projects", "parameters", "experiments", "storage", "runs", "samples"}, key) {
+		if method == "GET" && contains([]string{"capabilities", "status", "context", "projects", "parameters", "experiments", "storage", "runs", "samples", "recipes", "actions"}, key) {
 			return parts, true
 		}
 		if method == "POST" && contains([]string{"captures", "comparisons", "exports"}, key) {
@@ -196,10 +208,13 @@ func allowed(method, path string) ([]string, bool) {
 		}
 	}
 	if len(parts) == 2 {
-		if method == "POST" && (key == "captures/prepare" || key == "exports/prepare") {
+		if method == "POST" && (key == "captures/prepare" || key == "exports/prepare" || key == "recipes/imports") {
 			return parts, true
 		}
 		if method == "PUT" && key == "context/project" {
+			return parts, true
+		}
+		if parts[0] == "recipes" && method == "GET" {
 			return parts, true
 		}
 		if parts[0] == "parameters" && (method == "GET" || method == "PUT") {
@@ -214,6 +229,12 @@ func allowed(method, path string) ([]string, bool) {
 		if parts[0] == "jobs" && (method == "GET" || method == "DELETE") {
 			return parts, true
 		}
+	}
+	if len(parts) == 3 && parts[0] == "recipes" && method == "POST" && contains([]string{"prepare", "commit", "export"}, parts[2]) {
+		return parts, true
+	}
+	if len(parts) == 4 && parts[0] == "recipes" && parts[2] == "export" && parts[3] == "prepare" && method == "POST" {
+		return parts, true
 	}
 	if len(parts) == 3 && parts[0] == "runs" && parts[2] == "annotation" && method == "PUT" {
 		return parts, true
@@ -230,4 +251,44 @@ func contains(items []string, item string) bool {
 		}
 	}
 	return false
+}
+
+func (s *Server) uploadRecipe(w http.ResponseWriter, r *http.Request, fail func(int, string)) {
+	select {
+	case s.uploads <- struct{}{}:
+		defer func() { <-s.uploads }()
+	default:
+		fail(503, "Two recipe uploads are already in progress.")
+		return
+	}
+	controller := http.NewResponseController(w)
+	deadline := time.Now().Add(30 * time.Second)
+	_ = controller.SetReadDeadline(deadline)
+	_ = controller.SetWriteDeadline(deadline)
+	defer func() { _ = controller.SetReadDeadline(time.Time{}); _ = controller.SetWriteDeadline(time.Time{}) }()
+	ctx, cancel := context.WithDeadline(r.Context(), deadline)
+	defer cancel()
+	data, err := io.ReadAll(io.LimitReader(r.Body, recipe.MaxPackage+1))
+	if err != nil || len(data) > recipe.MaxPackage {
+		fail(413, "Recipe upload must be a complete ZIP of at most 20 MiB.")
+		return
+	}
+	c, err := client.New(client.Options{Socket: s.socket, Timeout: 30 * time.Second, MaxResponseBytes: 32 << 20})
+	if err != nil {
+		fail(503, "Cannot connect to daemon.")
+		return
+	}
+	defer c.Close()
+	var value recipe.ImportResult
+	if err := c.Upload(ctx, []string{"recipes", "imports"}, r.URL.Query(), data, &value); err != nil {
+		var known *protocol.Error
+		if errors.As(err, &known) {
+			fail(known.Code.HTTPStatus(), known.Message)
+		} else {
+			fail(503, "Upload response lost. Inspect installed recipes before retrying; identical content is idempotent.")
+		}
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(value)
 }

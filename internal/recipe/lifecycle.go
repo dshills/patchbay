@@ -1,6 +1,7 @@
 package recipe
 
 import (
+	"encoding/json"
 	"patchbay/internal/config"
 	"patchbay/pkg/protocol"
 	"time"
@@ -61,7 +62,13 @@ type Preview struct {
 	After           *Manifest                      `json:"after,omitempty"`
 	Inventory       []File                         `json:"inventory"`
 }
+type Document struct {
+	Path      string `json:"path"`
+	Text      string `json:"text"`
+	Truncated bool   `json:"truncated"`
+}
 type View struct {
+	Documents    []Document   `json:"documents,omitempty"`
 	Installation Installation `json:"installation"`
 	Status       string       `json:"status"`
 	Package      *Package     `json:"package,omitempty"`
@@ -82,4 +89,25 @@ type ImportResult struct {
 type SampleView struct {
 	Recipe protocol.RecipeOrigin `json:"recipe"`
 	Sample protocol.Sample       `json:"sample"`
+}
+
+// An empty assignment object explicitly clears controls; nil retains them.
+func (r Prepare) MarshalJSON() ([]byte, error) {
+	fields := map[string]any{"operation": r.Operation}
+	if r.Content != "" {
+		fields["content"] = r.Content
+	}
+	if r.Alias != "" {
+		fields["alias"] = r.Alias
+	}
+	if r.Mappings != nil {
+		fields["mappings"] = r.Mappings
+	}
+	if r.Assignments != nil {
+		fields["assignments"] = r.Assignments
+	}
+	if r.Reset {
+		fields["reset_parameters"] = true
+	}
+	return json.Marshal(fields)
 }

@@ -176,3 +176,76 @@ while the host remains usable. Re-review activation to grant the new composition
 An unsupported/corrupt store is preserved and recipe management becomes unavailable.
 A backward clock makes the store read-only. Stop the daemon before backing up the
 host config, state, runs and recipe directory together; preserve private permissions.
+
+## Guided setup in the workbench
+
+Open `deckctl workbench`, then **Recipes · bring a setup, make it yours**. Choose a
+local ZIP and import it. Upload progress and cancellation are visible; import stays
+inactive. If a response is lost or an upload is cancelled, inspect the installed
+list. Re-importing identical content is safe; no activation happens automatically.
+
+Open an installation to map its project, executable tool paths or local action IDs.
+Optional controls remain unassigned until you choose a device/control/gesture.
+Read the manifest and documentation, then select the lifecycle operation and choose
+**Review recipe change**. Approval applies to the displayed composition and expires
+after 60 seconds. A changed mapping, context, generation, parameter or reconnect
+clears the browser review. Updates and rollback display the selected stored version;
+the final preview includes the before/after definitions and parameter reset choices.
+
+Documentation is plain escaped text. The workbench fetches no embedded images,
+scripts or remote assets. Long documents show bounded UTF-8 excerpts (256 KiB each,
+1 MiB total); portable export review shows the exact included files. Package names,
+claimed authors and supplied samples do not establish publisher/hardware verification.
+
+Choose this recipe's samples to compare them with each other or a selected local
+run. Samples remain outside measured history. The comparison view remaps experiment
+and parameter references into the installation namespace while the package retains
+its original sample IDs, bytes and hashes. Comparisons still require compatible
+experiment definitions, units and collector identities.
+
+## Share a portable ZIP
+
+In **Share a portable ZIP**, select the definitions to include. Removing a required
+reference produces a validation error; restore that definition or omit its dependent
+experiment/workflow/control too. README and LICENSE are included. Extra documentation,
+samples, current values as portable defaults, and a selected measured run are opt-in.
+Imported portable defaults remain the default. A local tool/action mapping never
+becomes an executable path or credential field in the portable manifest.
+
+**Preview portable ZIP** displays every included file and its inventory. Review
+literal commands, arguments, destinations, parameter defaults, documentation and
+sample content. Advisory private-field warnings identify filenames to inspect;
+absence of a warning does not mean the package contains no private information.
+Then check the confirmation box and download the ZIP. The browser checks SHA-256
+before saving with the fixed suggested filename `patchbay-recipe.zip`.
+
+CLI equivalents:
+
+```sh
+bin/deckctl recipe export-preview LOCAL_ID '{}' --json
+bin/deckctl recipe export-preview LOCAL_ID '{"samples":["benchmark-small","benchmark-large"]}' --json
+bin/deckctl recipe export-save LOCAL_ID PREPARATION DIGEST /absolute/new/shared.zip --confirm
+bin/deckctl recipe inspect /absolute/new/shared.zip --json
+```
+
+`export-preview` accepts `content` (current/previous/staged digest), definition lists
+`actions`, `workflows`, `experiments`, `parameters`, `controls`, and optional lists
+`defaults` (current parameter names), `documentation` (inventoried paths), `samples`
+(package-local IDs), and `runs` (at most eight successful runs from that installation
+and content). Omitted definition lists retain their category; `[]` omits it. Omitted
+optional lists include nothing. JSON null is rejected. All selections pass the
+ordinary portable verifier; machine-specific defaults must be replaced before sharing.
+
+Saved runs become `origin: sample` records with new local IDs and a source label.
+Their selected measurement/series data and parameter metadata are visible in the
+preview. Local run/job/installation IDs, notes, raw text logs, source observations,
+serial numbers, addresses, bindings, grants, and AI conversations are excluded.
+Labels describe provenance supplied by the package; they are not signatures.
+
+Exports use stable ZIP order, timestamps and permissions and are re-imported through
+the verifier before release to the client. Preview tokens are single-use, expire in
+60 seconds, and retain at most 16 MiB total across sixteen previews, including archive
+bytes. The exact file preview is capped at 8 MiB; select fewer large samples/documents
+if it exceeds that budget. The CLI holds a directory descriptor, rejects links and
+existing files, writes privately, checks the hash, and syncs the new file/directory.
+No dependency download, marketplace or remote fetch is part of recipe sharing.

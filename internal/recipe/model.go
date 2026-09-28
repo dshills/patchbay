@@ -353,7 +353,7 @@ func verifyFiles(m Manifest, files map[string][]byte) ([]protocol.Sample, error)
 		if jsonstrict.Decode(data, &sample) != nil || sample.SchemaVersion != 1 || sample.Origin != "sample" || !config.ValidName(sample.ID) {
 			return nil, fail(f.Path, "invalid sample schema or origin")
 		}
-		if len(sample.Measurements) > 32 || len(sample.Series) > 32 || len(sample.Parameters) > 128 {
+		if len(sample.SourceLabel) > 256 || len(sample.Measurements) > 32 || len(sample.Series) > 32 || len(sample.Parameters) > 128 {
 			return nil, fail(f.Path, "sample exceeds collection limits")
 		}
 		expected, ok := m.Experiments[sample.Experiment.ID]

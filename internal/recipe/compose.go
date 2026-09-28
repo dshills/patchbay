@@ -290,24 +290,8 @@ func Compose(base *config.Config, entries []Installation, packages map[string]*P
 				out.Disabled = append(out.Disabled, prefix+name+": optional dependency unavailable")
 				continue
 			}
-			e := evidence.Clone(definition)
+			e := LocalExperiment(definition, prefix, project)
 			e.ID = prefix + name
-			e.Projects = []string{project}
-			if e.Action != "" {
-				e.Action = prefix + e.Action
-			}
-			if e.Workflow != "" {
-				e.Workflow = prefix + e.Workflow
-			}
-			for i := range e.Inputs {
-				e.Inputs[i].Parameter = prefix + e.Inputs[i].Parameter
-			}
-			for i := range e.Parameters {
-				e.Parameters[i] = prefix + e.Parameters[i]
-			}
-			for i := range e.Collectors {
-				e.Collectors[i].Action = prefix + e.Collectors[i].Action
-			}
 			candidate.Experiments[e.ID] = e
 			experiments[name] = true
 			wrapper := prefix + "capture." + name
@@ -486,4 +470,28 @@ func compositionYAML(c *config.Config) ([]byte, error) {
 		copy.Projects[name] = p
 	}
 	return yaml.Marshal(&copy)
+}
+
+// LocalExperiment remaps only semantic references. The original portable sample
+// and its inventory digest remain intact in the immutable package.
+func LocalExperiment(definition protocol.Experiment, prefix, project string) protocol.Experiment {
+	e := evidence.Clone(definition)
+	e.ID = prefix + e.ID
+	e.Projects = []string{project}
+	if e.Action != "" {
+		e.Action = prefix + e.Action
+	}
+	if e.Workflow != "" {
+		e.Workflow = prefix + e.Workflow
+	}
+	for i := range e.Inputs {
+		e.Inputs[i].Parameter = prefix + e.Inputs[i].Parameter
+	}
+	for i := range e.Parameters {
+		e.Parameters[i] = prefix + e.Parameters[i]
+	}
+	for i := range e.Collectors {
+		e.Collectors[i].Action = prefix + e.Collectors[i].Action
+	}
+	return e
 }

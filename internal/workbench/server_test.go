@@ -135,3 +135,36 @@ func TestRealLoopbackAndNoMutationOnLoad(t *testing.T) {
 		t.Fatal("invalid launch token")
 	}
 }
+
+func TestRecipeUploadBrowserBoundary(t *testing.T) {
+	s := testServer(t)
+	for _, tc := range []struct {
+		name, token, origin, media string
+		want                       int
+	}{
+		{"no token", "", s.origin, "application/zip", 401},
+		{"foreign origin", s.token, "https://outside.invalid", "application/zip", 403},
+		{"wrong media", s.token, s.origin, "application/json", 403},
+		{"bounded hostile zip", s.token, s.origin, "application/zip", 400},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			request := httptest.NewRequest("POST", s.origin+"/api/recipes/imports", strings.NewReader("not a zip"))
+			request.Header.Set("Authorization", "Bearer "+tc.token)
+			request.Header.Set("Origin", tc.origin)
+			request.Header.Set("Content-Type", tc.media)
+			response := httptest.NewRecorder()
+			s.ServeHTTP(response, request)
+			if response.Code != tc.want {
+				t.Fatal(response.Code, response.Body.String())
+			}
+		})
+	}
+	for _, path := range []string{"/api/recipes/imports/extra", "/api/recipes/id/export/delete", "/api/recipes/id/unknown"} {
+		if _, ok := allowed("POST", path); ok {
+			t.Fatal("unlisted mutation exposed", path)
+		}
+	}
+	if _, ok := allowed("POST", "/api/recipes/id/export/prepare"); !ok {
+		t.Fatal("missing bounded export route")
+	}
+}

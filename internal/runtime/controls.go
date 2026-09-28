@@ -38,6 +38,7 @@ func (r *Runtime) invalidateControls() {
 	r.controlRevision++
 	r.confirmations = nil
 	r.recipePreviews = nil
+	r.recipeExports = nil
 	r.captures = map[string]capturePreparation{}
 }
 

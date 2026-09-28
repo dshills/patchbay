@@ -1,14 +1,17 @@
 package protocol
 
 type ResultReference struct {
-	Kind string `json:"kind"`
-	ID   string `json:"id"`
+	Installation string `json:"installation,omitempty"`
+	Content      string `json:"content,omitempty"`
+	Kind         string `json:"kind"`
+	ID           string `json:"id"`
 }
 type ComparisonRequest struct {
 	Baseline  ResultReference `json:"baseline"`
 	Candidate ResultReference `json:"candidate"`
 }
 type Sample struct {
+	SourceLabel   string         `json:"source_label,omitempty"`
 	SchemaVersion int            `json:"schema_version"`
 	ID            string         `json:"id"`
 	Origin        string         `json:"origin"`
