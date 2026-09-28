@@ -26,6 +26,8 @@ import (
 )
 
 type prepared struct {
+	kind         string
+	inputs       map[string]any
 	name         string
 	risk         permission.Permission
 	timeout      time.Duration
@@ -84,7 +86,15 @@ func (r *Runtime) invoke(ctx context.Context, name string, isWorkflow bool, invo
 	})
 }
 
+type inputBindings struct {
+	index  int
+	values map[int]map[string]any
+}
+
 func (r *Runtime) prepareWorkflow(ctx context.Context, name string, remaining *int) (*prepared, error) {
+	return r.prepareWorkflowBound(ctx, name, remaining, nil)
+}
+func (r *Runtime) prepareWorkflowBound(ctx context.Context, name string, remaining *int, bindings *inputBindings) (*prepared, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, fault.Safe(err)
 	}
@@ -98,7 +108,7 @@ func (r *Runtime) prepareWorkflow(ctx context.Context, name string, remaining *i
 	}
 	plan := &prepared{name: name, risk: permission.Safe, stopOnError: *w.StopOnError, steps: make([]*prepared, 0, len(w.Steps))}
 	for _, step := range w.Steps {
-		child, err := r.prepareAction(ctx, step.Action, step.Args, remaining)
+		child, err := r.prepareActionBound(ctx, step.Action, step.Args, remaining, bindings)
 		if err != nil {
 			return nil, err
 		}
@@ -109,12 +119,27 @@ func (r *Runtime) prepareWorkflow(ctx context.Context, name string, remaining *i
 }
 
 func (r *Runtime) prepareAction(ctx context.Context, name string, args map[string]any, remaining *int) (*prepared, error) {
+	return r.prepareActionBound(ctx, name, args, remaining, nil)
+}
+func (r *Runtime) prepareActionBound(ctx context.Context, name string, args map[string]any, remaining *int, bindings *inputBindings) (*prepared, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, fault.Safe(err)
 	}
 	definition, exists := r.registries[r.context.Project].Get(name)
 	if !exists {
 		return nil, fault.New(protocol.ActionNotFound, "Action not found.")
+	}
+	if definition.Type == "experiment" {
+		return nil, fault.New(protocol.InvalidRequest, "Use experiment prepare and capture for a durable experiment.")
+	}
+	if bindings != nil && definition.Type != "workflow" {
+		next := maps.Clone(args)
+		if next == nil {
+			next = map[string]any{}
+		}
+		maps.Copy(next, bindings.values[bindings.index])
+		args = next
+		bindings.index++
 	}
 	values, err := definition.Arguments(args)
 	if err != nil {
@@ -142,7 +167,7 @@ func (r *Runtime) prepareAction(ctx context.Context, name string, args map[strin
 		}
 		plan = &prepared{name: name, risk: provider.SCPIRisk(definition.Operation), generation: r.generation, scpi: &provider.SCPIRequest{Device: definition.Device, Operation: definition.Operation, Channel: definition.Channel, Value: value}}
 	case "workflow":
-		plan, err = r.prepareWorkflow(ctx, definition.Workflow, remaining)
+		plan, err = r.prepareWorkflowBound(ctx, definition.Workflow, remaining, bindings)
 		if err != nil {
 			return nil, err
 		}
@@ -171,6 +196,7 @@ func (r *Runtime) prepareAction(ctx context.Context, name string, args map[strin
 			plan.gitOperation = definition.Operation
 		}
 	}
+	plan.kind, plan.inputs = definition.Type, values
 	plan.risk = permission.Strongest(plan.risk, definition.Safety)
 	if definition.Timeout != "" {
 		plan.timeout, _ = time.ParseDuration(definition.Timeout)

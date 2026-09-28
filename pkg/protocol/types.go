@@ -25,6 +25,11 @@ const (
 	Internal             Code = "internal"
 	Busy                 Code = "busy"
 	ShuttingDown         Code = "shutting_down"
+	StalePreparation     Code = "stale_preparation"
+	RequestConflict      Code = "request_conflict"
+	IncompatibleResults  Code = "incompatible_results"
+	StorageFull          Code = "storage_full"
+	RecordingFailed      Code = "recording_failed"
 )
 
 func (c Code) HTTPStatus() int {
@@ -35,8 +40,12 @@ func (c Code) HTTPStatus() int {
 		return http.StatusNotFound
 	case PermissionDenied:
 		return http.StatusForbidden
-	case ConfirmationRequired, Cancelled:
+	case ConfirmationRequired, Cancelled, StalePreparation, RequestConflict:
 		return http.StatusConflict
+	case IncompatibleResults:
+		return http.StatusUnprocessableEntity
+	case StorageFull:
+		return http.StatusInsufficientStorage
 	case ProviderUnavailable, Busy, ShuttingDown:
 		return http.StatusServiceUnavailable
 	case ExecutionFailed:
@@ -58,7 +67,8 @@ func (c Code) Valid() bool {
 	switch c {
 	case InvalidConfig, InvalidRequest, NotFound, ActionNotFound, ProjectNotFound,
 		PermissionDenied, ConfirmationRequired, ProviderUnavailable, ExecutionFailed,
-		Cancelled, Timeout, Internal, Busy, ShuttingDown:
+		Cancelled, Timeout, Internal, Busy, ShuttingDown, StalePreparation,
+		RequestConflict, IncompatibleResults, StorageFull, RecordingFailed:
 		return true
 	default:
 		return false
@@ -117,12 +127,13 @@ type Invocation struct {
 }
 
 type Input struct {
-	Type     string   `json:"type"`
-	Required bool     `json:"required"`
-	Default  any      `json:"default,omitempty"`
-	Min      any      `json:"min,omitempty"`
-	Max      any      `json:"max,omitempty"`
-	Enum     []string `json:"enum,omitempty"`
+	Sensitive bool     `json:"sensitive,omitempty"`
+	Type      string   `json:"type"`
+	Required  bool     `json:"required"`
+	Default   any      `json:"default,omitempty"`
+	Min       any      `json:"min,omitempty"`
+	Max       any      `json:"max,omitempty"`
+	Enum      []string `json:"enum,omitempty"`
 }
 type Action struct {
 	Name       string            `json:"name"`
@@ -226,6 +237,7 @@ type InvocationResponse struct {
 }
 
 type Parameter struct {
+	Sensitive       bool                      `json:"sensitive,omitempty"`
 	Instrument      *InstrumentAction         `json:"instrument,omitempty"`
 	Synchronization *ParameterSynchronization `json:"synchronization,omitempty"`
 	Name            string                    `json:"name"`

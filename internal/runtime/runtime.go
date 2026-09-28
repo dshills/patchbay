@@ -18,6 +18,7 @@ import (
 	"patchbay/internal/config"
 	runtimecontext "patchbay/internal/context"
 	"patchbay/internal/event"
+	"patchbay/internal/evidence"
 	"patchbay/internal/fault"
 	"patchbay/internal/identity"
 	"patchbay/internal/job"
@@ -37,6 +38,10 @@ type Options struct {
 	Agent  provider.Agent
 }
 type Runtime struct {
+	runs            *evidence.Store
+	storageError    error
+	captureKey      []byte
+	captures        map[string]capturePreparation
 	mu              sync.Mutex
 	reloadMu        sync.Mutex
 	cfg             *config.Config
@@ -145,9 +150,13 @@ func NewConfigured(path string, c *config.Config, options Options) (*Runtime, er
 			if normalized, err := p.ValidateValue(value); err == nil {
 				p.Value = normalized
 				r.parameters[name] = p
+				r.captures = map[string]capturePreparation{}
 			}
 		}
 	}
+	r.runs, r.storageError = evidence.Open(c.Runs.Path, evidence.Limits{MaxRuns: c.Runs.MaxRuns, MaxBytes: c.Runs.MaxBytes, MaxRunBytes: c.Runs.MaxRunBytes, MaxArtifactBytes: c.Runs.MaxArtifactBytes, MaxReceipts: c.Runs.MaxReceipts}, evidence.Options{})
+	r.captureKey = []byte(identity.New() + identity.New())
+	r.captures = map[string]capturePreparation{}
 	r.bus = event.New(c.Events.SubscriberCapacity)
 	r.jobs = job.NewManager(jobLimits(c), r.bus, r.log)
 	interval, _ := time.ParseDuration(c.State.FlushInterval)
@@ -319,6 +328,7 @@ func (r *Runtime) setParameter(name string, value any, delta *int64) (parameter.
 		previous := p
 		p.Value = value
 		r.parameters[name] = p
+		r.captures = map[string]capturePreparation{}
 		if p.Persistent {
 			if err := r.persist(r.context, r.parameters); err != nil {
 				r.parameters[name] = previous
@@ -393,6 +403,9 @@ func (r *Runtime) Close(ctx context.Context) error {
 	r.closed = true
 	r.mu.Unlock()
 	jobErr := r.jobs.Shutdown(ctx)
+	if jobErr == nil && r.runs != nil {
+		_ = r.runs.Close()
+	}
 	pluginErr := r.plugins.Close(ctx)
 	scpiErr := r.scpi.Close(ctx)
 	if closer, ok := r.agent.(io.Closer); ok {

@@ -128,3 +128,8 @@ All I/O, negotiation and cleanup are bounded; cancellation attempts a cooperativ
 message then kills the process group and reaps the child. Runtime shutdown cancels
 jobs before closing the host. No subprocess remains for an idle successful plugin.
 See [PLUGINS.md](PLUGINS.md) for deadlines and OS isolation limits.
+
+## Experiment evidence extension
+
+See [Experiments and local evidence](EVIDENCE.md) for the CC-1 schema, preparation,
+storage, API, CLI, and recovery contracts. Capture execution follows in CC-2.

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"maps"
 	"patchbay/pkg/protocol"
@@ -13,6 +14,32 @@ func render(value any) string {
 	var out strings.Builder
 	line := func(format string, args ...any) { _, _ = fmt.Fprintf(&out, format+"\n", args...) }
 	switch v := value.(type) {
+	case protocol.ExperimentList:
+		for _, e := range v.Experiments {
+			line("%s\t%s", e.ID, e.Title)
+		}
+		if len(v.Experiments) == 0 {
+			line("No experiments configured.")
+		}
+	case protocol.StoreStatus:
+		line("Run storage: available=%t read-only=%t; %d/%d runs; %d bytes saved, %d reserved", v.Available, v.ReadOnly, v.Runs, v.MaxRuns, v.Bytes, v.Reserved)
+		for _, d := range v.Diagnostics {
+			line("%s", d)
+		}
+	case protocol.RunList:
+		for _, r := range v.Runs {
+			line("%s\t%s\t%s\t%s", r.ID, r.Experiment, r.State, r.CreatedAt.Format(time.RFC3339))
+		}
+		if len(v.Runs) == 0 {
+			line("No saved runs.")
+		}
+		if v.NextCursor != "" {
+			line("Next page: deckctl run page %s", v.NextCursor)
+		}
+	case protocol.CapturePreview, protocol.Capabilities, protocol.Run, protocol.Annotation, protocol.Baseline:
+		data, _ := json.MarshalIndent(value, "", "  ")
+		line("%s", data)
+
 	case validationResult:
 		line("Configuration is valid.")
 	case protocol.Status:
@@ -130,6 +157,8 @@ func render(value any) string {
 		}
 	case protocol.InvocationResponse:
 		line("%s", v.JobID)
+	case protocol.Deletion:
+		line("Run deleted: %t", v.Deleted)
 	case protocol.ReloadResponse:
 		line("Configuration reloaded (generation %d).", v.Generation)
 	}

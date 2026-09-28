@@ -1,6 +1,6 @@
 # Capture & Compare implementation plan
 
-**Status:** Not started\
+**Status:** CC-1 complete; CC-2 in progress\
 **Specification:** [Capture & Compare](SPEC.md)\
 **Dependencies:** Existing runtime/release tooling; no recipes or agent execution required.
 
@@ -18,25 +18,25 @@ correct across crashes, concurrent captures, and incompatible inputs.
 
 **Depends on:** Current action/job/API contracts.
 
-- [ ] Add strict experiment definitions, typed input mappings, collector schemas,
+- [x] Add strict experiment definitions, typed input mappings, collector schemas,
   layout references, feature capabilities, run/measurement/series/artifact DTOs,
   and schema-version rejection. Finalize CLI names and error/status mapping.
-- [ ] Extract only the shared preparation hooks needed from
+- [x] Extract only the shared preparation hooks needed from
   `internal/runtime/prepare.go`; preserve effective overrides, input validation,
   workflow preflight, job deadlines, and provider permission floors.
-- [ ] Define canonical digests and expiring preparation records; include effective
+- [x] Define canonical digests and expiring preparation records; include effective
   execution inputs privately and produce a redacted public preview.
-- [ ] Add declared sensitivity to input/preview schemas, preserve redacted argument
+- [x] Add declared sensitivity to input/preview schemas, preserve redacted argument
   positions/reference names, and distinguish rejected sensitive inputs from existing
   provider environment metadata before persistence.
-- [ ] Define experiment action wrappers and reject recursive experiment targets.
+- [x] Define experiment action wrappers and reject recursive experiment targets.
   Add revisioned per-project/experiment baseline state shared by all clients.
-- [ ] Build private storage with durable manifests, immutable artifacts, annotations,
+- [x] Build private storage with durable manifests, immutable artifacts, annotations,
   quota reservations, interrupted-run recovery, quarantine, reference-aware deletion,
   and bounded request-ID tombstones. Document the reservation/dispatch commit point.
-- [ ] Add cursor-paginated reads, annotation revisions, storage diagnostics, and
+- [x] Add cursor-paginated reads, annotation revisions, storage diagnostics, and
   capability discovery to `pkg/protocol`, API, client, and CLI.
-- [ ] Write schema fixtures and migrations policy: new stores have an explicit
+- [x] Write schema fixtures and migrations policy: new stores have an explicit
   version; unsupported newer versions open for diagnosis without destructive repair.
 
 **Verification:** Strict decoding and collector-reference fixtures; restart at each
@@ -51,6 +51,9 @@ and meaningful unit/integration/race tests.
 No provider execution is required for the store fixtures.
 
 **Commit boundary:** Schema/preparation contract; durable storage/recovery; API/CLI.
+
+**Evidence:** [CC-1 review and verification](../../reviews/CC1.md),
+[implemented contracts](../../EVIDENCE.md).
 
 ## CC-2 — Execute, collect, and compare
 

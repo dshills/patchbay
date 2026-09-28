@@ -88,6 +88,11 @@ func (c *Client) Close() {
 // Call never retries mutations. Each resource segment is escaped independently.
 // Additive response fields are accepted, but malformed/trailing JSON is rejected.
 func (c *Client) Call(ctx context.Context, method string, segments []string, request, response any) error {
+	return c.CallQuery(ctx, method, segments, nil, request, response)
+}
+
+// CallQuery escapes query values without treating them as resource paths.
+func (c *Client) CallQuery(ctx context.Context, method string, segments []string, query url.Values, request, response any) error {
 	var body io.Reader
 	if request != nil {
 		data, err := json.Marshal(request)
@@ -100,7 +105,11 @@ func (c *Client) Call(ctx context.Context, method string, segments []string, req
 	for i, part := range segments {
 		escaped[i] = url.PathEscape(part)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, "http://deckd/v1/"+strings.Join(escaped, "/"), body)
+	endpoint := "http://deckd/v1/" + strings.Join(escaped, "/")
+	if len(query) > 0 {
+		endpoint += "?" + query.Encode()
+	}
+	req, err := http.NewRequestWithContext(ctx, method, endpoint, body)
 	if err != nil {
 		return &Error{"usage", "Cannot construct the request."}
 	}

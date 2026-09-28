@@ -9,6 +9,7 @@ import (
 	"patchbay/internal/permission"
 	"patchbay/internal/provider"
 	"patchbay/internal/workflow"
+	"patchbay/pkg/protocol"
 )
 
 const (
@@ -19,6 +20,8 @@ const (
 )
 
 type Config struct {
+	Runs        RunSettings                             `yaml:"runs,omitempty"`
+	Experiments map[string]protocol.Experiment          `yaml:"experiments,omitempty"`
 	Version     int                                     `yaml:"version"`
 	Server      Server                                  `yaml:"server,omitempty"`
 	Context     Context                                 `yaml:"context,omitempty"`
@@ -76,6 +79,15 @@ type State struct {
 	FlushInterval string `yaml:"flush_interval,omitempty"`
 }
 
+type RunSettings struct {
+	Path             string `yaml:"path,omitempty"`
+	MaxRuns          int    `yaml:"max_runs,omitempty"`
+	MaxBytes         int64  `yaml:"max_bytes,omitempty"`
+	MaxRunBytes      int64  `yaml:"max_run_bytes,omitempty"`
+	MaxArtifactBytes int64  `yaml:"max_artifact_bytes,omitempty"`
+	MaxReceipts      int    `yaml:"max_receipts,omitempty"`
+}
+
 type Project struct {
 	ID          string            `yaml:"id,omitempty"`
 	Name        string            `yaml:"name"`
@@ -90,6 +102,7 @@ type Project struct {
 }
 
 type Action struct {
+	Experiment  string                `yaml:"experiment,omitempty"`
 	Type        string                `yaml:"type"`
 	Safety      permission.Permission `yaml:"safety,omitempty"`
 	Command     string                `yaml:"command,omitempty"`
@@ -112,12 +125,13 @@ type Action struct {
 }
 
 type Input struct {
-	Type     parameter.Type `yaml:"type"`
-	Required bool           `yaml:"required,omitempty"`
-	Default  any            `yaml:"default,omitempty"`
-	Min      any            `yaml:"min,omitempty"`
-	Max      any            `yaml:"max,omitempty"`
-	Enum     []string       `yaml:"enum,omitempty"`
+	Sensitive bool           `yaml:"sensitive,omitempty"`
+	Type      parameter.Type `yaml:"type"`
+	Required  bool           `yaml:"required,omitempty"`
+	Default   any            `yaml:"default,omitempty"`
+	Min       any            `yaml:"min,omitempty"`
+	Max       any            `yaml:"max,omitempty"`
+	Enum      []string       `yaml:"enum,omitempty"`
 }
 
 type Workflow struct {
@@ -127,6 +141,7 @@ type Workflow struct {
 
 func defaults() Config {
 	return Config{
+		Runs:   RunSettings{MaxRuns: 1000, MaxBytes: 1 << 30, MaxRunBytes: 16 << 20, MaxArtifactBytes: 4 << 20, MaxReceipts: 10000},
 		Server: Server{Socket: DefaultSocket, MaxRequestBytes: 1 << 20, ShutdownGrace: "5s"},
 		Jobs:   Jobs{Concurrency: 4, QueueCapacity: 64, HistoryLimit: 100, OutputLimitBytes: 1 << 20},
 		Events: Events{SubscriberCapacity: 64},

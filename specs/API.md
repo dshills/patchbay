@@ -266,3 +266,8 @@ Plugin text appears in ordinary result `data.stdout`, with `truncated`, plugin
 name, operation, `stderr_bytes`, and optional lifecycle diagnostics. Plugin frames
 cannot forge job IDs, internal events or state mutations. The executable protocol
 has its own version independent of API v1. See [PLUGINS.md](PLUGINS.md).
+
+## Experiment evidence extension
+
+See [Experiments and local evidence](EVIDENCE.md) for the CC-1 schema, preparation,
+storage, API, CLI, and recovery contracts. Capture execution follows in CC-2.

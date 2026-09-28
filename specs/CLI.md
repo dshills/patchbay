@@ -112,3 +112,8 @@ commands. `action list` shows plugin routing and policy; `status` shows configur
 operations, discovery state and last-use health. Both are passive reads. Plugin
 text is shown as job stdout. The separate `deckplugincheck` tool executes explicit
 conformance probes against a configured plugin; see [PLUGINS.md](PLUGINS.md).
+
+## Experiment evidence extension
+
+See [Experiments and local evidence](EVIDENCE.md) for the CC-1 schema, preparation,
+storage, API, CLI, and recovery contracts. Capture execution follows in CC-2.

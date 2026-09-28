@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/url"
 	"patchbay/internal/client"
 	"patchbay/internal/config"
 	"patchbay/internal/jsonstrict"
@@ -75,10 +76,57 @@ func call[T any](ctx context.Context, c *client.Client, method string, request a
 	return value, err
 }
 func executeCommand(ctx context.Context, c *client.Client, o ctlOptions, command []string) (any, error) {
+	if command[0] == "capabilities" {
+		return call[protocol.Capabilities](ctx, c, "GET", nil, "capabilities")
+	}
 	if command[0] == "status" {
 		return call[protocol.Status](ctx, c, "GET", nil, "status")
 	}
 	switch command[0] + " " + command[1] {
+	case "experiment list":
+		return call[protocol.ExperimentList](ctx, c, "GET", nil, "experiments")
+	case "experiment prepare":
+		return call[protocol.CapturePreview](ctx, c, "POST", protocol.CapturePrepare{Experiment: command[2]}, "captures", "prepare")
+	case "storage status":
+		return call[protocol.StoreStatus](ctx, c, "GET", nil, "storage")
+	case "run list", "run page":
+		var value protocol.RunList
+		query := url.Values{}
+		if len(command) == 3 {
+			query.Set("cursor", command[2])
+		}
+		err := c.CallQuery(ctx, "GET", []string{"runs"}, query, nil, &value)
+		return value, err
+	case "run show":
+		return call[protocol.Run](ctx, c, "GET", nil, "runs", command[2])
+	case "run annotate":
+		var update protocol.AnnotationUpdate
+		if err := jsonstrict.Decode([]byte(command[3]), &update); err != nil {
+			return nil, usage("Annotation requires revision, title, note and pinned JSON fields.")
+		}
+		return call[protocol.Annotation](ctx, c, "PUT", update, "runs", command[2], "annotation")
+	case "run delete":
+		var value protocol.Deletion
+		err := c.CallQuery(ctx, "DELETE", []string{"runs", command[2]}, url.Values{"acknowledge": {strconv.FormatBool(o.confirm)}}, nil, &value)
+		return value, err
+	case "baseline show", "baseline set":
+		context, err := call[protocol.Context](ctx, c, "GET", nil, "context")
+		if err != nil {
+			return nil, err
+		}
+		var value protocol.Baseline
+		method := "GET"
+		var body any
+		if command[1] == "set" {
+			var update protocol.BaselineUpdate
+			if err := jsonstrict.Decode([]byte(command[3]), &update); err != nil {
+				return nil, usage("Baseline requires run_id and revision JSON fields.")
+			}
+			method = "PUT"
+			body = update
+		}
+		err = c.CallQuery(ctx, method, []string{"baselines", command[2]}, url.Values{"project": {context.Project}}, body, &value)
+		return value, err
 	case "project list":
 		return call[protocol.ProjectList](ctx, c, "GET", nil, "projects")
 	case "project current":

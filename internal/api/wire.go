@@ -13,7 +13,7 @@ func wireContext(value runtimecontext.RuntimeContext) protocol.Context {
 	return protocol.Context{Project: value.Project, Mode: value.Mode, Values: value.Values}
 }
 func wireParameter(value parameter.Parameter) protocol.Parameter {
-	p := protocol.Parameter{Name: value.Name, Type: string(value.Type), Value: value.Value, Min: value.Min, Max: value.Max, Step: value.Step, Enum: value.Enum, Unit: value.Unit, Persistent: value.Persistent}
+	p := protocol.Parameter{Sensitive: value.Sensitive, Name: value.Name, Type: string(value.Type), Value: value.Value, Min: value.Min, Max: value.Max, Step: value.Step, Enum: value.Enum, Unit: value.Unit, Persistent: value.Persistent}
 	if b := value.Instrument; b != nil {
 		p.Instrument = &protocol.InstrumentAction{Device: b.Device, Operation: b.Operation, Channel: b.Channel}
 	}

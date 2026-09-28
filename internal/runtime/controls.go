@@ -36,6 +36,7 @@ func (r *Runtime) controlGuard() protocol.ControlGuard {
 func (r *Runtime) invalidateControls() {
 	r.controlRevision++
 	r.confirmations = nil
+	r.captures = map[string]capturePreparation{}
 }
 
 func (r *Runtime) ControlSnapshot(ctx context.Context, request protocol.ControlSnapshotRequest) (protocol.ControlSnapshot, error) {

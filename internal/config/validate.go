@@ -40,6 +40,9 @@ func (v *validator) normalize(c *Config, baseDir, home string) error {
 		}
 		paths[path] = true
 	}
+	if err := v.runSettings(c, baseDir, home); err != nil {
+		return err
+	}
 	for _, entry := range []struct {
 		path    string
 		value   int64
@@ -195,6 +198,9 @@ func (v *validator) normalize(c *Config, baseDir, home string) error {
 			return err
 		}
 	}
+	if err := v.experiments(c); err != nil {
+		return err
+	}
 	return v.bindings(c)
 }
 
@@ -223,6 +229,9 @@ func (v *validator) environment(path string, environment map[string]string, inpu
 }
 
 func (v *validator) action(path string, a *Action, c *Config, baseDir, home string) error {
+	if a.Type != "experiment" && a.Experiment != "" {
+		return v.fail(path, "experiment is only supported by experiment actions")
+	}
 	if a.Type != "plugin" && a.Plugin != "" {
 		return v.fail(path, "plugin is only supported by plugin actions")
 	}
@@ -267,6 +276,13 @@ func (v *validator) action(path string, a *Action, c *Config, baseDir, home stri
 		a.Inputs[key] = input
 	}
 	switch a.Type {
+	case "experiment":
+		if _, ok := c.Experiments[a.Experiment]; !ok {
+			return v.fail(path, "experiment does not exist")
+		}
+		if a.Command != "" || len(a.Args) != 0 || a.Target != "" || a.Operation != "" || a.Workflow != "" || a.Cwd != "" || len(a.Environment) != 0 || len(a.Inputs) != 0 {
+			return v.fail(path, "experiment accepts experiment, safety, and timeout only")
+		}
 	case "plugin":
 		if err := v.pluginAction(path, a, c); err != nil {
 			return err
@@ -369,7 +385,7 @@ func (v *validator) action(path string, a *Action, c *Config, baseDir, home stri
 			return v.fail(path, "workflow accepts workflow, safety, and timeout only")
 		}
 	default:
-		return v.fail(path+".type", "supported providers are exec, open, git, workflow, agent, scpi, and plugin")
+		return v.fail(path+".type", "supported providers are exec, open, git, workflow, agent, scpi, plugin, and experiment")
 	}
 	if a.Cwd == "" && (a.Type == "exec" || a.Type == "git") {
 		a.Cwd = baseDir

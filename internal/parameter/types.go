@@ -40,6 +40,7 @@ type Synchronization struct {
 }
 
 type Definition struct {
+	Sensitive  bool        `json:"sensitive,omitempty" yaml:"sensitive,omitempty"`
 	Type       Type        `json:"type" yaml:"type"`
 	Value      any         `json:"value" yaml:"value"`
 	Min        any         `json:"min,omitempty" yaml:"min,omitempty"`

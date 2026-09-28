@@ -41,7 +41,7 @@ func (r *Runtime) Reload(ctx context.Context) (uint64, error) {
 	if !reflect.DeepEqual(candidate.Devices, old.Devices) {
 		return 0, fault.New(protocol.InvalidConfig, "Instrument configuration changes require a restart.")
 	}
-	if candidate.Server.Socket != old.Server.Socket || candidate.Server.ShutdownGrace != old.Server.ShutdownGrace || candidate.State != old.State || candidate.Events != old.Events {
+	if candidate.Server.Socket != old.Server.Socket || candidate.Server.ShutdownGrace != old.Server.ShutdownGrace || candidate.State != old.State || candidate.Runs != old.Runs || candidate.Events != old.Events {
 		return 0, fault.New(protocol.InvalidConfig, "Socket, state, shutdown, or subscription settings require a restart.")
 	}
 	ctxState := cloneContext(r.context)
@@ -121,6 +121,15 @@ func (r *Runtime) actionRisk(name string, seen map[string]bool) permission.Permi
 			risk = permission.Strongest(risk, permission.Confirm)
 		}
 	}
+	if a.Type == "experiment" {
+		e := r.cfg.Experiments[a.Experiment]
+		if e.Action != "" {
+			risk = permission.Strongest(risk, r.actionRisk(e.Action, seen))
+		}
+		for _, step := range r.cfg.Workflows[e.Workflow].Steps {
+			risk = permission.Strongest(risk, r.actionRisk(step.Action, seen))
+		}
+	}
 	if a.Type == "workflow" {
 		for _, step := range r.cfg.Workflows[a.Workflow].Steps {
 			risk = permission.Strongest(risk, r.actionRisk(step.Action, seen))
@@ -155,7 +164,7 @@ func (r *Runtime) Action(name string) (protocol.Action, error) {
 func (r *Runtime) actionMetadata(name string, a config.Action) protocol.Action {
 	inputs := make(map[string]protocol.Input, len(a.Inputs))
 	for key, input := range a.Inputs {
-		inputs[key] = protocol.Input{Type: string(input.Type), Required: input.Required, Default: input.Default, Min: input.Min, Max: input.Max, Enum: slices.Clone(input.Enum)}
+		inputs[key] = protocol.Input{Sensitive: input.Sensitive, Type: string(input.Type), Required: input.Required, Default: input.Default, Min: input.Min, Max: input.Max, Enum: slices.Clone(input.Enum)}
 	}
 	metadata := protocol.Action{Name: name, Type: a.Type, Safety: string(r.actionRisk(name, map[string]bool{})), Inputs: inputs, Origin: a.Origin}
 	if a.Type == "plugin" {

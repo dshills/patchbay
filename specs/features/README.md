@@ -1,6 +1,6 @@
 # Patchbay feature roadmap
 
-**Status:** Proposed implementation specifications; no feature below is implemented by these documents.\
+**Status:** Implementation underway. CC-1 contracts and durable evidence are implemented; later phases remain planned.\
 **Date:** 2026-09-28\
 **Baseline:** [Core specification](../SPEC.md), [foundation implementation plan](../PLAN.md), and the current macOS daemon, CLI, Stream Deck+, agent, SCPI, and plugin contracts.
 
@@ -23,8 +23,8 @@ people doing real work before expanding the number of integrations.
 | Agent Control Panel | Inspect proposed actions, approve a specific operation, follow its job, and compare its results. | [Specification](agent-control/SPEC.md) | [Plan](agent-control/PLAN.md) |
 
 Each feature has independent phase IDs: `CC`, `RP`, and `AC`. Existing Phases 0–7
-retain their meaning and evidence. An unchecked item is planned work. All new CLI
-commands, configuration fields, and API routes in these documents are proposals.
+retain their meaning and evidence. An unchecked item is planned work. Checked items link to implementation evidence. Unchecked CLI commands, configuration
+fields, and API routes remain proposals.
 
 ## Recommended delivery order
 
