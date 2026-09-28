@@ -11,6 +11,7 @@ import (
 	"patchbay/internal/config"
 	"patchbay/internal/evidence"
 	"patchbay/internal/jsonstrict"
+	"patchbay/internal/recipe"
 	"patchbay/internal/version"
 	"patchbay/pkg/protocol"
 	"strconv"
@@ -62,6 +63,13 @@ func runDeckctl(ctx context.Context, args []string, stdout, stderr io.Writer) in
 			return report(nil, &protocol.Error{Code: protocol.InvalidConfig, Message: err.Error()}, options, stdout, stderr)
 		}
 		return report(validationResult{true}, nil, options, stdout, stderr)
+	}
+	if command[0] == "recipe" && command[1] == "inspect" {
+		value, err := recipe.Inspect(ctx, command[2])
+		if err != nil {
+			return report(nil, &protocol.Error{Code: protocol.InvalidRequest, Message: err.Error()}, options, stdout, stderr)
+		}
+		return report(value, nil, options, stdout, stderr)
 	}
 	if command[0] == "demo" {
 		return runDemo(ctx, options.demoDir, stdout, stderr)

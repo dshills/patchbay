@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"patchbay/internal/recipe"
 	"patchbay/pkg/protocol"
 	"slices"
 	"strings"
@@ -14,6 +15,17 @@ func render(value any) string {
 	var out strings.Builder
 	line := func(format string, args ...any) { _, _ = fmt.Fprintf(&out, format+"\n", args...) }
 	switch v := value.(type) {
+	case *recipe.Package:
+		line("%s %s · declared ID %s", v.Manifest.Name, v.Manifest.Version, v.Manifest.ID)
+		line("Package: %s\nLicense: %s · author: %s", v.Digest, v.Manifest.License, v.Manifest.Author)
+		line("Offline inspection only. Local mappings and activation are required before execution.")
+		for _, name := range slices.Sorted(maps.Keys(v.Manifest.Requirements)) {
+			r := v.Manifest.Requirements[name]
+			line("Role %s: %s · optional=%t · %s", name, r.Kind, r.Optional, r.Description)
+		}
+		data, _ := json.MarshalIndent(v.Manifest.Actions, "", "  ")
+		line("Portable action definitions (local paths unresolved):\n%s", data)
+		line("%d experiments · %d samples · %d verified payload files", len(v.Manifest.Experiments), len(v.Samples), len(v.Manifest.Inventory))
 	case protocol.ExperimentList:
 		for _, e := range v.Experiments {
 			line("%s\t%s", e.ID, e.Title)

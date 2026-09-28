@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "id": "benchmark-large",
+  "origin": "sample",
+  "experiment": {
+    "schema_version": 1,
+    "id": "benchmark",
+    "title": "Benchmark Playground",
+    "description": "Change the work size and compare repeated SHA-256 timings on this computer.",
+    "projects": [
+      "benchmark"
+    ],
+    "action": "benchmark.measure",
+    "inputs": [
+      {
+        "step": 0,
+        "input": "iterations",
+        "parameter": "iterations"
+      },
+      {
+        "step": 0,
+        "input": "repeats",
+        "parameter": "repeats"
+      }
+    ],
+    "collectors": [
+      {
+        "name": "duration",
+        "step": 0,
+        "action": "benchmark.measure",
+        "kind": "measurement",
+        "source": "json_stdout",
+        "path": [
+          "duration"
+        ],
+        "unit": "ms",
+        "quantity": "duration",
+        "direction": "lower"
+      },
+      {
+        "name": "host",
+        "step": 0,
+        "action": "benchmark.measure",
+        "kind": "text",
+        "source": "json_stdout",
+        "path": [
+          "host"
+        ]
+      },
+      {
+        "name": "work",
+        "step": 0,
+        "action": "benchmark.measure",
+        "kind": "text",
+        "source": "json_stdout",
+        "path": [
+          "work"
+        ]
+      }
+    ],
+    "layout": [
+      {
+        "id": "duration",
+        "kind": "measurement",
+        "title": "Median duration",
+        "reference": "duration"
+      },
+      {
+        "id": "host",
+        "kind": "text",
+        "title": "Measured on",
+        "reference": "host"
+      }
+    ]
+  },
+  "parameters": {
+    "iterations": 20000,
+    "repeats": 5
+  },
+  "measurements": [
+    {
+      "repeats": 5,
+      "spread": 0.12,
+      "name": "duration",
+      "value": 2.4,
+      "unit": "ms",
+      "quantity": "duration",
+      "direction": "lower",
+      "status": "valid",
+      "source_step": 0,
+      "observed_at": "2026-09-28T00:00:00Z"
+    }
+  ],
+  "series": []
+}

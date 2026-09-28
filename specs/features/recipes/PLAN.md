@@ -1,6 +1,6 @@
 # Shareable Recipes implementation plan
 
-**Status:** Not started\
+**Status:** RP-1 implemented; RP-2 in progress\
 **Specification:** [Shareable Recipes](SPEC.md)\
 **Dependencies:** CC-1 schemas; CC-2 for activation/runs; CC-3 for UI. CC-5 gates only the verified Rigol recipe.
 
@@ -11,17 +11,17 @@ state or executing any content.
 
 **Depends on:** CC-1's experiment, layout, result, and capability schemas.
 
-- [ ] Define manifest/inventory, requirements, semantic definitions, layout references,
+- [x] Define manifest/inventory, requirements, semantic definitions, layout references,
   license/version metadata, sample provenance, and canonical content digests.
-- [ ] Implement strict schema validation and compatibility checks. Reuse existing
+- [x] Implement strict schema validation and compatibility checks. Reuse existing
   name, input, template, workflow and binding validators where their semantics match;
   keep imported policy constraints separate from trusted host configuration.
-- [ ] Implement directory copy and ZIP readers with finite budgets, no-follow path
+- [x] Implement directory copy and ZIP readers with finite budgets, no-follow path
   handling, collision detection, content verification, bounded concurrency/processing
   deadlines, and private staging cleanup.
-- [ ] Add offline `deckctl recipe inspect` in human and JSON modes. Explain commands,
+- [x] Add offline `deckctl recipe inspect` in human and JSON modes. Explain commands,
   requirements, permissions and unresolved roles without loading providers.
-- [ ] Add malformed/adversarial fixtures and a minimal portable recipe that uses
+- [x] Add malformed/adversarial fixtures and a minimal portable recipe that uses
   packaged CC sample results and the demo tool requirement.
 
 **Verification:** Unknown/duplicate fields; unsupported schemas; nested workflow
@@ -36,6 +36,8 @@ fuzz targets for archive/manifest boundaries.
 **Exit:** RP-F01/F02 and RP-A01/A02 pass; valid content has a stable digest and preview.
 
 **Commit boundary:** Schema/digest; bounded importer; CLI and adversarial corpus.
+
+**Evidence:** [RP-1 review and tests](../../reviews/RP1.md), [format guide](../../RECIPES.md).
 
 ## RP-2 — Local bindings and transactional activation
 

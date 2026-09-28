@@ -1,0 +1,135 @@
+schema_version: 1
+id: benchmark
+name: Benchmark Playground
+description: Try an offline repeated CPU experiment and compare saved results.
+author: Patchbay contributors
+license: MIT
+version: 1.0.0
+digest: ed0974c910c79988d9b48c8fae20025b130bb88f2d90ce75413d994d11cb3dac
+features:
+    capture: 1
+    comparison: 1
+schemas:
+    experiment: 1
+    series: 1
+requirements:
+    benchmark:
+        kind: project
+        description: Choose a local project for this experiment.
+    demo:
+        kind: tool
+        description: Map the deckdemo executable from a verified Patchbay bundle.
+actions:
+    benchmark.measure:
+        type: exec
+        tool: demo
+        project: benchmark
+        args:
+            - --iterations
+            - '{{ .args.iterations }}'
+            - --repeats
+            - '{{ .args.repeats }}'
+        inputs:
+            iterations:
+                type: integer
+                required: true
+                min: 1
+                max: 100000
+            repeats:
+                type: integer
+                required: true
+                min: 2
+                max: 20
+        safety: safe
+        timeout: 15s
+parameters:
+    iterations:
+        type: integer
+        value: 10000
+        min: 1
+        max: 100000
+        step: 1000
+        persistent: true
+    repeats:
+        type: integer
+        value: 5
+        min: 2
+        max: 20
+        step: 1
+        persistent: true
+experiments:
+    benchmark:
+        schema_version: 1
+        id: benchmark
+        title: Benchmark Playground
+        description: Change the work size and compare repeated SHA-256 timings on this computer.
+        projects:
+            - benchmark
+        action: benchmark.measure
+        inputs:
+            - step: 0
+              input: iterations
+              parameter: iterations
+            - step: 0
+              input: repeats
+              parameter: repeats
+        collectors:
+            - name: duration
+              step: 0
+              action: benchmark.measure
+              kind: measurement
+              source: json_stdout
+              path:
+                - duration
+              unit: ms
+              quantity: duration
+              direction: lower
+            - name: host
+              step: 0
+              action: benchmark.measure
+              kind: text
+              source: json_stdout
+              path:
+                - host
+            - name: work
+              step: 0
+              action: benchmark.measure
+              kind: text
+              source: json_stdout
+              path:
+                - work
+        layout:
+            - id: duration
+              kind: measurement
+              title: Median duration
+              reference: duration
+            - id: host
+              kind: text
+              title: Measured on
+              reference: host
+controls:
+    baseline:
+        baseline: benchmark
+    capture:
+        capture: benchmark
+    iterations:
+        parameter: iterations
+    result:
+        result: benchmark
+inventory:
+    - path: LICENSE
+      media_type: text/plain
+      size: 1068
+      sha256: ca78d6b55d10fab1eec3f362638ef62144c7597786f6becc1fa9df045af0b879
+    - path: README.md
+      media_type: text/markdown
+      size: 284
+      sha256: c44fef24ceaafe78800342bc6a158509af3ba8e63881970c26a550465458cc34
+    - path: samples/benchmark-large.json
+      media_type: application/json
+      size: 1968
+      sha256: 524f2ba20026a90245b092a1750d6987a5f9089db689d6ed12eb38ef7172c781
+    - path: samples/benchmark-small.json
+      media_type: application/json
+      size: 1968
+      sha256: bbb56ce5994469277a24bd193f9f287a45732962e8ffd56ab93f2a13f3deb0f7

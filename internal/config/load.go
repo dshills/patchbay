@@ -114,6 +114,34 @@ func Parse(data []byte, baseDir, home string) (*Config, error) {
 	return &c, nil
 }
 
+// DecodeDocument applies the same bounded YAML shape rules to another explicit
+// schema. It performs no config normalization, filesystem access or execution.
+func DecodeDocument(data []byte, target any, limit int) error {
+	if len(data) > limit {
+		return &Error{Path: "$", Message: "document exceeds its byte limit"}
+	}
+	t := reflect.TypeOf(target)
+	if t == nil || t.Kind() != reflect.Pointer {
+		return &Error{Path: "$", Message: "document target must be a pointer"}
+	}
+	d := yaml.NewDecoder(bytes.NewReader(data))
+	var root, extra yaml.Node
+	if err := d.Decode(&root); err != nil {
+		return syntaxError(err)
+	}
+	if err := d.Decode(&extra); err != io.EOF || len(root.Content) != 1 {
+		return &Error{Path: "$", Message: "exactly one document is required"}
+	}
+	v := &validator{nodes: map[string]*yaml.Node{}}
+	if err := v.shape(root.Content[0], t.Elem(), "$", 0); err != nil {
+		return err
+	}
+	if err := root.Decode(target); err != nil {
+		return &Error{Path: "$", Message: "document cannot be decoded into its schema"}
+	}
+	return nil
+}
+
 var yamlLine = regexp.MustCompile(`line ([0-9]+)`)
 
 func syntaxError(err error) error {
