@@ -144,6 +144,7 @@ type SourceObservation struct {
 }
 
 type StepOutcome struct {
+	Patch      *PatchOutcome          `json:"patch,omitempty"`
 	Instrument *InstrumentObservation `json:"instrument,omitempty"`
 	Index      int                    `json:"index"`
 	Action     string                 `json:"action"`

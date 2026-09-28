@@ -1,6 +1,6 @@
 # Agent Control Panel implementation plan
 
-**Status:** AC-1 through AC-4 software implemented; AC-5 next; external validation pending\
+**Status:** AC-1 through AC-5 software implemented; external validation pending\
 **Specification:** [Agent Control Panel](SPEC.md)\
 **Dependencies:** CC-1 through CC-4 for evidence, previews, workbench and packaged onboarding. Recipes are optional.
 
@@ -160,24 +160,24 @@ then independently authorize validation and compare the outcome.
 
 **Depends on:** AC-4; this is a separate feature increment and capability flag.
 
-- [ ] Define strict patch artifacts and explicit user-selected patchable paths. Reject
+- [x] Define strict patch artifacts and explicit user-selected patchable paths. Reject
   protected/config/credential paths, binary files, symlinks, path escapes, untracked
   targets, file create/delete/rename, mode changes, oversized files and fuzzy hunks.
-- [ ] Implement a daemon-owned `workspace.apply_patch` capability outside the text
+- [x] Implement a daemon-owned `workspace.apply_patch` capability outside the text
   provider. Calculate canonical before/after contents and hashes; provide the complete
   diff for workbench/CLI review. Truncation prevents approval.
-- [ ] Bind authorization to file hashes, Git HEAD, proposal/diff digest and exact targets.
+- [x] Bind authorization to file hashes, Git HEAD, proposal/diff digest and exact targets.
   Recheck under a per-project Patchbay write lock immediately before each replacement.
-- [ ] Persist staging intent before file creation; stage, flush and hash-verify every
+- [x] Persist staging intent before file creation; stage, flush and hash-verify every
   after-image before replacing any target. Add private preimages, ready-journal commit,
   atomic per-file updates, verified staging cleanup, exact progress and partial
   failure/cancellation. Document external-editor and rename-sequence limits.
-- [ ] Reconcile interrupted writes from before/after/current hashes without replay or
+- [x] Reconcile interrupted writes from before/after/current hashes without replay or
   automatic revert. Present changed/unchanged/conflicted files and let a user request
   a separately reviewed restoration diff when appropriate.
-- [ ] Add separate validation proposals and CC comparison links. Applying a patch
+- [x] Add separate validation proposals and CC comparison links. Applying a patch
   never grants tests, commits, pushes, another generation, or subsequent edits.
-- [ ] Extend capability negotiation, grant configuration, artifact limits, docs, release
+- [x] Extend capability negotiation, grant configuration, artifact limits, docs, release
   packaging and fake/live demonstrations; preserve text-only proposal fallback.
 
 **Verification:** Temporary Git repositories with dirty files; exact and malformed
@@ -197,6 +197,8 @@ repair loop or silently overwrites a conflicting external edit.
 **Commit boundary:** Patch schema/parser; apply/journal/recovery; review/validation UI;
 release evidence. Prism review is required before enabling write capability by default
 in any example; the capability itself remains opt-in for users.
+
+AC-5 review and deterministic evidence: [AC5.md](../../reviews/AC5.md). A user-reviewed live project/model demonstration remains pending; temporary fixtures are not a live-user result.
 
 ## Acceptance traceability
 

@@ -171,3 +171,15 @@ PATCHBAY_CODEX_SMOKE=1 PATCHBAY_CODEX_MODEL=gpt-5.3-codex go test ./internal/pro
 This uses the existing environment key and can incur API charges. It is not part
 of `make check` or CI. See [the Phase 4 report](reviews/PHASE4.md) for results and
 remaining limits.
+
+## Roadmap regression gates
+
+Run `make check` and `node --test tests/workbench.test.cjs` after workbench or authority
+changes. The browser harness uses isolated fake providers and real local daemons; no
+production key or project upload is needed. Patch tests use temporary Git repositories,
+fault injection and killed subprocesses to verify stage/write/recovery boundaries.
+`scripts/verify_agents.py --bundle PATH` checks native offline generation, exact action
+approval, a pasted patch, separate measured validation and freshly approved restoration.
+It requires Git for that optional patch scenario. Static release verification requires
+all browser assets and the curated recipes; native arm64 smoke does not prove native
+Intel behavior, physical hardware operation or successful Gatekeeper installation.

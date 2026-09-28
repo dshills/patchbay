@@ -92,6 +92,16 @@ func (r *Runtime) agentDefinition(kind, target string) (agentDefinition, error) 
 	}
 	var err error
 	switch kind {
+	case "patch":
+		if !r.cfg.Agents.Proposals.Patches || (r.patches == nil || !r.patches.Writable()) || target != "workspace.apply_patch" || len(d.Project.AgentPatchPaths) == 0 {
+			return bad()
+		}
+		for _, name := range d.Project.AgentPatchPaths {
+			if r.protectedContextPath(d.Project.Path, name) {
+				return bad()
+			}
+		}
+		d.Parameters["patch_format"] = "exact-unified-v1;10-files;256KiB-file;1MiB-content;64KiB-diff"
 	case "action":
 		err = action(target)
 	case "workflow":
@@ -149,7 +159,10 @@ func (r *Runtime) inspectAgentGrant(kind, target string) (supervisor.GrantReview
 	if err != nil {
 		return supervisor.GrantReview{}, err
 	}
-	out := supervisor.GrantReview{Project: r.context.Project, Target: supervisor.Target{Kind: kind, ID: target, Digest: r.sessions.Sign(d), Inputs: map[string]protocol.Input{}}, Actions: map[string]any{}, Workflows: map[string]any{}, Experiment: d.Experiment, Warning: "Configured exec commands run as your user and may write files or use the network. Review the full definitions before adding this digest to local project grants."}
+	out := supervisor.GrantReview{Project: r.context.Project, Target: supervisor.Target{Paths: slices.Clone(d.Project.AgentPatchPaths), Kind: kind, ID: target, Digest: r.sessions.Sign(d), Inputs: map[string]protocol.Input{}}, Actions: map[string]any{}, Workflows: map[string]any{}, Experiment: d.Experiment, Warning: "Configured exec commands run as your user and may write files or use the network. Review the full definitions before adding this digest to local project grants."}
+	if kind == "patch" {
+		out.Warning = "Grants exact reviewed edits to these tracked files only. Each patch still needs approval. Private preimages are retained; validation, commits and pushes require separate actions."
+	}
 	for key, input := range r.definitionInputs(d) {
 		out.Target.Inputs[key] = publicInput(input)
 	}
@@ -202,7 +215,7 @@ func (r *Runtime) grantedTarget(kind, target string) (supervisor.Target, config.
 			return supervisor.Target{}, grant, d, fault.New(protocol.PermissionDenied, "Effective target changed; review and replace its local grant digest.")
 		}
 		inputs := r.definitionInputs(d)
-		public := supervisor.Target{Kind: kind, ID: target, Digest: digest, Inputs: map[string]protocol.Input{}}
+		public := supervisor.Target{Paths: slices.Clone(d.Project.AgentPatchPaths), Kind: kind, ID: target, Digest: digest, Inputs: map[string]protocol.Input{}}
 		for key, bound := range grant.Inputs {
 			original, ok := inputs[key]
 			if !ok || original.Sensitive || original.Type != bound.Type || reservedAgentInput(key) {
@@ -231,6 +244,12 @@ func (r *Runtime) validateSuggestion(s supervisor.Suggestion) (supervisor.Target
 	target, grant, d, err := r.grantedTarget(s.Kind, s.Target)
 	if err != nil {
 		return target, nil, err
+	}
+	if s.Kind == "patch" {
+		if s.Target != "workspace.apply_patch" || len(s.Inputs) != 0 || s.Diff == "" || len(s.Diff) > supervisor.MaxOutput || s.Baseline != "" {
+			return target, nil, fault.New(protocol.InvalidProposal, "Invalid bounded patch suggestion.")
+		}
+		return target, nil, nil
 	}
 	original := r.definitionInputs(d)
 	values := map[string]any{}

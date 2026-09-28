@@ -82,7 +82,11 @@ func (browserAgent) Run(_ context.Context, request provider.AgentRequest, _ *pro
 	}
 	proposals := []supervisor.Suggestion{}
 	for _, target := range input.Catalog {
-		proposals = append(proposals, supervisor.Suggestion{Kind: target.Kind, Target: target.ID, Rationale: "Fixture proposes a configured echo.", Expected: "Saved execution outcome."})
+		suggestion := supervisor.Suggestion{Kind: target.Kind, Target: target.ID, Rationale: "Fixture proposes one reviewed operation.", Expected: "Saved execution outcome."}
+		if target.Kind == "patch" {
+			suggestion.Diff = "--- a/selected.txt\n+++ b/selected.txt\n@@ -1,1 +1,1 @@\n-Illustrative selected evidence.\n\\ No newline at end of file\n+Patched selected evidence.\n"
+		}
+		proposals = append(proposals, suggestion)
 	}
 	out, _ := json.Marshal(supervisor.Output{SchemaVersion: 1, Summary: "<script>window.agentInjected=true</script> Model interpretation only.", ContextRefs: refs, Proposals: proposals})
 	publish(action.Result{Status: "running", Data: map[string]any{"stdout": "partial JSON"}})
@@ -105,6 +109,25 @@ func TestServeAgentBrowser(t *testing.T) {
 	configuration, err := config.Load(path)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if os.Getenv("PATCHBAY_BROWSER_PATCHES") == "1" {
+		review, err := runtime.InspectAgentGrant(context.Background(), "patch", "workspace.apply_patch")
+		if err != nil {
+			t.Fatal(err)
+		}
+		project := configuration.Projects["demo"]
+		project.AgentGrants = []config.AgentGrant{{Kind: "patch", Target: "workspace.apply_patch", Digest: review.Target.Digest}}
+		configuration.Projects["demo"] = project
+		data, err := yaml.Marshal(configuration)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = os.WriteFile(path, data, 0600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err = runtime.Reload(context.Background()); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if os.Getenv("PATCHBAY_BROWSER_PROPOSALS") == "1" {
 		review, err := runtime.InspectAgentGrant(context.Background(), "action", "echo")

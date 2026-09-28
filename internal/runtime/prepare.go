@@ -27,19 +27,20 @@ import (
 )
 
 type prepared struct {
-	kind         string
-	inputs       map[string]any
-	name         string
-	risk         permission.Permission
-	timeout      time.Duration
-	command      *provider.Command
-	agent        *provider.AgentRequest
-	scpi         *provider.SCPIRequest
-	plugin       *provider.PluginRequest
-	generation   uint64
-	gitOperation string
-	steps        []*prepared
-	stopOnError  bool
+	patchOperation string
+	kind           string
+	inputs         map[string]any
+	name           string
+	risk           permission.Permission
+	timeout        time.Duration
+	command        *provider.Command
+	agent          *provider.AgentRequest
+	scpi           *provider.SCPIRequest
+	plugin         *provider.PluginRequest
+	generation     uint64
+	gitOperation   string
+	steps          []*prepared
+	stopOnError    bool
 }
 
 func (r *Runtime) Invoke(ctx context.Context, name string, isWorkflow bool, invocation protocol.Invocation) (*job.Handle, error) {
@@ -397,7 +398,11 @@ func (r *Runtime) executeObserved(ctx context.Context, jobID string, plan *prepa
 		}
 		r.bus.Emit(event.ActionFinished, map[string]any{"action_id": actionID, "job_id": jobID, "action": plan.name, "status": result.Status})
 	}()
-	if plan.plugin != nil {
+	if plan.patchOperation != "" {
+		var outcome protocol.PatchOutcome
+		outcome, err = r.patches.Apply(ctx, plan.patchOperation)
+		result = action.Result{Status: action.Success, Data: map[string]any{"patch": outcome}}
+	} else if plan.plugin != nil {
 		request := *plan.plugin
 		request.AllowDangerous, request.Confirmed = allow, confirmed
 		result, err = r.plugins.Run(ctx, request, budget)

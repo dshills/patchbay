@@ -257,3 +257,15 @@ not change the running application.
 The current candidate is unsigned and unnotarized. Clean-account Gatekeeper tests,
 native Intel execution, manual screen-reader checks, and the five-user onboarding
 study are pending. Do not represent archive verification as evidence for these gates.
+
+## Feature stores and recovery
+
+Keep the configured state, run store, `<state>.recipes`, `<state>.agents` and
+`<state>.patches` together when backing up an installation. Each is private and bounded;
+space exhaustion blocks its new operations without silently deleting retained evidence.
+Do not copy an open store or independently restore only its metadata. Stop the daemon
+before an administrative backup/restore. Recipe mappings, agent grants and interrupted
+patches need fresh inspection after changes; no pending approval survives restart.
+See [Recipes](RECIPES.md) and [Agent control](AGENT_CONTROL.md#recovery-and-retention)
+for cleanup and restoration. User studies, physical devices, Intel execution and
+signed-distribution checks are tracked separately in the feature plans and review records.

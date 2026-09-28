@@ -1,5 +1,5 @@
 'use strict';
-const agentState={catalog:null,preview:null,session:null,artifacts:[],cursor:'',extra:[],project:'',selection:null,review:null,paired:false,reviewError:'',requested:0};
+const agentState={catalog:null,preview:null,session:null,artifacts:[],cursor:'',extra:[],project:'',selection:null,review:null,paired:false,reviewError:'',requested:0,requestedInstance:''};
 function clearAgentConsent(){agentState.paired=false;$('agent-approve-check').checked=false;agentState.preview=null;$('agent-consent-check').checked=false;$('agent-consent').hidden=true;}
 function agentButtons(ready){
  const usable=ready&&agentState.catalog?.available;
@@ -24,6 +24,7 @@ async function agentRefresh(){
  if(state.data?.capabilities?.features?.agent_context!==1){agentState.catalog=null;$('agent-availability').textContent='This daemon does not advertise agent sessions. Ordinary workbench functions remain available.';return;}
  if(state.data?.capabilities?.features?.agent_supervision===1){
  const selection=await api('agents/selection');
+ if(agentState.requestedInstance!==state.data.status.instance){agentState.requestedInstance=state.data.status.instance;agentState.requested=selection.review_requested;}
  if(agentState.selection?.revision!==selection.revision){agentState.paired=false;$('agent-approve-check').checked=false;}
  agentState.selection=selection;
  $('agent-selection').textContent=selection.project+' · selected '+(selection.proposal||selection.job||'none')+' · '+(selection.state||'')+(selection.review_active?' · Full review connected':'');
@@ -36,6 +37,7 @@ async function agentRefresh(){
  if(!$('agents-open').open)return;
  const project=state.data?.context.project||'';if(project!==agentState.project){agentState.project=project;agentState.extra=[];agentState.session=null;agentState.artifacts=[];$('agent-artifacts').replaceChildren();$('agent-detail').hidden=true;clearAgentConsent();}
  const [catalog,list]=await Promise.all([api('agents/catalog'),api('agents/sessions?project='+encodeURIComponent(project))]);agentState.catalog=catalog;if(!agentState.extra.length)agentState.cursor=list.next_cursor||'';
+ if(state.data?.capabilities?.features?.agent_patches===1&&$('agent-patches-open').open)await refreshAgentPatches();
  $('agent-availability').textContent=catalog.message||(catalog.enabled?'Provider ready · '+catalog.model:'Proposal mode disabled');
  const sessions=[...new Map([...list.sessions,...agentState.extra].map(s=>[s.id,s])).values()];const stamp=JSON.stringify(sessions.map(s=>[s.id,s.state]));if($('agent-sessions').dataset.stamp!==stamp){$('agent-sessions').dataset.stamp=stamp;$('agent-sessions').replaceChildren(...sessions.map(s=>{const b=text('button',s.project+' · '+s.id.slice(0,8)+' · '+s.state);b.addEventListener('click',()=>mutation(()=>showAgentSession(s.id)));return b;}));}
  $('agent-more').hidden=!agentState.cursor;if(agentState.session)await showAgentSession(agentState.session.id);
@@ -75,7 +77,7 @@ async function reviewAgentProposal(id,select){
  if(select){agentState.selection=await api('agents/selection','PUT',{revision:agentState.selection?.revision||0,proposal:id});agentState.paired=false;}
  try{const p=await api('agents/proposals/'+encodeURIComponent(id)+'/prepare','POST',{});const changed=!agentState.review||effectiveReview(agentState.review)!==effectiveReview(p);
  agentState.review=p;agentState.reviewError='';$('agent-review').hidden=false;
- if(changed){$('agent-review-text').textContent=effectiveReview(p);$('agent-review-text').scrollTop=0;$('agent-approve-check').checked=false;}
+ if(changed){const visible=structuredClone(p);if(visible.patch)visible.patch.diff='Complete diff is shown below.';$('agent-review-text').textContent=effectiveReview(visible);$('agent-patch-diff').hidden=!p.patch;$('agent-patch-diff').textContent=p.patch?.diff||'';$('agent-review-text').scrollTop=0;$('agent-approve-check').checked=false;}
  agentState.selection=await api('agents/review','POST',{revision:agentState.selection.revision,preparation:p.id,digest:p.digest});agentState.paired=true;
  if(select)$('agent-review-text').focus();
  }catch(e){if(!agentState.review||agentState.review.proposal!==id){agentState.review={proposal:id,expires_at:new Date(0).toISOString()};$('agent-review').hidden=false;$('agent-review-text').textContent=JSON.stringify(agentState.session?.proposals?.find(p=>p.id===id),null,2);}$('agent-approve-check').checked=false;agentState.paired=false;agentState.reviewError=e.message;throw e;}
@@ -87,3 +89,10 @@ $('agent-reject').addEventListener('click',()=>mutation(async()=>{await api('age
 $('agent-duplicate').addEventListener('click',()=>mutation(async()=>{const s=await api('agents/proposals/'+encodeURIComponent(agentState.review.proposal)+'/duplicate','POST',{request_id:agentRequestID()});await showAgentSession(s.id);await reviewAgentProposal(s.proposals[0].id,true);}));
 $('agent-select-job').addEventListener('click',()=>mutation(async()=>{const s=agentState.session;agentState.selection=await api('agents/selection','PUT',{revision:agentState.selection.revision,session:s.id,job:s.job_id});agentState.paired=false;}));
 document.addEventListener('visibilitychange',()=>{if(document.hidden){agentState.paired=false;$('agent-approve-check').checked=false;}});
+
+async function refreshAgentPatches(){const entries=(await api('agents/patches')).operations,stamp=JSON.stringify(entries);if($('agent-patches').dataset.stamp===stamp)return;$('agent-patches').dataset.stamp=stamp;$('agent-patches').replaceChildren();
+ for(const record of entries){const row=document.createElement('div');row.append(text('h4',record.operation.slice(0,8)+' · '+record.project+' · '+record.state),text('pre',JSON.stringify(record,null,2)));
+ const restore=text('button','Review a restoration');restore.className='mutation';restore.addEventListener('click',()=>mutation(async()=>{const s=await api('agents/patches/'+encodeURIComponent(record.operation)+'/restore','POST',{request_id:agentRequestID()});await showAgentSession(s.id);await reviewAgentProposal(s.proposals[0].id,true);}));
+ const forget=text('button','Forget private restoration record');forget.className='mutation';forget.addEventListener('click',()=>mutation(async()=>{if(!window.confirm('Remove this restoration record and its private preimages? Run artifacts remain until separately deleted.'))return;await api('agents/patches/'+encodeURIComponent(record.operation)+'/forget','POST',{confirmed:true});}));row.append(restore,forget);$('agent-patches').append(row);}
+}
+$('agent-patches-open').addEventListener('toggle',()=>{if($('agent-patches-open').open)refresh();});

@@ -25,6 +25,7 @@ import (
 	"patchbay/internal/localfs"
 	"patchbay/internal/logging"
 	"patchbay/internal/parameter"
+	"patchbay/internal/patching"
 	"patchbay/internal/provider"
 	"patchbay/internal/recipe"
 	"patchbay/internal/state"
@@ -34,6 +35,7 @@ import (
 )
 
 type Options struct {
+	PatchFault func(string) error
 	Supervisor supervisor.Options
 	Recipes    recipe.StoreOptions
 	Evidence   evidence.Options
@@ -43,6 +45,8 @@ type Options struct {
 	Agent      provider.Agent
 }
 type Runtime struct {
+	patches              *patching.Store
+	patchError           error
 	agentSelection       protocol.AgentSelection
 	agentReview          string
 	agentReviewUntil     time.Time
@@ -182,6 +186,7 @@ func NewConfigured(path string, c *config.Config, options Options) (*Runtime, er
 	}
 	r.runs, r.storageError = evidence.Open(c.Runs.Path, evidence.Limits{MaxRuns: c.Runs.MaxRuns, MaxBytes: c.Runs.MaxBytes, MaxRunBytes: c.Runs.MaxRunBytes, MaxArtifactBytes: c.Runs.MaxArtifactBytes, MaxReceipts: c.Runs.MaxReceipts}, options.Evidence)
 	r.sessions, r.sessionError = supervisor.Open(c.State.Path+".agents", options.Supervisor)
+	r.patches, r.patchError = patching.Open(c.State.Path+".patches", options.PatchFault)
 	r.reconcileAgentRuns()
 	r.contexts = map[string]agentContextPreparation{}
 	r.proposalPreviews = map[string]agentProposalPreparation{}
@@ -448,6 +453,9 @@ func (r *Runtime) Close(ctx context.Context) error {
 	}
 	if jobErr == nil && r.sessions != nil {
 		_ = r.sessions.Close()
+	}
+	if jobErr == nil && r.patches != nil {
+		_ = r.patches.Close()
 	}
 	pluginErr := r.plugins.Close(ctx)
 	scpiErr := r.scpi.Close(ctx)

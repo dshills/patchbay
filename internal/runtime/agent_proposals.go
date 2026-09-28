@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"patchbay/internal/config"
@@ -9,12 +10,14 @@ import (
 	"patchbay/internal/fault"
 	"patchbay/internal/identity"
 	"patchbay/internal/job"
+	"patchbay/internal/patching"
 	"patchbay/internal/permission"
 	"patchbay/internal/supervisor"
 	"patchbay/pkg/protocol"
 )
 
 type agentProposalPreparation struct {
+	patch   *patching.Plan
 	preview supervisor.ProposalPreview
 	capture capturePreparation
 	session supervisor.Session
@@ -29,6 +32,9 @@ func (r *Runtime) generatedProposals(ctx context.Context, s supervisor.Session, 
 	for _, suggestion := range out.Proposals {
 		p := supervisor.Proposal{ID: identity.New(), Suggestion: suggestion, State: "pending", Digest: supervisor.Hash(suggestion), ExpiresAt: time.Now().Add(10 * time.Minute).UTC()}
 		_, _, err := r.validateSuggestion(suggestion)
+		if err == nil && suggestion.Kind == "patch" {
+			_, err = r.patchPlan(ctx, suggestion)
+		}
 		if sourceErr != nil {
 			err = sourceErr
 		}
@@ -88,6 +94,9 @@ func (r *Runtime) PrepareAgentProposal(ctx context.Context, id string) (supervis
 	target, values, err := r.validateSuggestion(p.Suggestion)
 	if err != nil {
 		return supervisor.ProposalPreview{}, err
+	}
+	if target.Kind == "patch" {
+		return r.prepareAgentPatch(ctx, s, index, target, used)
 	}
 	var experiment protocol.Experiment
 	var args, parameters map[string]any
@@ -172,8 +181,23 @@ func (r *Runtime) approveAgentProposal(ctx context.Context, id string, request s
 	if s.Proposals[index].Digest != prep.session.Proposals[index].Digest {
 		return supervisor.Admission{}, fault.New(protocol.StalePreparation, "Suggestion changed after review.")
 	}
+	if prep.patch != nil {
+		if err := patching.Validate(ctx, *prep.patch); err != nil {
+			return supervisor.Admission{}, fault.New(protocol.ContextChanged, err.Error())
+		}
+	}
 	store := r.sessions
 	hooks := &captureHooks{After: func() { r.recheckPendingProposals(s.ID, index) }, Digest: digest, Agent: &protocol.AgentOrigin{Session: s.ID, Proposal: id}, Before: func(response protocol.CaptureResponse) error {
+		if prep.patch != nil {
+			// Evidence quota and durable private intent must both succeed before session admission.
+			data, _ := json.Marshal(prep.patch)
+			if _, err := r.runs.AddArtifact(response.RunID, "Approved patch and private preimages", "application/json", data); err != nil {
+				return err
+			}
+			if err := r.patches.Begin(id, response.RunID, s.Project, *prep.patch); err != nil {
+				return fault.New(protocol.RecordingFailed, err.Error())
+			}
+		}
 		_, err := store.Change(s.ID, func(current *supervisor.Session) error {
 			if current.State != "awaiting_review" || current.Proposals[index].State != "pending" {
 				return fault.New(protocol.RequestConflict, "Proposal decision changed.")
@@ -188,9 +212,15 @@ func (r *Runtime) approveAgentProposal(ctx context.Context, id string, request s
 		})
 		if err != nil {
 			store.RecordingFailure(s.ID)
+			if prep.patch != nil {
+				r.patches.FinalizePending(id, "Approval audit failed; no file was changed.")
+			}
 		}
 		return err
 	}, Completed: func(finished job.Job, runID string) {
+		if prep.patch != nil {
+			r.patches.FinalizePending(id, "Job finished before patch execution.")
+		}
 		_, err := store.Change(s.ID, func(current *supervisor.Session) error {
 			p := &current.Proposals[index]
 			p.State = string(finished.State)
@@ -321,6 +351,9 @@ func (r *Runtime) recheckPendingProposals(sessionID string, admitted int) {
 			continue
 		}
 		_, _, err := r.validateSuggestion(p.Suggestion)
+		if err == nil && p.Suggestion.Kind == "patch" {
+			_, err = r.patchPlan(ctx, p.Suggestion)
+		}
 		if sourceErr != nil {
 			err = sourceErr
 		}

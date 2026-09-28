@@ -144,3 +144,29 @@ func TestAgentSelectionCancelCannotFollowNewJob(t *testing.T) {
 		t.Fatal("cancel followed replacement", current)
 	}
 }
+
+func TestAgentReviewRequestCounterSurvivesSelectionChanges(t *testing.T) {
+	ctx := context.Background()
+	r, _ := proposalRuntime(t, []supervisor.Suggestion{{Kind: "action", Target: "echo"}, {Kind: "action", Target: "echo"}}, &fakeRunner{}, supervisor.Options{})
+	changeProposalConfig(t, r, func(c *config.Config) {
+		c.Bindings = append(c.Bindings, binding.Binding{Control: "review", Press: &binding.Target{Agent: "review"}})
+	})
+	grantProposal(t, r, "action", "echo", nil)
+	session := generateProposals(t, r)
+	previous := uint64(0)
+	for _, p := range session.Proposals {
+		selection, err := r.SelectAgent(ctx, protocol.AgentSelect{Revision: r.AgentSelection().Revision, Proposal: p.ID})
+		if err != nil {
+			t.Fatal(err)
+		}
+		guard := r.controlGuard()
+		if _, err = r.Control(ctx, controlRequest(t, event.ControlPressed, controlPayload{Control: "review", Guard: &guard, AgentRevision: selection.Revision})); err != nil {
+			t.Fatal(err)
+		}
+		next := r.AgentSelection()
+		if next.ReviewRequested <= previous {
+			t.Fatal("new selected review reused an already-observed request", next)
+		}
+		previous = next.ReviewRequested
+	}
+}

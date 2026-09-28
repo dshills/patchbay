@@ -1,6 +1,6 @@
 # Patchbay feature roadmap
 
-**Status:** Implementation underway. CC-1–CC-4 capture, comparison, export, browser workbench, and demo packaging software are implemented. CC-5 software has simulator coverage; physical and external release gates remain pending. Recipe import, reviewed activation, guided export and three curated packages have software/release evidence; human exchange and physical verification gates remain pending. Agent context consent, durable sessions and exact granted proposal execution (AC-1/AC-2) are implemented; supervision UI, physical controls and patch phases are next.\
+**Status:** All planned software phases are implemented: CC-1–CC-5, RP-1–RP-4 and AC-1–AC-5. Capture, comparison, recipes, supervised proposals and opt-in bounded patches have deterministic tests, Prism reviews and local release evidence. Human walkthrough/exchange, real provider, physical Stream Deck/Rigol, native Intel, clean-account upgrade and signed-distribution gates remain pending.\
 **Date:** 2026-09-28\
 **Baseline:** [Core specification](../SPEC.md), [foundation implementation plan](../PLAN.md), and the current macOS daemon, CLI, Stream Deck+, agent, SCPI, and plugin contracts.
 
@@ -88,8 +88,7 @@ These proposals extend, rather than silently reinterpret, the current contracts:
 
 Implementers must update the relevant [API](../API.md), [runtime](../RUNTIME.md),
 [development](../DEVELOPMENT.md), [SCPI](../SCPI.md), and
-[operations](../OPERATIONS.md) guides as each extension lands. Proposed fields are
-not valid in the current configuration loader.
+[operations](../OPERATIONS.md) guides as each extension lands. The individual guides identify implemented fields and remaining external verification gates.
 
 ## Review and completion policy
 

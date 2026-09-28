@@ -95,7 +95,7 @@ deckctl agent forget SESSION --confirm
 are `GET /v1/agents/catalog`, `POST /v1/agents/context/prepare`, `GET|POST
 /v1/agents/sessions`, `GET|DELETE /v1/agents/sessions/{id}` and `POST
 /v1/agents/sessions/{id}/forget`. The last requires `{"confirmed":true}`. Capability
-`agent_context:1` advertises the selected-context/session contract. Proposal execution has its own `agent_proposals:1` capability. Patches remain unavailable until their separate increment.
+`agent_context:1` advertises the selected-context/session contract. Proposal execution has its own `agent_proposals:1` capability. Optional patches have a separate `agent_patches:1` capability and local grant.
 
 No live provider account or physical controls have been verified by the deterministic
 fixtures. Such checks require separately reviewed context and recorded device evidence.
@@ -295,3 +295,113 @@ Stored private metadata remains bounded and records unsupported/interrupted outc
 Keep the state, `.agents` and run stores together when moving an installation so its
 grant signing key and retained evidence remain consistent. Explicit forgetting removes
 a terminal session; linked runs have separate retention and deletion controls.
+
+## Review and apply a bounded patch
+
+Patch writes are a separate opt-in. Ordinary agent explanations and configured
+command proposals keep working with patches disabled. Enable the capability and
+select exact files locally:
+
+```yaml
+agents:
+  codex: {model: your-model-id}
+  proposals:
+    enabled: true
+    patches: true
+projects:
+  my-project:
+    name: My project
+    path: /absolute/path/to/project
+    agent_patch_paths: [src/example.go, tests/example_test.go]
+```
+
+Inspect `deckctl agent grant patch workspace.apply_patch --json`. Review its project,
+paths and warning, then add the returned digest as a `kind: patch`, `target:
+workspace.apply_patch` entry in that project's `agent_grants`. Reload. Selecting paths
+or turning on the capability alone does not grant model proposals access. Recipes
+cannot supply grants or add patchable paths. Changing the path list invalidates the
+grant. A project moved/recloned onto another directory identity requires fresh review;
+old recovery records never silently retarget a new checkout.
+
+A model can now propose `{kind:"patch", target:"workspace.apply_patch", diff:"...",
+rationale:"...", expected_outcome:"..."}` within the existing strict schema-1 response.
+Select context and consent exactly as for an explanation. Alternatively,
+`deckctl agent propose-patch '{"diff":"...","request_id":"TIMESTAMP-ID"}'` creates
+a local review session for pasted untrusted diff text, without any provider request
+or write. Both paths use the same grant, parser, full preview and separate approval.
+
+Review shows the entire diff, canonical file paths, before/after hashes, modes, Git
+HEAD and exact project. The browser displays the diff as plain text below its metadata;
+the CLI prints the full diff after the JSON preview. Approve once, inspect the saved
+run, then separately approve your configured validation action or experiment. Failed
+validation does not request another generation, edit, revert, commit or push.
+
+### Accepted patch format and limits
+
+- Plain unified `--- a/path` / `+++ b/path` headers and exact `@@ -start,count
+  +start,count @@` hunks. No fuzz, offset search, Git metadata headers, timestamps,
+  rename/create/delete operations, binary patches or file-mode changes. Removing all
+  text from an existing file is permitted; removing the file itself is not.
+- Up to ten existing Git-tracked regular UTF-8 files, 256 KiB per file and 1 MiB
+  combined before/after contents. Full diffs are at most 64 KiB and must also fit
+  the provider's existing 64 KiB final-response envelope. Large restorations that
+  cannot fit a complete diff require manual recovery; they are never truncated.
+- Preserve LF/CRLF style and permission bits; mixed line endings, NUL, symlinks,
+  special permission bits, unmerged/untracked files and path escapes are rejected.
+  The standard “No newline at end of file” marker is supported at actual file ends.
+- Protect `.git`, `.patchbay`, `.agents`, `.codex`, `AGENTS.md`, credential-like files,
+  active configuration/state/run/recipe/session/patch stores and configured protected
+  paths. An allowlist cannot override these protections. Git must be available for
+  tracking and HEAD checks; an existing commit is required.
+
+The daemon serializes its patch operations and takes an advisory lock on the project
+root shared with other Patchbay patch stores. It writes private preimages and durable
+intent before creating staging files, stages and fsyncs every after-image, verifies
+hashes, commits a ready record, then rechecks HEAD, tracked status, parent identity,
+file mode and preimage immediately before each atomic file replacement. Each parent
+directory is synced. A full queue or failed audit causes no write. Duplicated admission
+returns the original run even after restart; it never reapplies the diff.
+
+External editors do not honor the advisory lock. Checks detect observed changes but
+cannot make the read/rename boundary atomic against arbitrary outside processes.
+Multiple file renames are also not one atomic transaction. Cancellation, disk errors
+or external changes can leave a partially applied patch; the result reports each
+file as applied, unapplied or conflicted instead of claiming the whole patch succeeded.
+
+### Recovery and retention
+
+Open **Patch outcomes and recovery**, or run `deckctl agent patches`. Each record
+links its operation, project and ordinary CC run. On restart the immutable run remains
+interrupted; the separate recovery record compares current hashes with the retained
+before/after images. The daemon never replays writes or automatically restores files.
+Completed run evidence describes execution; recovery file states describe the files
+observed during reconciliation. Filesystem changes can require a fresh restoration
+review even when a previous record said applied.
+
+**Review a restoration** / `deckctl agent restore OPERATION NEW_REQUEST_ID` creates
+a new proposal with its own session, expiry and approval. Already-unapplied files
+are skipped; a conflicting current file prevents automatic restoration. A restoration
+still needs the current exact grant and cannot write a protected or newly disallowed
+file. Cancel and reject remain ordinary explicit decisions.
+
+Private recovery journals live in `<state.path>.patches`, with 64 retained operations,
+64 MiB of committed records and at most 8 MiB for one metadata staging file. Preimages
+are also retained as a private CC artifact before dispatch and count toward configured
+run/artifact quotas. Oversized or full storage blocks execution. Neither store evicts
+old records automatically. `deckctl agent forget-patch OPERATION --confirm` removes a
+terminal private recovery record; delete its linked run separately to remove that
+artifact. Forgetting a session alone removes neither copy of patch evidence.
+
+Only exact journal-recorded staging paths are considered for cleanup. Ownership,
+regular-file identity and content are checked without following links. Replaced,
+partially written or unverifiable staging files are retained and reported for manual
+inspection; no filename-prefix sweep removes project files. Journal failure freezes
+further patch admission. Retained incomplete staging files must be resolved explicitly
+before forgetting their recovery record.
+
+Capability `agent_patches:1` advertises implementation, not local permission. API:
+`GET /v1/agents/patches` returns an `operations` list; `POST .../patches/propose` accepts
+`diff` and `request_id`; `POST .../patches/{id}/restore` accepts a new `request_id`;
+`POST .../patches/{id}/forget` requires `confirmed:true`. Actual application uses the
+existing proposal prepare/approve routes. Provider credentials and paid generation
+are unnecessary for local diff review or restoration.

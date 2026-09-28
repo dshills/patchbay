@@ -42,6 +42,7 @@ type Config struct {
 }
 
 type ProposalMode struct {
+	Patches        bool     `yaml:"patches,omitempty"`
 	Demo           bool     `yaml:"demo,omitempty"`
 	Enabled        bool     `yaml:"enabled,omitempty"`
 	ProtectedPaths []string `yaml:"protected_paths,omitempty"`
@@ -101,17 +102,18 @@ type AgentGrant struct {
 	Inputs map[string]Input `yaml:"inputs,omitempty"`
 }
 type Project struct {
-	AgentGrants []AgentGrant      `yaml:"agent_grants,omitempty"`
-	ID          string            `yaml:"id,omitempty"`
-	Name        string            `yaml:"name"`
-	Path        string            `yaml:"path"`
-	GitHub      string            `yaml:"github,omitempty"`
-	Language    string            `yaml:"language,omitempty"`
-	Engine      string            `yaml:"engine,omitempty"`
-	Metadata    map[string]string `yaml:"metadata,omitempty"`
-	Environment map[string]string `yaml:"environment,omitempty"`
-	Actions     map[string]Action `yaml:"actions,omitempty"`
-	Conventions []string          `yaml:"conventions,omitempty"`
+	AgentPatchPaths []string          `yaml:"agent_patch_paths,omitempty"`
+	AgentGrants     []AgentGrant      `yaml:"agent_grants,omitempty"`
+	ID              string            `yaml:"id,omitempty"`
+	Name            string            `yaml:"name"`
+	Path            string            `yaml:"path"`
+	GitHub          string            `yaml:"github,omitempty"`
+	Language        string            `yaml:"language,omitempty"`
+	Engine          string            `yaml:"engine,omitempty"`
+	Metadata        map[string]string `yaml:"metadata,omitempty"`
+	Environment     map[string]string `yaml:"environment,omitempty"`
+	Actions         map[string]Action `yaml:"actions,omitempty"`
+	Conventions     []string          `yaml:"conventions,omitempty"`
 }
 
 type Action struct {

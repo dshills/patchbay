@@ -61,13 +61,24 @@ func (v *validator) developerConfig(c *Config, baseDir, home string) error {
 		return v.fail("agents.codex.max_output_tokens", "expected 16 through 32768 tokens")
 	}
 	for _, project := range c.Projects {
+		if len(project.AgentPatchPaths) > 10 {
+			return v.fail("projects.agent_patch_paths", "at most ten exact relative paths")
+		}
+		seenPatch := map[string]bool{}
+		for _, name := range project.AgentPatchPaths {
+			if !filepath.IsLocal(name) || filepath.Clean(name) != name || strings.ContainsAny(name, "\\\r\n\t") || seenPatch[name] {
+				return v.fail("projects.agent_patch_paths", "unique clean relative paths required")
+			}
+			seenPatch[name] = true
+		}
+
 		if len(project.AgentGrants) > 128 {
 			return v.fail("projects.agent_grants", "at most 128 grants per project")
 		}
 		seen := map[string]bool{}
 		for _, grant := range project.AgentGrants {
 			key := grant.Kind + ":" + grant.Target
-			if (grant.Kind != "action" && grant.Kind != "workflow" && grant.Kind != "experiment") || !ValidName(grant.Target) || len(grant.Digest) != 64 || seen[key] || len(grant.Inputs) > 32 {
+			if (grant.Kind != "action" && grant.Kind != "workflow" && grant.Kind != "experiment" && grant.Kind != "patch") || !ValidName(grant.Target) || len(grant.Digest) != 64 || seen[key] || len(grant.Inputs) > 32 {
 				return v.fail("projects.agent_grants", "expected unique bounded targets with exact 64-character digests")
 			}
 			seen[key] = true

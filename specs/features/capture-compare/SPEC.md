@@ -1,6 +1,6 @@
 # Capture & Compare specification
 
-**Status:** Proposed, version 0.1\
+**Status:** Software implemented, version 1; external verification gates pending\
 **Date:** 2026-09-28\
 **Plan:** [Implementation plan](PLAN.md)\
 **Parent:** [Feature roadmap](../README.md)

@@ -133,3 +133,13 @@ See [PLUGINS.md](PLUGINS.md) for deadlines and OS isolation limits.
 
 See [Experiments and local evidence](EVIDENCE.md) for the CC-1/CC-2 schema, preparation,
 storage, capture, comparison, export, API, CLI, and recovery contracts.
+
+## Durable feature execution
+
+[Evidence](EVIDENCE.md) records reservations before scheduler dispatch and terminal
+outcomes before waiters resume. [Recipe composition](RECIPES.md) publishes reviewed
+configuration changes atomically. [Agent control](AGENT_CONTROL.md) adds frozen context,
+private sessions, effective-definition grants and exact proposal approvals. Bounded
+patches use the same job/run admission, plus a durable staging journal and per-project
+advisory write lock. Interrupted work is recorded without replay. Recovery file states
+remain separate from immutable completed/interrupted run evidence.

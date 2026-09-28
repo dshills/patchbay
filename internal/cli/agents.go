@@ -6,10 +6,26 @@ import (
 	"patchbay/internal/client"
 	"patchbay/internal/jsonstrict"
 	"patchbay/internal/supervisor"
+	"patchbay/pkg/protocol"
 )
 
 func agentCommand(ctx context.Context, c *client.Client, o ctlOptions, command []string) (any, error) {
 	switch command[1] {
+	case "propose-patch":
+		var request struct {
+			Diff      string `json:"diff"`
+			RequestID string `json:"request_id"`
+		}
+		if jsonstrict.Decode([]byte(command[2]), &request) != nil {
+			return nil, usage("Patch proposal requires strict diff/request_id JSON.")
+		}
+		return call[supervisor.Session](ctx, c, "POST", request, "agents", "patches", "propose")
+	case "patches":
+		return call[protocol.PatchList](ctx, c, "GET", nil, "agents", "patches")
+	case "restore":
+		return call[supervisor.Session](ctx, c, "POST", map[string]string{"request_id": command[3]}, "agents", "patches", command[2], "restore")
+	case "forget-patch":
+		return call[map[string]string](ctx, c, "POST", map[string]bool{"confirmed": o.confirm}, "agents", "patches", command[2], "forget")
 	case "grant":
 		return call[supervisor.GrantReview](ctx, c, "GET", nil, "agents", "grants", command[2], command[3])
 	case "review":

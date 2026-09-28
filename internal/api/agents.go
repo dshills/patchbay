@@ -8,6 +8,7 @@ import (
 )
 
 func (h *Handler) agentRoutes() {
+	h.patchRoutes()
 	h.proposalRoutes()
 	h.route("/v1/agents/selection", "GET, PUT", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
@@ -162,5 +163,62 @@ func (h *Handler) proposalRoutes() {
 			return
 		}
 		respond(w, 200, value)
+	})
+}
+
+func (h *Handler) patchRoutes() {
+	h.route("/v1/agents/patches/propose", "POST", func(w http.ResponseWriter, r *http.Request) {
+		var request struct {
+			Diff      string `json:"diff"`
+			RequestID string `json:"request_id"`
+		}
+		if !h.decode(w, r, &request) {
+			return
+		}
+		value, err := h.runtime.ProposePatch(r.Context(), request.Diff, request.RequestID)
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, value)
+	})
+	h.route("/v1/agents/patches", "GET", func(w http.ResponseWriter, r *http.Request) {
+		value, err := h.runtime.PatchHistory(r.Context())
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, protocol.PatchList{Operations: value})
+	})
+	h.route("/v1/agents/patches/{id}/restore", "POST", func(w http.ResponseWriter, r *http.Request) {
+		var request struct {
+			RequestID string `json:"request_id"`
+		}
+		if !h.decode(w, r, &request) {
+			return
+		}
+		value, err := h.runtime.RestorePatch(r.Context(), r.PathValue("id"), request.RequestID)
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, value)
+	})
+	h.route("/v1/agents/patches/{id}/forget", "POST", func(w http.ResponseWriter, r *http.Request) {
+		var request struct {
+			Confirmed bool `json:"confirmed"`
+		}
+		if !h.decode(w, r, &request) {
+			return
+		}
+		if !request.Confirmed {
+			failure(w, fault.New(protocol.ConfirmationRequired, "Confirm removal of private restoration preimages; run evidence is retained separately."))
+			return
+		}
+		if err := h.runtime.ForgetPatch(r.Context(), r.PathValue("id")); err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, map[string]string{"forgotten": r.PathValue("id")})
 	})
 }

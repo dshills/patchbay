@@ -11,7 +11,7 @@ import (
 )
 
 func (r *Runtime) clearAgentSelection() {
-	r.agentSelection = protocol.AgentSelection{Revision: r.agentSelection.Revision + 1, Project: r.context.Project}
+	r.agentSelection = protocol.AgentSelection{Revision: r.agentSelection.Revision + 1, Project: r.context.Project, ReviewRequested: r.agentSelection.ReviewRequested}
 	r.agentReview = ""
 	r.agentReviewUntil = time.Time{}
 }

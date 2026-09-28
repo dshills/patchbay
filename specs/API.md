@@ -271,3 +271,13 @@ has its own version independent of API v1. See [PLUGINS.md](PLUGINS.md).
 
 See [Experiments and local evidence](EVIDENCE.md) for the CC-1/CC-2 schema, preparation,
 storage, capture, comparison, export, API, CLI, and recovery contracts.
+
+## Feature workbench contracts
+
+Capability discovery at `GET /v1/capabilities` includes versioned capture, run store,
+comparison, export, recipes, agent context/proposals/supervision and bounded patches.
+The complete extensions and their strict DTOs are documented in [Evidence](EVIDENCE.md),
+[Recipes](RECIPES.md), [Workbench](WORKBENCH.md) and [Agent control](AGENT_CONTROL.md).
+Agent generation, exact execution approval and patch restoration are separate requests;
+none is an implicit tool invocation from model text. Protected Unix-socket and private
+browser authentication requirements remain unchanged.

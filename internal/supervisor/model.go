@@ -61,6 +61,7 @@ type Start struct {
 	Confirmed   bool   `json:"confirmed"`
 }
 type Suggestion struct {
+	Diff      string         `json:"diff,omitempty"`
 	Kind      string         `json:"kind"`
 	Target    string         `json:"target"`
 	Inputs    map[string]any `json:"inputs,omitempty"`
@@ -126,6 +127,7 @@ type Catalog struct {
 	Targets     []Target `json:"targets"`
 }
 type Target struct {
+	Paths  []string                  `json:"paths,omitempty"`
 	Inputs map[string]protocol.Input `json:"inputs,omitempty"`
 	Kind   string                    `json:"kind"`
 	ID     string                    `json:"id"`
@@ -147,7 +149,10 @@ func ParseOutput(text string) (Output, error) {
 		}
 	}
 	for _, p := range out.Proposals {
-		if (p.Kind != "action" && p.Kind != "workflow" && p.Kind != "experiment") || len(p.Target) == 0 || len(p.Target) > 128 || len(p.Rationale) > 4096 || len(p.Expected) > 4096 || len(p.Inputs) > 32 || len(p.Baseline) > 128 {
+		if (p.Kind != "action" && p.Kind != "workflow" && p.Kind != "experiment" && p.Kind != "patch") || len(p.Target) == 0 || len(p.Target) > 128 || len(p.Rationale) > 4096 || len(p.Expected) > 4096 || len(p.Inputs) > 32 || len(p.Baseline) > 128 {
+			return bad()
+		}
+		if (p.Kind == "patch" && (p.Target != "workspace.apply_patch" || p.Diff == "" || len(p.Inputs) != 0 || p.Baseline != "")) || (p.Kind != "patch" && p.Diff != "") {
 			return bad()
 		}
 		for k, v := range p.Inputs {
@@ -165,6 +170,7 @@ func ParseOutput(text string) (Output, error) {
 }
 
 type ProposalPreview struct {
+	Patch     *protocol.PatchPreview  `json:"patch,omitempty"`
 	ID        string                  `json:"id"`
 	Session   string                  `json:"session"`
 	Proposal  string                  `json:"proposal"`

@@ -26,8 +26,8 @@ def main():
         config = {"version": 1, "server": {"socket": str(socket)},
                   "state": {"path": str(root / "state.json")},
                   "context": {"defaults": {"project": "demo"}},
-                  "projects": {"demo": {"name": "Agent demonstration", "path": str(root)}},
-                  "agents": {"proposals": {"enabled": True, "demo": True}},
+                  "projects": {"demo": {"name": "Agent demonstration", "path": str(root), "agent_patch_paths": ["editable.txt"]}},
+                  "agents": {"proposals": {"enabled": True, "demo": True, "patches": True}},
                   "actions": {"measure": {"type": "exec", "command": str(bundle / "bin/deckdemo"),
                                             "args": ["--iterations", "100", "--repeats", "2"], "safety": "safe"}},
                   "experiments": {"benchmark": {"schema_version": 1, "title": "Benchmark Playground",
@@ -66,6 +66,13 @@ def main():
                 time.sleep(0.02)
             raise RuntimeError("agent fixture timed out")
 
+        editable = root / "editable.txt"
+        editable.write_text("old\n")
+        (root / ".gitignore").write_text("*\n!editable.txt\n!.gitignore\n")
+        for command in (["init", "-q"], ["add", "editable.txt", ".gitignore"],
+                        ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "fixture"]):
+            subprocess.run(["git", "-C", str(root), *command], env=env, check=True, timeout=10,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         save()
         process = subprocess.Popen([str(bundle / "bin/deckd"), "--config", str(config_path)],
                                    env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -78,7 +85,7 @@ def main():
             catalog = call("GET", "agents/catalog")
             assert catalog["available"] and catalog["destination"].startswith("local:") and not catalog["targets"]
             features = call("GET", "capabilities")["features"]
-            assert all(features[key] == 1 for key in ("agent_context", "agent_proposals", "agent_supervision"))
+            assert all(features[key] == 1 for key in ("agent_context", "agent_proposals", "agent_supervision", "agent_patches"))
             assert not call("GET", "recipes")["installations"]
             grant = call("GET", "agents/grants/experiment/benchmark")
             assert grant["experiment"]["action"] == "measure"
@@ -109,8 +116,41 @@ def main():
             comparison = call("POST", "comparisons", {"baseline": {"kind": "run", "id": baseline["id"]},
                                                        "candidate": {"kind": "run", "id": run["id"]}})
             assert comparison["metrics"][0]["unit"] == "ms" and "delta" in comparison["metrics"][0]
+            patch_grant = call("GET", "agents/grants/patch/workspace.apply_patch")
+            assert patch_grant["target"]["paths"] == ["editable.txt"]
+            config["projects"]["demo"]["agent_grants"].append(
+                {"kind": "patch", "target": "workspace.apply_patch", "digest": patch_grant["target"]["digest"]})
+            save()
+            call("POST", "config/reload", {})
+            diff = "--- a/editable.txt\n+++ b/editable.txt\n@@ -1,1 +1,1 @@\n-old\n+new\n"
+            proposal = call("POST", "agents/patches/propose", {"diff": diff,
+                            "request_id": request({"id": "", "digest": ""})["request_id"]})["proposals"][0]["id"]
+            full = call("POST", f"agents/proposals/{proposal}/prepare", {})
+            assert full["patch"]["diff"] == diff and editable.read_text() == "old\n"
+            approval = request(full)
+            applied = call("POST", f"agents/proposals/{proposal}/approve", approval)
+            assert call("POST", f"agents/proposals/{proposal}/approve", approval) == applied
+            result = wait("runs/" + applied["run_id"], ("queued", "running"))
+            assert result["state"] == "success" and result["outcomes"][0]["patch"]["files"][0]["state"] == "applied"
+            assert editable.read_text() == "new\n"
+            # Validation is a separate reviewed capture; patch application cannot start it.
+            validation = call("POST", "captures", request(call("POST", "captures/prepare", {"experiment": "benchmark"})))
+            validated = wait("runs/" + validation["run_id"], ("queued", "running"))
+            assert validated["state"] == "success"
+            call("POST", "comparisons", {"baseline": {"kind": "run", "id": baseline["id"]},
+                                          "candidate": {"kind": "run", "id": validated["id"]}})
+            history = call("GET", "agents/patches")["operations"]
+            assert len(history) == 1 and history[0]["operation"] == proposal
+            restoration = call("POST", f"agents/patches/{proposal}/restore", {
+                "request_id": request({"id": "", "digest": ""})["request_id"]})["proposals"][0]["id"]
+            restore_preview = call("POST", f"agents/proposals/{restoration}/prepare", {})
+            assert editable.read_text() == "new\n"
+            restored = call("POST", f"agents/proposals/{restoration}/approve", request(restore_preview))
+            assert wait("runs/" + restored["run_id"], ("queued", "running"))["state"] == "success"
+            assert editable.read_text() == "old\n"
             print(json.dumps({"agent_demo": "offline fixture", "generations": 1, "approved_actions": 1,
-                              "measured_runs": 2, "comparison": "duration in ms", "recipes_required": False}))
+                              "measured_runs": 3, "comparison": "duration in ms", "recipes_required": False,
+                              "patch_applications": 1, "separate_validations": 1, "reviewed_restorations": 1}))
         finally:
             process.terminate()
             try:

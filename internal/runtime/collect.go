@@ -51,6 +51,11 @@ func captureCollector(store *evidence.Store, run *protocol.Run, plan *prepared, 
 		started, finished = started.UTC(), finished.UTC()
 
 		outcome := protocol.StepOutcome{Index: leaf, Action: p.name, State: string(result.Status), StartedAt: &started, FinishedAt: &finished, Truncated: result.Data["truncated"] == true, Error: fault.Safe(executeErr)}
+		if p.kind == "patch" {
+			if patch, ok := result.Data["patch"].(protocol.PatchOutcome); ok {
+				outcome.Patch = &patch
+			}
+		}
 		if p.kind == "scpi" {
 			if observation, ok := result.Data["instrument"].(*protocol.InstrumentObservation); ok {
 				outcome.Instrument = evidence.Clone(observation)
