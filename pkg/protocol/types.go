@@ -283,6 +283,7 @@ type ProviderHealth struct {
 	Code      string `json:"code,omitempty"`
 }
 type Status struct {
+	Instance    string                      `json:"instance"`
 	Plugins     map[string]PluginStatus     `json:"plugins,omitempty"`
 	Devices     map[string]InstrumentStatus `json:"devices,omitempty"`
 	Version     string                      `json:"version"`

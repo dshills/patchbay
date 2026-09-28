@@ -397,7 +397,7 @@ func (r *Runtime) Status() protocol.Status {
 		}
 		providers[name] = health
 	}
-	return protocol.Status{Version: version.Current().Version, UptimeMS: time.Since(r.started).Milliseconds(), ConfigPath: r.path, Project: r.context.Project, Mode: r.context.Mode, RunningJobs: r.jobs.Running(), Generation: r.generation, Providers: providers, Devices: devices, Plugins: plugins}
+	return protocol.Status{Instance: r.instance, Version: version.Current().Version, UptimeMS: time.Since(r.started).Milliseconds(), ConfigPath: r.path, Project: r.context.Project, Mode: r.context.Mode, RunningJobs: r.jobs.Running(), Generation: r.generation, Providers: providers, Devices: devices, Plugins: plugins}
 }
 
 func (r *Runtime) Close(ctx context.Context) error {

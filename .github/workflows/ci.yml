@@ -52,3 +52,26 @@ jobs:
           cmp dist/SHA256SUMS .cache/release-repeat/SHA256SUMS
           make streamdeck-package VERSION=0.3.0 COMMIT="$(git rev-parse HEAD)" BUILD_TIME=2026-09-28T00:00:00Z RELEASE_FLAGS='--output .cache/streamdeck-repeat'
           cmp dist/DECKSD-SHA256SUMS .cache/streamdeck-repeat/DECKSD-SHA256SUMS
+
+  workbench-browser:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npx playwright install chromium
+      - run: make build
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workbench-screenshots
+          path: .cache/workbench-*.png

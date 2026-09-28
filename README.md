@@ -122,3 +122,19 @@ verification. For the technical details, see the [specification](specs/SPEC.md),
 ## License
 
 Patchbay is available under the [MIT License](LICENSE).
+
+## Capture and compare
+
+The new local workbench lets you change a parameter, save a run, choose a baseline,
+and see what changed. Start with the offline benchmark playground:
+
+```sh
+make build
+bin/deckd --config configs/benchmark.yaml
+# In another terminal:
+bin/deckctl workbench --socket .cache/benchmark/deckd.sock
+```
+
+No equipment or AI account is needed. Save notes, pin useful results, and download
+an offline HTML report after reviewing exactly what it includes.
+See the [workbench guide](specs/WORKBENCH.md) and [CLI walkthrough](specs/EVIDENCE.md).

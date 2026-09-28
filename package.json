@@ -1,0 +1,6 @@
+{
+  "name": "patchbay-workbench-tests",
+  "private": true,
+  "scripts": { "test:browser": "node --test tests/workbench.test.cjs" },
+  "devDependencies": { "playwright": "1.59.1" }
+}

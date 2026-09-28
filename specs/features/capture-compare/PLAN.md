@@ -1,6 +1,6 @@
 # Capture & Compare implementation plan
 
-**Status:** CC-1 and CC-2 complete; CC-3 in progress\
+**Status:** CC-1–CC-3 software complete; CC-4 in progress. Manual screen-reader verification remains pending.\
 **Specification:** [Capture & Compare](SPEC.md)\
 **Dependencies:** Existing runtime/release tooling; no recipes or agent execution required.
 
@@ -100,17 +100,17 @@ evidence for applicable paths. An interrupted experiment is never silently retri
 
 **Depends on:** CC-2.
 
-- [ ] Add the explicitly launched loopback helper to `deckctl`, packaged static assets,
+- [x] Add the explicitly launched loopback helper to `deckctl`, packaged static assets,
   Unix-socket connection, session-token lifecycle, exact Host/Origin rules, restricted
   routes, CSP, request limits, and bounded shutdown. Keep `deckd` transport unchanged.
-- [ ] Build project/experiment selection, declared parameter controls, action preview,
+- [x] Build project/experiment selection, declared parameter controls, action preview,
   confirmation, run/cancel, baseline selection, charts/tables, annotations, storage
   management, export preview, and download.
-- [ ] Add authoritative polling, hidden-tab backoff, stale-state disabling, reconnect
+- [x] Add authoritative polling, hidden-tab backoff, stale-state disabling, reconnect
   resynchronization, and clear job/run outcome distinctions.
-- [ ] Cover first-run/sample, empty, disconnected, missing dependency, full storage,
+- [x] Cover first-run/sample, empty, disconnected, missing dependency, full storage,
   interrupted, malformed result, and incompatible comparison states.
-- [ ] Make controls keyboard accessible, label units and desired/observed values,
+- [x] Make controls keyboard accessible, label units and desired/observed values,
   provide chart data tables, and preserve visible focus at common window sizes.
 
 **Verification:** Browser integration against a real temporary daemon; authenticated
@@ -125,6 +125,9 @@ main/error states, and documented launch/session behavior.
 is recorded. The client performs no execution that bypasses daemon policy.
 
 **Commit boundary:** Browser bridge; workbench controls; comparison/history/export UI.
+
+**Evidence:** [CC-3 review and verification](../../reviews/CC3.md),
+[workbench guide](../../WORKBENCH.md). Manual screen-reader verification is pending.
 
 ## CC-4 — Packaged first experience
 
