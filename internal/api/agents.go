@@ -8,6 +8,7 @@ import (
 )
 
 func (h *Handler) agentRoutes() {
+	h.proposalRoutes()
 	h.route("/v1/agents/catalog", "GET", func(w http.ResponseWriter, r *http.Request) { respond(w, 200, h.runtime.AgentCatalog(r.Context())) })
 	h.route("/v1/agents/context/prepare", "POST", func(w http.ResponseWriter, r *http.Request) {
 		var request supervisor.Selection
@@ -72,5 +73,66 @@ func (h *Handler) agentRoutes() {
 			return
 		}
 		respond(w, 200, map[string]string{"forgotten": r.PathValue("id")})
+	})
+}
+
+func (h *Handler) proposalRoutes() {
+	h.route("/v1/agents/grants/{kind}/{id}", "GET", func(w http.ResponseWriter, r *http.Request) {
+		value, err := h.runtime.InspectAgentGrant(r.Context(), r.PathValue("kind"), r.PathValue("id"))
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, value)
+	})
+	h.route("/v1/agents/proposals/{id}/prepare", "POST", func(w http.ResponseWriter, r *http.Request) {
+		var request struct{}
+		if !h.decode(w, r, &request) {
+			return
+		}
+		value, err := h.runtime.PrepareAgentProposal(r.Context(), r.PathValue("id"))
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, value)
+	})
+	h.route("/v1/agents/proposals/{id}/approve", "POST", func(w http.ResponseWriter, r *http.Request) {
+		var request supervisor.Approve
+		if !h.decode(w, r, &request) {
+			return
+		}
+		value, err := h.runtime.ApproveAgentProposal(r.Context(), r.PathValue("id"), request)
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, value)
+	})
+	h.route("/v1/agents/proposals/{id}/reject", "POST", func(w http.ResponseWriter, r *http.Request) {
+		var request struct{}
+		if !h.decode(w, r, &request) {
+			return
+		}
+		value, err := h.runtime.RejectAgentProposal(r.Context(), r.PathValue("id"))
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, value)
+	})
+	h.route("/v1/agents/proposals/{id}/duplicate", "POST", func(w http.ResponseWriter, r *http.Request) {
+		var request struct {
+			RequestID string `json:"request_id"`
+		}
+		if !h.decode(w, r, &request) {
+			return
+		}
+		value, err := h.runtime.DuplicateAgentProposal(r.Context(), r.PathValue("id"), request.RequestID)
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		respond(w, 200, value)
 	})
 }

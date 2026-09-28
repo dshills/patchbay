@@ -27,7 +27,7 @@ type capturePreparation struct {
 }
 
 func (r *Runtime) Capabilities() protocol.Capabilities {
-	return protocol.Capabilities{Features: map[string]int{"agent_context": 1, "outcome_collectors": 1, "recipes": 1, "experiment_preparation": 1, "run_store": 1, "capture": 1, "comparison": 1, "export": 1}, Schemas: map[string]int{"recipe": 1, "experiment": 1, "run": 1, "series": 1, "artifact": 1}}
+	return protocol.Capabilities{Features: map[string]int{"agent_context": 1, "agent_proposals": 1, "outcome_collectors": 1, "recipes": 1, "experiment_preparation": 1, "run_store": 1, "capture": 1, "comparison": 1, "export": 1}, Schemas: map[string]int{"recipe": 1, "experiment": 1, "run": 1, "series": 1, "artifact": 1}}
 }
 func (r *Runtime) Experiments() protocol.ExperimentList {
 	r.mu.Lock()
@@ -81,6 +81,9 @@ func (r *Runtime) prepareCapture(ctx context.Context, request protocol.CapturePr
 	if len(e.Projects) > 0 && !slices.Contains(e.Projects, r.context.Project) {
 		return protocol.CapturePreview{}, fault.New(protocol.InvalidRequest, "Experiment is not available in this project.")
 	}
+	return r.prepareExperiment(ctx, e, wrapper, nil, nil)
+}
+func (r *Runtime) prepareExperiment(ctx context.Context, e protocol.Experiment, wrapper *config.Action, overrides, parameterOverrides map[string]any) (protocol.CapturePreview, error) {
 	now := time.Now()
 	for id, p := range r.captures {
 		if !now.Before(p.preview.ExpiresAt) {
@@ -100,6 +103,9 @@ func (r *Runtime) prepareCapture(ctx context.Context, request protocol.CapturePr
 		if p.Sensitive {
 			return protocol.CapturePreview{}, fault.New(protocol.InvalidRequest, "Sensitive inputs cannot be captured.")
 		}
+		if value, ok := parameterOverrides[mapping.Parameter]; ok {
+			p.Value = value
+		}
 		parameters[mapping.Parameter] = p.Value
 		if bindings.values[mapping.Step] == nil {
 			bindings.values[mapping.Step] = map[string]any{}
@@ -110,7 +116,7 @@ func (r *Runtime) prepareCapture(ctx context.Context, request protocol.CapturePr
 	var plan *prepared
 	var err error
 	if e.Action != "" {
-		plan, err = r.prepareActionBound(ctx, e.Action, nil, &remaining, bindings)
+		plan, err = r.prepareActionBound(ctx, e.Action, overrides, &remaining, bindings)
 	} else {
 		plan, err = r.prepareWorkflowBound(ctx, e.Workflow, &remaining, bindings)
 	}

@@ -1,6 +1,6 @@
 # Agent Control Panel implementation plan
 
-**Status:** AC-1 implemented; AC-2 through AC-5 next\
+**Status:** AC-1 and AC-2 implemented; AC-3 through AC-5 next\
 **Specification:** [Agent Control Panel](SPEC.md)\
 **Dependencies:** CC-1 through CC-4 for evidence, previews, workbench and packaged onboarding. Recipes are optional.
 
@@ -46,24 +46,24 @@ AC-1 review and deterministic evidence: [AC1.md](../../reviews/AC1.md).
 
 **Depends on:** AC-1 and CC preparation/admission contracts.
 
-- [ ] Define strict versioned proposal schema, final-output parser, bounded suggestions,
+- [x] Define strict versioned proposal schema, final-output parser, bounded suggestions,
   independent IDs/digests, and context-reference validation. Never parse partial text
   into actions; malformed output produces a visible failure without automatic retry.
-- [ ] Add per-project action grants with complete effective-definition digests and
+- [x] Add per-project action grants with complete effective-definition digests and
   typed input narrowing. Resolve all overrides/nested steps and reject protected
   provider operations, recursion, agent generation and recipe/config management.
-- [ ] Construct previews from actual prepared runtime definitions, including effective
+- [x] Construct previews from actual prepared runtime definitions, including effective
   command, arguments, project and relevant preconditions. Treat model rationale as
   explanatory text only. No model-controlled field supplies confirmation or policy.
-- [ ] Preserve positions and declared reference sources for masked secrets, reject
+- [x] Preserve positions and declared reference sources for masked secrets, reject
   model-supplied sensitive inputs, and test that redaction never hides secret usage.
-- [ ] Add token expiry, selection revisions, generation/context/input invalidation,
+- [x] Add token expiry, selection revisions, generation/context/input invalidation,
   explicit approve/reject, queue-full behavior and exact request-ID deduplication.
-- [ ] Integrate durable approval plus run reservation before dispatch, using the
+- [x] Integrate durable approval plus run reservation before dispatch, using the
   existing scheduler and permissions. Audit failure must fail closed before effects.
-- [ ] Implement per-session sequencing, no worker held while awaiting review, one
+- [x] Implement per-session sequencing, no worker held while awaiting review, one
   approved proposal at a time, remaining-proposal reevaluation and cancellation races.
-- [ ] Record child jobs as CC runs with declared collectors or bounded outcomes;
+- [x] Record child jobs as CC runs with declared collectors or bounded outcomes;
   attach baseline links and comparisons without inferring measurements from logs.
 
 **Verification:** Injection corpus with plausible allowed-looking but invalid targets;
@@ -79,6 +79,8 @@ review/approve/reject, and threat/failure test matrix.
 configured helper commands. Every generated operation requires its own explicit review.
 
 **Commit boundary:** Proposal parser/grants; preview/approval; execution/audit lifecycle.
+
+AC-2 review and deterministic evidence: [AC2.md](../../reviews/AC2.md).
 
 ## AC-3 — Workbench and physical supervision
 

@@ -43,6 +43,7 @@ type Options struct {
 	Agent      provider.Agent
 }
 type Runtime struct {
+	proposalPreviews     map[string]agentProposalPreparation
 	sessions             *supervisor.Store
 	sessionError         error
 	contexts             map[string]agentContextPreparation
@@ -178,7 +179,9 @@ func NewConfigured(path string, c *config.Config, options Options) (*Runtime, er
 	}
 	r.runs, r.storageError = evidence.Open(c.Runs.Path, evidence.Limits{MaxRuns: c.Runs.MaxRuns, MaxBytes: c.Runs.MaxBytes, MaxRunBytes: c.Runs.MaxRunBytes, MaxArtifactBytes: c.Runs.MaxArtifactBytes, MaxReceipts: c.Runs.MaxReceipts}, options.Evidence)
 	r.sessions, r.sessionError = supervisor.Open(c.State.Path+".agents", options.Supervisor)
+	r.reconcileAgentRuns()
 	r.contexts = map[string]agentContextPreparation{}
+	r.proposalPreviews = map[string]agentProposalPreparation{}
 	r.captureKey = []byte(identity.New() + identity.New())
 	r.captures = map[string]capturePreparation{}
 	r.bus = event.New(c.Events.SubscriberCapacity)

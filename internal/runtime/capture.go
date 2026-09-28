@@ -22,7 +22,19 @@ func (r *Runtime) Capture(ctx context.Context, request protocol.CaptureRequest) 
 	defer r.mu.Unlock()
 	return r.capture(ctx, request, nil, context.Background())
 }
+
+type captureHooks struct {
+	After     func()
+	Digest    string
+	Agent     *protocol.AgentOrigin
+	Before    func(protocol.CaptureResponse) error
+	Completed func(job.Job, string)
+}
+
 func (r *Runtime) capture(ctx context.Context, request protocol.CaptureRequest, admitted **job.Handle, parent context.Context) (protocol.CaptureResponse, error) {
+	return r.captureWith(ctx, request, admitted, parent, nil)
+}
+func (r *Runtime) captureWith(ctx context.Context, request protocol.CaptureRequest, admitted **job.Handle, parent context.Context, hooks *captureHooks) (protocol.CaptureResponse, error) {
 	if err := r.writable(ctx); err != nil {
 		return protocol.CaptureResponse{}, err
 	}
@@ -31,6 +43,9 @@ func (r *Runtime) capture(ctx context.Context, request protocol.CaptureRequest, 
 	}
 	content, _ := json.Marshal(request)
 	digest := evidence.Digest(content)
+	if hooks != nil {
+		digest = hooks.Digest
+	}
 	if response, known, err := r.runs.Lookup(request.RequestID, digest); known {
 		return response, err
 	}
@@ -43,6 +58,9 @@ func (r *Runtime) capture(ctx context.Context, request protocol.CaptureRequest, 
 		return protocol.CaptureResponse{}, err
 	}
 	run := protocol.Run{Experiment: prep.experiment, ExperimentDigest: prep.preview.ExperimentDigest, PlanDigest: prep.preview.Digest, Project: prep.preview.Context.Project, Context: protocol.Context{Project: prep.preview.Context.Project, Mode: prep.preview.Context.Mode}, Instance: r.instance, Generation: r.generation, RequestID: request.RequestID, RequestDigest: digest, Parameters: prep.preview.Parameters, Steps: prep.preview.Steps}
+	if hooks != nil {
+		run.Agent = hooks.Agent
+	}
 	for prefix, origin := range r.recipeComposition.Origins {
 		if strings.HasPrefix(prep.experiment.ID, prefix) {
 			copy := origin
@@ -53,6 +71,9 @@ func (r *Runtime) capture(ctx context.Context, request protocol.CaptureRequest, 
 	root := r.cfg.Projects[r.context.Project].Path
 	budget := provider.NewBudget(r.cfg.Jobs.OutputLimitBytes)
 	handle, err := r.jobs.SubmitDurable(parent, "experiment."+prep.experiment.ID, r.generation, prep.plan.timeout, func(jobCtx context.Context, jobID string) (action.Result, error) {
+		if hooks != nil && hooks.After != nil {
+			defer hooks.After()
+		}
 		local, err := r.runs.Get(response.RunID)
 		if err != nil {
 			return action.Result{}, err
@@ -87,8 +108,25 @@ func (r *Runtime) capture(ctx context.Context, request protocol.CaptureRequest, 
 			return fault.New(protocol.RequestConflict, "Capture already admitted.")
 		}
 		response = value
+		if err == nil && hooks != nil && hooks.Before != nil {
+			err = hooks.Before(value)
+			if err != nil {
+				if saved, getErr := r.runs.Get(value.RunID); getErr == nil {
+					now := time.Now().UTC()
+					saved.State = "recording_failed"
+					saved.FinishedAt = &now
+					saved.Error = fault.New(protocol.RecordingFailed, "Approval audit failed before dispatch; no action was run.")
+					if updateErr := r.runs.Update(saved); updateErr != nil {
+						r.runs.RecordingFailure(saved.ID, saved)
+					}
+				}
+			}
+		}
 		return err
 	}, Completed: func(finished job.Job) {
+		if hooks != nil && hooks.Completed != nil {
+			defer hooks.Completed(finished, response.RunID)
+		}
 		saved, err := r.runs.Get(response.RunID)
 		if err != nil {
 			return

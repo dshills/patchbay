@@ -175,7 +175,12 @@ type WaveformObservation struct {
 	Preamble        []float64        `json:"preamble,omitempty"`
 }
 
+type AgentOrigin struct {
+	Session  string `json:"session"`
+	Proposal string `json:"proposal"`
+}
 type Run struct {
+	Agent            *AgentOrigin       `json:"agent,omitempty"`
 	Recipe           *RecipeOrigin      `json:"recipe,omitempty"`
 	Context          Context            `json:"context"`
 	Outcomes         []StepOutcome      `json:"outcomes,omitempty"`

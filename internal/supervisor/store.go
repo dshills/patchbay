@@ -1,6 +1,10 @@
 package supervisor
 
 import (
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
@@ -27,18 +31,21 @@ type Receipt struct {
 	At      time.Time `json:"at"`
 }
 type saved struct {
+	Key      string             `json:"key,omitempty"`
 	Version  int                `json:"version"`
 	Written  time.Time          `json:"written"`
 	Sessions map[string]Session `json:"sessions"`
 	Receipts map[string]Receipt `json:"receipts"`
 }
 type Store struct {
-	mu      sync.Mutex
-	root    *os.Root
-	lock    *localfs.Lock
-	data    saved
-	options Options
-	failed  bool
+	proposalIndex map[string]string
+	mu            sync.Mutex
+	root          *os.Root
+	lock          *localfs.Lock
+	data          saved
+	options       Options
+	failed        bool
+	boot          bool
 }
 
 func Open(path string, options Options) (*Store, error) {
@@ -57,7 +64,7 @@ func Open(path string, options Options) (*Store, error) {
 		_ = root.Close()
 		return nil, err
 	}
-	s := &Store{root: root, lock: lock, options: options, data: saved{Version: 1, Sessions: map[string]Session{}, Receipts: map[string]Receipt{}}}
+	s := &Store{boot: true, root: root, lock: lock, options: options, data: saved{Version: 1, Sessions: map[string]Session{}, Receipts: map[string]Receipt{}}}
 	// A single fixed staging leaf bounds crash leftovers. Never promote it.
 	if info, err := root.Lstat("sessions.pending"); err == nil {
 		if !info.Mode().IsRegular() || !localfs.Owned(info) || info.Mode().Perm()&0077 != 0 || info.Size() > MaxStorage {
@@ -110,10 +117,18 @@ func Open(path string, options Options) (*Store, error) {
 		_ = s.Close()
 		return nil, err
 	}
+	if s.data.Key == "" {
+		s.data.Key = rand.Text() + rand.Text()
+		if err := s.persist(s.data); err != nil {
+			_ = s.Close()
+			return nil, err
+		}
+	}
+	s.boot = false
 	return s, nil
 }
 func (s *Store) inject(op string) error {
-	if s.options.Fault != nil {
+	if s.options.Fault != nil && !s.boot {
 		return s.options.Fault(op)
 	}
 	return nil
@@ -165,6 +180,7 @@ func (s *Store) persist(next saved) (result error) {
 	}
 	// After rename an uncertain directory sync must never permit another dispatch.
 	s.data = next
+	s.indexProposals()
 	dir, err := s.root.Open(".")
 	if err == nil {
 		err = s.inject("directory_sync")
@@ -318,4 +334,80 @@ func (s *Store) RecordingFailure(id string) {
 		v.Error = fault.New(protocol.RecordingFailed, "Agent finished but its audit could not be saved. Restart and inspect storage; no retry was sent.")
 		s.data.Sessions[id] = v
 	}
+}
+
+// Sign makes definition digests stable locally without publishing hashes of secret values.
+func (s *Store) Sign(value any) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	b, _ := json.Marshal(value)
+	mac := hmac.New(sha256.New, []byte(s.data.Key))
+	_, _ = mac.Write(b)
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+func (s *Store) Writable() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return !s.failed && !s.options.Now().Before(s.data.Written)
+}
+
+// ReconcileRuns batches recovery links in one transaction and copies each session
+// only as part of the single bounded metadata snapshot.
+func (s *Store) ReconcileRuns(links []evidence.AgentReservation) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(links) == 0 {
+		return nil
+	}
+	next := evidence.Clone(s.data)
+	changed := false
+	for _, run := range links {
+		session, ok := next.Sessions[run.Session]
+		if !ok {
+			continue
+		}
+		for i, p := range session.Proposals {
+			if p.ID != run.Proposal || p.RunID == run.RunID && p.State == run.State {
+				continue
+			}
+			session.Proposals[i].RunID = run.RunID
+			session.Proposals[i].JobID = run.JobID
+			session.Proposals[i].State = run.State
+			session.Proposals[i].Message = "Recovered saved evidence; no operation was replayed."
+			session.JobID = run.JobID
+			if session.State == "executing" || session.State == "awaiting_review" {
+				session.State = "interrupted"
+			}
+			changed = true
+		}
+		next.Sessions[run.Session] = session
+	}
+	if !changed {
+		return nil
+	}
+	return s.persist(next)
+}
+
+func (s *Store) indexProposals() {
+	s.proposalIndex = map[string]string{}
+	for id, session := range s.data.Sessions {
+		for _, p := range session.Proposals {
+			s.proposalIndex[p.ID] = id
+		}
+	}
+}
+func (s *Store) FindProposal(id string) (Session, int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	sessionID, ok := s.proposalIndex[id]
+	if ok {
+		session := s.data.Sessions[sessionID]
+		for i, p := range session.Proposals {
+			if p.ID == id {
+				return evidence.Clone(session), i, nil
+			}
+		}
+	}
+	return Session{}, 0, fault.New(protocol.NotFound, "Proposal not found.")
 }

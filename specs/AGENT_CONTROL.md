@@ -55,7 +55,7 @@ at most two active generations, 64 context previews and 16 MiB of frozen preview
 input. Each generation also uses the ordinary bounded job scheduler and a ten-minute
 deadline. Provider output is capped at 64 KiB and parsed only after completion.
 The output format is schema 1 with a summary, selected context references and at
-most eight suggestions. AC-1 displays an explanation and grants no execution authority.
+most eight suggestions. Explanation alone grants no execution authority; configured grants and a separate approval are required for every proposed operation.
 
 By default the store retains selection metadata/hashes and the model response;
 exact submitted context is retained only when **Retain the exact submitted context**
@@ -95,8 +95,102 @@ deckctl agent forget SESSION --confirm
 are `GET /v1/agents/catalog`, `POST /v1/agents/context/prepare`, `GET|POST
 /v1/agents/sessions`, `GET|DELETE /v1/agents/sessions/{id}` and `POST
 /v1/agents/sessions/{id}/forget`. The last requires `{"confirmed":true}`. Capability
-`agent_context:1` advertises the selected-context/session contract. It does not
-advertise proposal execution or patches before those increments are implemented.
+`agent_context:1` advertises the selected-context/session contract. Proposal execution has its own `agent_proposals:1` capability. Patches remain unavailable until their separate increment.
 
 No live provider account or physical controls have been verified by the deterministic
 fixtures. Such checks require separately reviewed context and recorded device evidence.
+
+## Grant an action, then approve one proposal
+
+`agent_proposals:1` adds execution review. An empty catalog grants no execution.
+Inspect a configured target before editing local configuration:
+
+```sh
+deckctl agent grant action project.test --json
+# Also supported: workflow TARGET or experiment TARGET.
+```
+
+The result shows effective reachable actions, workflow arguments, project, input
+schemas and a local definition digest. Environment names and sensitive input
+references remain visible; secret values are masked. Add the reviewed digest to
+that project's `agent_grants`, then reload:
+
+```yaml
+projects:
+  demo:
+    name: Demo
+    path: /absolute/project
+    agent_grants:
+      - kind: action
+        target: project.test
+        digest: COPY_THE_REVIEWED_64_CHARACTER_DIGEST
+        inputs: {}
+```
+
+No generated content or recipe can add a grant. Supported targets are explicit
+exec actions, Git `status`/`diff`/`log`, and workflows/experiments containing only
+those operations. Every wrapper and nested step is checked. SCPI, plugins, open,
+Git writes, dangerous actions, agent generation, recipe/config management and
+recursion are excluded. Arbitrary granted executables remain trusted code running
+as your user, with possible filesystem/network effects. This is not an OS sandbox.
+
+The digest covers reachable effective definitions, workflow structure, experiment
+mappings/collectors, project metadata/environment and inherited environment. It is
+signed with a private persistent local key, so publishing the digest does not
+publish a guessable hash of secret environment values. Changed definitions or an
+inherited environment change invalidate the grant; inspect and replace the digest
+explicitly. Grants are local and must not be copied to another installation.
+
+Only inputs listed under a grant's `inputs` can be supplied by a model. Use the
+same declared type and optional narrower `min`/`max`/`enum`; both original and grant
+bounds are checked, including effective defaults. A grant cannot add defaults or
+sensitive inputs. Omitted action inputs retain configured defaults; workflows have
+no top-level inputs. Experiment inputs use mapped parameter names, affect only the
+prepared run, and leave persistent parameter values unchanged. The uploaded catalog
+contains these allowed targets and public input schemas; review it with the rest of
+the exact upload.
+
+Final schema-1 suggestions have `kind`, `target`, optional scalar `inputs`,
+`rationale`, `expected_outcome`, and optional existing `baseline_run_id`. Unknown
+fields, versions, non-scalar inputs, more than eight suggestions or truncated output
+fail visibly without another generation. Invalid targets are marked invalidated;
+valid suggestions become independent pending proposals for ten minutes.
+
+```sh
+deckctl agent show SESSION
+deckctl agent review PROPOSAL --json
+deckctl request-id
+# Review the full command, argument positions, project and context hashes:
+deckctl agent approve PROPOSAL PREPARATION DIGEST REQUEST_ID --confirm
+deckctl agent reject PROPOSAL
+# An expired pending suggestion can be explicitly revalidated without a model call:
+deckctl agent duplicate PROPOSAL NEW_REQUEST_ID
+```
+
+Each review creates a one-use, 60-second approval. At most 64 active proposal
+previews / 16 MiB of private prepared plans are retained. Approval binds the exact
+proposal, context, selected file hashes, Git observation, config generation,
+parameter/control revision and effective grant. A pending on-disk config edit also
+blocks approval until reload/review. No generic `confirmed` capture call can execute
+an agent's private prepared plan. A full queue preserves the token until expiry.
+
+Run reservation and the session decision are both durable before dispatch. The run
+contains immutable agent session/proposal provenance and the exact approval request
+digest. Same-request retries return the same job/run after a dropped response or
+restart. An audit failure after reservation records an unexecuted failed reservation
+and closes further agent admission; it never dispatches the action. Crash recovery
+links reserved runs to sessions and never retries them. One proposal per session
+may execute; other proposals remain choices requiring their own reviews. After
+execution, changed preconditions invalidate remaining suggestions.
+
+Actions/workflows without collectors still save bounded daemon-owned step outcomes
+and timestamps. Experiments retain their declared measurements and artifacts, and
+can be compared through the ordinary run comparison API. Expected outcomes and
+model explanations never count as test results. Sensitive defaults are masked in
+preview and run metadata while preserving argument positions and input references;
+configured executables can still print them in ordinary job output.
+
+Additional endpoints: `GET /v1/agents/grants/{kind}/{id}` and `POST
+/v1/agents/proposals/{id}/{prepare,approve,reject,duplicate}`. Prepare/reject accept
+an empty object; duplicate takes `request_id`; approve takes `preparation`, `digest`,
+`request_id` and `confirmed`. These routes never treat model text as authorization.

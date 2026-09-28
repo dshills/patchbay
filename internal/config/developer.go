@@ -60,6 +60,33 @@ func (v *validator) developerConfig(c *Config, baseDir, home string) error {
 	if c.Agents.Codex.MaxOutputTokens < 16 || c.Agents.Codex.MaxOutputTokens > 32768 {
 		return v.fail("agents.codex.max_output_tokens", "expected 16 through 32768 tokens")
 	}
+	for _, project := range c.Projects {
+		if len(project.AgentGrants) > 128 {
+			return v.fail("projects.agent_grants", "at most 128 grants per project")
+		}
+		seen := map[string]bool{}
+		for _, grant := range project.AgentGrants {
+			key := grant.Kind + ":" + grant.Target
+			if (grant.Kind != "action" && grant.Kind != "workflow" && grant.Kind != "experiment") || !ValidName(grant.Target) || len(grant.Digest) != 64 || seen[key] || len(grant.Inputs) > 32 {
+				return v.fail("projects.agent_grants", "expected unique bounded targets with exact 64-character digests")
+			}
+			seen[key] = true
+			for _, ch := range grant.Digest {
+				if !strings.ContainsRune("0123456789abcdef", ch) {
+					return v.fail("projects.agent_grants.digest", "expected a hexadecimal digest")
+				}
+			}
+			for name, input := range grant.Inputs {
+				if !ValidName(name) || input.Sensitive || input.Default != nil {
+					return v.fail("projects.agent_grants.inputs", "grant inputs cannot add defaults or sensitive values")
+				}
+				d := input.definition()
+				if err := d.Normalize(); err != nil {
+					return v.fail("projects.agent_grants.inputs."+name, err.Error())
+				}
+			}
+		}
+	}
 	for language, commands := range c.Conventions {
 		if _, ok := conventionDefaults[language]; !ok {
 			return v.fail("conventions", "supported languages are go, node, and python")

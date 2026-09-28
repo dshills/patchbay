@@ -85,6 +85,7 @@ type Proposal struct {
 	Message    string     `json:"message,omitempty"`
 }
 type Session struct {
+	GenerationJobID string                      `json:"generation_job_id,omitempty"`
 	ID              string                      `json:"id"`
 	Project         string                      `json:"project"`
 	State           string                      `json:"state"`
@@ -125,9 +126,10 @@ type Catalog struct {
 	Targets     []Target `json:"targets"`
 }
 type Target struct {
-	Kind   string `json:"kind"`
-	ID     string `json:"id"`
-	Digest string `json:"digest"`
+	Inputs map[string]protocol.Input `json:"inputs,omitempty"`
+	Kind   string                    `json:"kind"`
+	ID     string                    `json:"id"`
+	Digest string                    `json:"digest"`
 }
 
 func Hash(value any) string { b, _ := json.Marshal(value); return evidence.Digest(b) }
@@ -160,4 +162,37 @@ func ParseOutput(text string) (Output, error) {
 		}
 	}
 	return out, nil
+}
+
+type ProposalPreview struct {
+	ID        string                  `json:"id"`
+	Session   string                  `json:"session"`
+	Proposal  string                  `json:"proposal"`
+	Digest    string                  `json:"digest"`
+	ExpiresAt time.Time               `json:"expires_at"`
+	Target    Target                  `json:"target"`
+	Capture   protocol.CapturePreview `json:"capture"`
+	Context   []Item                  `json:"context"`
+	Rationale string                  `json:"rationale"`
+	Expected  string                  `json:"expected_outcome"`
+}
+type Approve struct {
+	Preparation string `json:"preparation"`
+	Digest      string `json:"digest"`
+	RequestID   string `json:"request_id"`
+	Confirmed   bool   `json:"confirmed"`
+}
+type Admission struct {
+	Session  string `json:"session"`
+	Proposal string `json:"proposal"`
+	RunID    string `json:"run_id"`
+	JobID    string `json:"job_id"`
+}
+type GrantReview struct {
+	Target     Target               `json:"target"`
+	Project    string               `json:"project"`
+	Actions    map[string]any       `json:"actions"`
+	Workflows  map[string]any       `json:"workflows"`
+	Experiment *protocol.Experiment `json:"experiment,omitempty"`
+	Warning    string               `json:"warning"`
 }

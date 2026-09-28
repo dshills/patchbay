@@ -141,7 +141,7 @@ func (o ctlOptions) validate(command []string) error {
 	if len(command) > 1 {
 		key += " " + command[1]
 	}
-	lengths := map[string]int{"agent catalog": 2, "agent context": 3, "agent start": 5, "agent list": 2, "agent page": 3, "agent show": 3, "agent cancel": 3, "agent forget": 3, "recipe export-preview": 4, "recipe export-save": 6, "recipe inspect": 3, "recipe import": 3, "recipe stage": 4, "recipe list": 2, "recipe show": 3, "recipe prepare": 4, "recipe commit": 6, "capabilities": 1, "workbench": 1, "demo": 1, "sample list": 2, "experiment list": 2, "experiment prepare": 3, "experiment run": 3, "experiment capture": 5, "run compare": 4, "request-id": 1, "export prepare": 4, "export save": 6, "storage status": 2, "run list": 2, "run show": 3, "run page": 3, "run annotate": 4, "run delete": 3, "baseline show": 3, "baseline set": 4, "status": 1, "project list": 2, "project current": 2, "project use": 3, "context show": 2, "context set": 4, "action list": 2, "action run": 3, "workflow list": 2, "workflow run": 3, "job list": 2, "job show": 3, "job cancel": 3, "param list": 2, "param get": 3, "param set": 4, "config validate": 2, "config reload": 2}
+	lengths := map[string]int{"agent grant": 4, "agent review": 3, "agent approve": 6, "agent reject": 3, "agent duplicate": 4, "agent catalog": 2, "agent context": 3, "agent start": 5, "agent list": 2, "agent page": 3, "agent show": 3, "agent cancel": 3, "agent forget": 3, "recipe export-preview": 4, "recipe export-save": 6, "recipe inspect": 3, "recipe import": 3, "recipe stage": 4, "recipe list": 2, "recipe show": 3, "recipe prepare": 4, "recipe commit": 6, "capabilities": 1, "workbench": 1, "demo": 1, "sample list": 2, "experiment list": 2, "experiment prepare": 3, "experiment run": 3, "experiment capture": 5, "run compare": 4, "request-id": 1, "export prepare": 4, "export save": 6, "storage status": 2, "run list": 2, "run show": 3, "run page": 3, "run annotate": 4, "run delete": 3, "baseline show": 3, "baseline set": 4, "status": 1, "project list": 2, "project current": 2, "project use": 3, "context show": 2, "context set": 4, "action list": 2, "action run": 3, "workflow list": 2, "workflow run": 3, "job list": 2, "job show": 3, "job cancel": 3, "param list": 2, "param get": 3, "param set": 4, "config validate": 2, "config reload": 2}
 	if n, ok := lengths[key]; !ok || n != len(command) {
 		return usage("Unknown command or incorrect number of arguments; use --help.")
 	}
@@ -157,7 +157,7 @@ func (o ctlOptions) validate(command []string) error {
 		}
 		switch flag {
 		case "confirm":
-			if key != "agent start" && key != "agent forget" && key != "recipe export-save" && key != "recipe commit" && key != "action run" && key != "workflow run" && key != "run delete" && key != "experiment run" && key != "experiment capture" {
+			if key != "agent approve" && key != "agent start" && key != "agent forget" && key != "recipe export-save" && key != "recipe commit" && key != "action run" && key != "workflow run" && key != "run delete" && key != "experiment run" && key != "experiment capture" {
 				return usage("--confirm requires an execution or deletion command.")
 			}
 		case "async", "timeout":
@@ -189,6 +189,9 @@ Usage: deckctl [options] <command> [options]
 
   agent catalog | context <selection-JSON> | list | page <cursor> | show <session>
   agent start <preparation> <digest> <request-id> --confirm
+  agent grant <action|workflow|experiment> <target> | review <proposal>
+  agent approve <proposal> <preparation> <digest> <request-id> --confirm
+  agent reject <proposal> | duplicate <proposal> <request-id>
   agent cancel <session> | forget <session> --confirm
   recipe inspect <directory-or-zip> [--json]
   recipe import <directory-or-zip> | stage <installation-id> <directory-or-zip>

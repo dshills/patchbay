@@ -16,7 +16,7 @@ func render(value any) string {
 	var out strings.Builder
 	line := func(format string, args ...any) { _, _ = fmt.Fprintf(&out, format+"\n", args...) }
 	switch v := value.(type) {
-	case supervisor.Catalog, supervisor.ContextPreview, supervisor.Session, supervisor.List, recipe.ExportPreview, recipe.List, recipe.View, recipe.Preview, recipe.ManagementResult, recipe.ImportResult:
+	case supervisor.GrantReview, supervisor.ProposalPreview, supervisor.Admission, supervisor.Catalog, supervisor.ContextPreview, supervisor.Session, supervisor.List, recipe.ExportPreview, recipe.List, recipe.View, recipe.Preview, recipe.ManagementResult, recipe.ImportResult:
 		data, _ := json.MarshalIndent(value, "", "  ")
 		line("%s", data)
 	case *recipe.Package:

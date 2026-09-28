@@ -810,7 +810,7 @@ func sameJSON(a, b any) bool {
 	return bytes.Equal(left, right)
 }
 func immutable(run protocol.Run) any {
-	return map[string]any{"id": run.ID, "origin": run.Origin, "recipe": run.Recipe, "project": run.Project, "context": run.Context, "instance": run.Instance, "job_id": run.JobID, "request_id": run.RequestID, "request_digest": run.RequestDigest, "plan_digest": run.PlanDigest, "experiment_digest": run.ExperimentDigest, "schema_version": run.SchemaVersion, "generation": run.Generation, "created_at": run.CreatedAt, "experiment": run.Experiment, "parameters": run.Parameters, "steps": run.Steps}
+	return map[string]any{"id": run.ID, "origin": run.Origin, "recipe": run.Recipe, "agent": run.Agent, "project": run.Project, "context": run.Context, "instance": run.Instance, "job_id": run.JobID, "request_id": run.RequestID, "request_digest": run.RequestDigest, "plan_digest": run.PlanDigest, "experiment_digest": run.ExperimentDigest, "schema_version": run.SchemaVersion, "generation": run.Generation, "created_at": run.CreatedAt, "experiment": run.Experiment, "parameters": run.Parameters, "steps": run.Steps}
 }
 
 func validMetadata(meta metadata) bool {
@@ -828,4 +828,20 @@ func validMetadata(meta metadata) bool {
 		}
 	}
 	return true
+}
+
+// AgentReservation is the small recovery record already held in the run index.
+// Reading it neither opens artifacts nor copies complete run manifests.
+type AgentReservation struct{ RunID, JobID, Session, Proposal, State string }
+
+func (s *Store) AgentReservations() []AgentReservation {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := []AgentReservation{}
+	for _, run := range s.runs {
+		if run.Agent != nil {
+			out = append(out, AgentReservation{RunID: run.ID, JobID: run.JobID, Session: run.Agent.Session, Proposal: run.Agent.Proposal, State: run.State})
+		}
+	}
+	return out
 }

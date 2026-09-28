@@ -93,7 +93,14 @@ type RunSettings struct {
 	MaxReceipts      int    `yaml:"max_receipts,omitempty"`
 }
 
+type AgentGrant struct {
+	Kind   string           `yaml:"kind"`
+	Target string           `yaml:"target"`
+	Digest string           `yaml:"digest"`
+	Inputs map[string]Input `yaml:"inputs,omitempty"`
+}
 type Project struct {
+	AgentGrants []AgentGrant      `yaml:"agent_grants,omitempty"`
 	ID          string            `yaml:"id,omitempty"`
 	Name        string            `yaml:"name"`
 	Path        string            `yaml:"path"`
