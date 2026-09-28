@@ -16,6 +16,8 @@ and separate desired/observed parameter state. Instrument simulator checks are
 complete; physical model/firmware validation remains pending. Phase 6 adds a
 versioned executable plugin host, explicit operation allowlists, bounded lifecycle
 handling, and a reusable conformance checker.
+Phase 7 hardens release packaging with source provenance, dependency notices,
+verified file inventories, and smoke tests against extracted native binaries.
 
 Start with the [temporary-project quick start](specs/QUICKSTART.md), then see
 the [CLI reference](specs/CLI.md) and [macOS operations/release guide](specs/OPERATIONS.md).
@@ -29,7 +31,8 @@ conformance checker, including the limits of process isolation.
 
 ## Build and validate
 
-Requirements: Go 1.27 or later and Make. macOS is the initial supported platform.
+Requirements: Go 1.27 or later and Make. Release tooling and its tests also require
+Python 3.10 or later. macOS is the initial supported platform.
 
 ```sh
 go mod download
@@ -82,8 +85,9 @@ make coverage
 go tool cover -func=coverage.out
 ```
 
-`make check` checks formatting, runs vet, lint, unit tests, race tests, and builds
-all three commands. `make fmt` formats source. The lint version is pinned in the
+`make check` checks formatting, runs vet, lint, unit tests, race tests, release-tool
+tests, builds all four commands, and probes the compiled example plugin.
+`make fmt` formats source. The lint version is pinned in the
 Makefile; the selected checks are `errcheck`, `govet`, `ineffassign`, `staticcheck`,
 and `unused`. These catch correctness and maintenance issues without a broad
 style policy. CI runs these commands on macOS. The race suite uses the platform's
@@ -120,6 +124,7 @@ uses `dev`, `unknown`, and `unknown` defaults.
 - [Phase 5 verification and Prism review](specs/reviews/PHASE5.md)
 - [Executable plugin protocol and setup](specs/PLUGINS.md)
 - [Phase 6 verification and Prism review](specs/reviews/PHASE6.md)
+- [Phase 7 release hardening and verification](specs/reviews/PHASE7.md)
 
 The local module is `patchbay` because the repository has no configured remote.
 Set a canonical published module path before exposing packages to external Go

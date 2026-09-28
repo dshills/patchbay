@@ -2,7 +2,7 @@
 
 **Source:** [SPEC.md](SPEC.md), version 0.1, dated 2026-09-27
 
-**Plan status:** Phases 0–2 complete. Phase 3 implementation and simulator verification are complete; its physical hardware exit gate remains pending. See [Phase 3 evidence](reviews/PHASE3.md). Phase 4 implementation and verification are complete; see [Phase 4 evidence and Prism review](reviews/PHASE4.md). Phase 5 implementation and simulator verification are complete; physical DG812/MHO954 validation remains pending. See [Phase 5 evidence](reviews/PHASE5.md). Phase 6 implementation and local conformance verification are complete; see [Phase 6 evidence](reviews/PHASE6.md).
+**Plan status:** Phases 0–2 complete. Phase 3 implementation and simulator verification are complete; its physical hardware exit gate remains pending. See [Phase 3 evidence](reviews/PHASE3.md). Phase 4 implementation and verification are complete; see [Phase 4 evidence and Prism review](reviews/PHASE4.md). Phase 5 implementation and simulator verification are complete; physical DG812/MHO954 validation remains pending. See [Phase 5 evidence](reviews/PHASE5.md). Phase 6 implementation and local conformance verification are complete; see [Phase 6 evidence](reviews/PHASE6.md). Phase 7 release hardening and local artifact verification are complete; see [Phase 7 evidence and review](reviews/PHASE7.md).
 
 **Planning baseline:** Before Phase 0, the repository contained `specs/SPEC.md` and no application code, build configuration, or tests.
 
@@ -158,6 +158,7 @@ Use one maintained YAML library because Go's standard library does not decode YA
 | 4 — Developer integrations | Phase 2; Phase 3 optional | Git/project conventions and agent provider | Agent jobs obey the same execution and safety contracts. |
 | 5 — Electronics | Stable Phase 1 parameter/provider contracts; Phase 3 for physical bench UX | SCPI and semantic instrument operations | Bench behavior passes simulator and controlled hardware checks. |
 | 6 — Executable plugins | Proven provider contracts from earlier phases | Versioned subprocess plugin host | Compatibility, lifecycle, and failure isolation are verified. |
+| 7 — Release hardening | Phases 0–6 implementation | Verifiable, reproducible release artifacts and packaged smoke tests | Archive integrity, provenance, failure tests, and native packaged checks pass. |
 
 Follow the published sequence by default. Phases 4 and 5 must remain usable through the CLI, even if physical hardware work is delayed. These phase numbers denote delivery stages rather than permission to implement deferred scope during V1.
 
@@ -449,6 +450,30 @@ Follow the published sequence by default. Phases 4 and 5 must remain usable thro
 **Deliverables:** Protocol specification, host implementation, example plugin, compatibility policy, and conformance tests.
 
 **Exit gate:** Supported plugins load, execute, report health, cancel, and terminate within bounds. A broken plugin cannot bypass daemon checks or crash the runtime through protocol handling.
+
+## 11.1 Phase 7 — Release hardening
+
+**Goal:** Make the delivered macOS artifacts independently inspectable and test the
+software users actually extract. Authorized after completion of Phase 6.
+
+- [x] Validate release metadata against the current Git revision; reject dirty
+  source by default and explicitly label local dirty builds.
+- [x] Share deterministic archive handling between core and Stream Deck packages,
+  include dependency notices, and record toolchain/source provenance and file hashes.
+- [x] Verify archive structure, sizes, permissions, hashes, required contents and
+  architecture before extraction. Add adversarial and failed-build regression tests.
+- [x] Exercise extracted native binaries: metadata, all shipped configurations,
+  headless V1 lifecycle/restart/cancellation, and example plugin conformance.
+- [x] Run release-script tests in normal checks and archive/native verification in
+  macOS CI. Verify repeat builds with identical inputs produce identical archives.
+- [x] Document release procedure, upgrade/rollback preparation, and outstanding
+  physical hardware, signing/notarization and remote verification gates.
+- [x] Complete Prism review, resolve confirmed findings, record evidence and commit.
+
+**Exit gate:** Local checks and packaged verification pass for the native architecture;
+both architecture bundles and the universal adapter pass structural checks. Remote
+CI and physical Stream Deck+/DG812/MHO954 validation retain their own evidence gates.
+Publication, service installation and hardware writes are separate operator actions.
 
 ## 12. Verification and acceptance matrix
 

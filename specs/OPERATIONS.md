@@ -115,6 +115,14 @@ root installation is needed. Actual launchd registration was not performed as
 part of implementation; the template and its operating environment were verified
 without installing a persistent service.
 
+Before upgrading, retain the previous verified bundle, configuration, plist and
+stopped daemon's state file in a private backup directory. Validate a copy of the
+configuration with the new `deckctl`, stop the service, replace the binaries, then
+start it and check status and logs. For rollback, stop the service again and
+restore the saved binaries and matching configuration/state together. Keep the
+failed upgrade's state/logs for diagnosis. Do not overwrite state while a daemon
+owns it. Restoring files cannot undo external action or instrument effects.
+
 ## Troubleshooting
 
 | Symptom | Check |
@@ -139,19 +147,80 @@ version, commit, and timestamp for byte-identical archives. The release script
 builds with `CGO_ENABLED=0`, `-trimpath`, and `-buildvcs=false`, then writes sorted
 ZIP entries with fixed timestamps and permissions. It embeds supplied metadata
 and creates arm64/amd64 bundles with binaries, example configurations, and docs.
+Python 3.10+ is required; the Stream Deck universal package also needs macOS `lipo`.
+User Go build flags and workspaces are disabled; modules are verified and builds
+use `-mod=readonly`. Keep the compiler and platform tools fixed between builds.
+
+Both packagers check that `COMMIT` resolves to the current HEAD and record its full
+hash. A clean tree is required by default. `RELEASE_FLAGS=--allow-dirty` permits
+local development verification and marks `source_dirty: true`; the verifier also
+requires `--allow-dirty` for these artifacts. Stage new release inputs before a
+local test build: core docs/configs/scripts are collected from Git's tracked index
+and read from the working tree. Use an ignored output directory such as `dist` or
+`.cache` so generated files do not dirty the next build. Keep source unchanged
+throughout a build.
+
+`RELEASE.json` records schema version, product/version, full source revision,
+dirty status, build time, Go/Python/zlib versions, target architecture, dependency
+versions/sums, and every payload file's SHA-256, size and mode. In a Stream Deck
+ZIP it lives inside `local.patchbay.deckd.sdPlugin/`. `THIRD_PARTY_NOTICES.txt` and
+`licenses/` include dependency notices and the Go runtime license. The manifest
+does not hash itself; the external checksum covers the entire archive.
 
 ```sh
 make check
-make release VERSION=0.1.0 COMMIT="$(git rev-parse HEAD)" BUILD_TIME=2026-09-27T00:00:00Z
+make release VERSION=0.3.0 COMMIT="$(git rev-parse HEAD)" BUILD_TIME=2026-09-28T00:00:00Z
 (cd dist && shasum -a 256 -c SHA256SUMS)
-unzip -l dist/deckd-0.1.0-darwin-arm64.zip
+python3 scripts/verify_release.py dist/deckd-0.3.0-darwin-arm64.zip
+python3 scripts/verify_release.py dist/deckd-0.3.0-darwin-amd64.zip
+# Execute only a trusted bundle matching this Mac (use amd64 on Intel):
+python3 scripts/verify_release.py dist/deckd-0.3.0-darwin-arm64.zip --smoke
+make streamdeck-package VERSION=0.3.0 COMMIT="$(git rev-parse HEAD)" BUILD_TIME=2026-09-28T00:00:00Z
+python3 scripts/verify_release.py dist/decksd-0.3.0-macos.zip --smoke
 ```
 
-Build from a clean checkout for a published release. `make release` only writes
+The packagers verify staged archives before replacing any outputs. Build or
+verification failure leaves the old artifacts intact. Files are replaced
+individually and the checksum file last; interruption during replacement can
+leave a mixed set that fails checksum validation. Rerun the complete build after
+such an interruption. The Stream Deck ZIP and checksum are authoritative; the
+extracted plugin directory is a convenience copy.
+
+The verifier caps archives at 1,024 files, 128 MiB per file, 256 MiB total
+compressed/expanded data, and a 1 MiB manifest. It checks required content, exact file inventory,
+hashes, regular-file types, executable modes, safe unique paths and Mach-O CPU
+types. It verifies the sibling checksum file as well. Without `--smoke`, it never
+executes bundle contents. `--smoke` extracts into a private temporary directory
+and checks native version metadata, all six example configurations, V1 startup,
+jobs/cancellation, reload, shutdown/restart persistence and plugin conformance.
+Adapter smoke checks the native universal executable's version; the separate
+native adapter simulator and vendor validation remain required. No service is
+installed and no hardware or model API is contacted by these checks.
+
+Checksums detect corruption; obtain archives and checksums from a trusted source.
+They do not authenticate the publisher. Build from a clean checkout for a
+published release. `make release` only writes
 local archives; signing, notarization, publication, and installation are separate
 operator actions. Architectures and runtime verification results are recorded in
 [the Phase 2 report](reviews/PHASE2.md). No claim of Intel runtime verification
 is made solely from cross-compilation.
+
+### Release evidence gates
+
+Before publishing, retain the exact revision, metadata, checksums, test output and
+Prism review dispositions. Run `make check`, built-binary V1 and Stream Deck
+simulator tests, vendor plugin validation, archive checks and native smoke. Build
+each package twice with identical inputs and compare checksum files. CI automates
+these software checks on its native macOS runner. The pinned vendor CLI uses
+`--no-update-check` with available local schemas. Cross-built Intel or arm64
+binaries still need their own runtime evidence if that runner uses the other CPU.
+
+Physical Stream Deck+ input/rendering/latency and controlled Rigol DG812/MHO954
+model/firmware validation remain open gates, tracked in [STREAMDECK.md](STREAMDECK.md)
+and [SCPI.md](SCPI.md). The optional live Codex account/model check, launchd
+installation, signing/notarization and remote CI results require their own evidence.
+Simulator and local bundle checks do not close those gates. See the
+[Phase 7 report](reviews/PHASE7.md) for this checkout's verified scope.
 
 ### Executable plugin tools
 

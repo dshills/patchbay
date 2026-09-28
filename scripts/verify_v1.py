@@ -29,10 +29,12 @@ def expand(value, directory):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--samples", type=int, default=50)
+    parser.add_argument("--bundle", type=Path, default=Path(__file__).resolve().parent.parent,
+                        help="extracted bundle or checkout containing bin/ and configs/")
     args = parser.parse_args()
     if args.samples < 1:
         parser.error("samples must be positive")
-    root = Path(__file__).resolve().parent.parent
+    root = args.bundle.resolve()
     template = plistlib.loads((root / "configs/local.patchbay.deckd.plist").read_bytes())
     with tempfile.TemporaryDirectory(prefix="pb-v1-", dir="/tmp") as temporary:
         directory = Path(temporary)

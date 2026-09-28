@@ -1,4 +1,4 @@
-// Package version exposes build metadata shared by both executables.
+// Package version exposes build metadata shared by the executables.
 package version
 
 import "fmt"

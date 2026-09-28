@@ -512,6 +512,13 @@ synchronization, reusable bench workflows.
 Executable plugin host, protocol versioning, capability discovery,
 health/lifecycle, isolation.
 
+### Phase 7 --- Release Hardening
+
+Validate source/build provenance, produce deterministic archives with dependency
+notices and per-file integrity metadata, verify archives before extraction, and
+exercise packaged native binaries in CI. Record hardware and publication gates
+separately from software verification.
+
 ## 34. V1 Acceptance Criteria
 
 V1 is complete when: 1. `deckd` starts from valid YAML and clearly

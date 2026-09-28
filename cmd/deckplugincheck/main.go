@@ -13,6 +13,7 @@ import (
 
 	"patchbay/internal/config"
 	"patchbay/internal/jsonstrict"
+	"patchbay/internal/version"
 	wire "patchbay/pkg/plugin"
 	"patchbay/pkg/pluginconform"
 )
@@ -20,6 +21,8 @@ import (
 func main() { os.Exit(run()) }
 func run() int {
 	flags := flag.NewFlagSet("deckplugincheck", flag.ContinueOnError)
+	showVersion := flags.Bool("version", false, "show build metadata without loading configuration")
+	asJSON := flags.Bool("json", false, "render version as JSON (probe reports are always JSON)")
 	path := flags.String("config", "configs/plugins.yaml", "configuration file (executes its configured plugin)")
 	name := flags.String("plugin", "example", "configured plugin name")
 	operation := flags.String("operation", "echo", "successful test operation")
@@ -28,6 +31,18 @@ func run() int {
 	cancelArguments := flags.String("cancel-args", `{"milliseconds":30000}`, "JSON input object for cancellation operation")
 	if flags.Parse(os.Args[1:]) != nil || flags.NArg() != 0 {
 		return 2
+	}
+	if *showVersion {
+		if *asJSON {
+			if err := json.NewEncoder(os.Stdout).Encode(version.Current()); err != nil {
+				return 1
+			}
+		} else {
+			if _, err := fmt.Fprintln(os.Stdout, version.Current()); err != nil {
+				return 1
+			}
+		}
+		return 0
 	}
 	c, err := config.Load(*path)
 	if err != nil {

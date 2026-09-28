@@ -7,6 +7,7 @@ permissions:
 jobs:
   core-and-streamdeck:
     runs-on: macos-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -29,6 +30,25 @@ jobs:
       - run: ./bin/deckctl config validate --config configs/plugins.yaml --json
       - run: make streamdeck-verify
       - run: node --test adapters/streamdeck/inspector.test.cjs
-      - run: make streamdeck-package VERSION=0.2.0 COMMIT="$(git rev-parse HEAD)" BUILD_TIME=2026-09-27T00:00:00Z
-      - run: npm exec --yes --package @elgato/cli@1.10.1 -- streamdeck validate dist/local.patchbay.deckd.sdPlugin
-      - run: make release VERSION=0.1.0-ci COMMIT="$(git rev-parse HEAD)" BUILD_TIME=2026-09-27T00:00:00Z
+      - run: make streamdeck-package VERSION=0.3.0 COMMIT="$(git rev-parse HEAD)" BUILD_TIME=2026-09-28T00:00:00Z
+      - run: npm exec --yes --package @elgato/cli@1.10.1 -- streamdeck validate --no-update-check dist/local.patchbay.deckd.sdPlugin
+      - run: python3 scripts/verify_release.py dist/decksd-0.3.0-macos.zip --smoke
+      - name: Exercise the packaged universal adapter
+        run: PATCHBAY_DECKSD_BINARY="$PWD/dist/local.patchbay.deckd.sdPlugin/bin/decksd" go test ./adapters/streamdeck -run '^TestFakeAppWithRealDaemonAndRestart$' -count=1
+      - run: make release VERSION=0.3.0-ci COMMIT="$(git rev-parse HEAD)" BUILD_TIME=2026-09-28T00:00:00Z
+      - name: Verify both bundles and exercise the native artifact
+        run: |
+          python3 scripts/verify_release.py dist/deckd-0.3.0-ci-darwin-arm64.zip
+          python3 scripts/verify_release.py dist/deckd-0.3.0-ci-darwin-amd64.zip
+          case "$(uname -m)" in
+            arm64) arch=arm64 ;;
+            x86_64) arch=amd64 ;;
+            *) exit 1 ;;
+          esac
+          python3 scripts/verify_release.py "dist/deckd-0.3.0-ci-darwin-$arch.zip" --smoke
+      - name: Check reproducibility
+        run: |
+          make release VERSION=0.3.0-ci COMMIT="$(git rev-parse HEAD)" BUILD_TIME=2026-09-28T00:00:00Z RELEASE_FLAGS='--output .cache/release-repeat'
+          cmp dist/SHA256SUMS .cache/release-repeat/SHA256SUMS
+          make streamdeck-package VERSION=0.3.0 COMMIT="$(git rev-parse HEAD)" BUILD_TIME=2026-09-28T00:00:00Z RELEASE_FLAGS='--output .cache/streamdeck-repeat'
+          cmp dist/DECKSD-SHA256SUMS .cache/streamdeck-repeat/DECKSD-SHA256SUMS
