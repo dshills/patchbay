@@ -27,7 +27,7 @@ type capturePreparation struct {
 }
 
 func (r *Runtime) Capabilities() protocol.Capabilities {
-	return protocol.Capabilities{Features: map[string]int{"recipes": 1, "experiment_preparation": 1, "run_store": 1, "capture": 1, "comparison": 1, "export": 1}, Schemas: map[string]int{"recipe": 1, "experiment": 1, "run": 1, "series": 1, "artifact": 1}}
+	return protocol.Capabilities{Features: map[string]int{"outcome_collectors": 1, "recipes": 1, "experiment_preparation": 1, "run_store": 1, "capture": 1, "comparison": 1, "export": 1}, Schemas: map[string]int{"recipe": 1, "experiment": 1, "run": 1, "series": 1, "artifact": 1}}
 }
 func (r *Runtime) Experiments() protocol.ExperimentList {
 	r.mu.Lock()

@@ -1,0 +1,167 @@
+schema_version: 1
+id: rigol-capture
+name: Rigol Capture & Compare
+description: DG812 / MHO954 stopped-trace workflow. Physical verification pending; samples are illustrative.
+author: Patchbay contributors
+license: MIT
+version: 1.0.0
+digest: 467c9765f1845644c153038659e4bebe480f257f5ce8607922c74375c907cec3
+features:
+    capture: 1
+    comparison: 1
+schemas:
+    experiment: 1
+    series: 1
+requirements:
+    bench:
+        kind: project
+        description: Select the local bench project for saved evidence.
+    generator:
+        kind: action
+        description: Map a configured DG812 channel-1 inspection action; no output write.
+        provider: scpi
+        operation: generator.inspect
+        model: DG812
+        channel: 1
+    scope:
+        kind: action
+        description: Map the stopped-trace MHO954 channel-1 capture action.
+        provider: scpi
+        operation: scope.capture
+        model: MHO954
+        channel: 1
+actions:
+    generator.inspect:
+        type: reference
+        project: bench
+        reference: generator
+        safety: confirm
+        timeout: 15s
+    scope.capture:
+        type: reference
+        project: bench
+        reference: scope
+        safety: confirm
+        timeout: 15s
+parameters:
+    bench.amplitude:
+        type: float
+        value: 0.1
+        min: 0.01
+        max: 1
+        step: 0.01
+        unit: Vpp
+        persistent: true
+    bench.frequency:
+        type: float
+        value: 1000
+        min: 1
+        max: 1e+06
+        step: 100
+        unit: Hz
+        persistent: true
+workflows:
+    bench.capture:
+        stop_on_error: false
+        steps:
+            - action: generator.inspect
+            - action: scope.capture
+            - action: generator.inspect
+experiments:
+    bench.trace:
+        schema_version: 1
+        id: bench.trace
+        title: Rigol stopped-trace comparison
+        description: Physical verification pending. Inputs record intended settings only and never apply them. Use separately configured local controls to disable outputs, apply safe settings and explicitly enable output. Acquire and stop manually at the MHO954, then transfer the stopped trace. Enter the acquisition assertion in the saved run note. Acquisition time remains unknown.
+        projects:
+            - bench
+        workflow: bench.capture
+        parameters:
+            - bench.frequency
+            - bench.amplitude
+        collectors:
+            - name: frequency.before
+              step: 0
+              action: generator.inspect
+              kind: measurement
+              source: native
+              path:
+                - observed
+                - generator.set_frequency
+              unit: Hz
+              quantity: frequency
+            - name: amplitude.before
+              step: 0
+              action: generator.inspect
+              kind: measurement
+              source: native
+              path:
+                - observed
+                - generator.set_amplitude
+              unit: Vpp
+              quantity: amplitude
+            - name: waveform
+              step: 1
+              action: scope.capture
+              kind: series
+              source: native
+              path:
+                - waveform
+                - series
+              unit: V
+              quantity: voltage
+            - name: frequency.after
+              step: 2
+              action: generator.inspect
+              kind: measurement
+              source: native
+              path:
+                - observed
+                - generator.set_frequency
+              unit: Hz
+              quantity: frequency
+            - name: amplitude.after
+              step: 2
+              action: generator.inspect
+              kind: measurement
+              source: native
+              path:
+                - observed
+                - generator.set_amplitude
+              unit: Vpp
+              quantity: amplitude
+        layout:
+            - id: trace
+              kind: series
+              title: Stopped trace
+              reference: waveform
+controls:
+    baseline:
+        baseline: bench.trace
+    capture:
+        capture: bench.trace
+    intended-frequency:
+        parameter: bench.frequency
+    result:
+        result: bench.trace
+inventory:
+    - path: LICENSE
+      media_type: text/plain
+      size: 1068
+      sha256: ca78d6b55d10fab1eec3f362638ef62144c7597786f6becc1fa9df045af0b879
+    - path: README.md
+      media_type: text/markdown
+      size: 1096
+      sha256: b02c2328cc2f816caed0adee778050138a7fec2baaf11e1bdc904e49d463320e
+    - path: docs/verification.md
+      media_type: text/markdown
+      size: 395
+      sha256: 81e422a98457613907793ca0ff952ddcde402a62b0894afd07e61e877a2ba105
+    - path: samples/bench.trace-baseline.json
+      media_type: application/json
+      size: 10444
+      sha256: 1735fb5f2eebb2daa67e032e6f8aa54c83e7aecaecf2abd8ca272be5cd62c2b4
+    - path: samples/bench.trace-candidate.json
+      media_type: application/json
+      size: 10439
+      sha256: 5663d2742c17d65d3d4da530cd2e21f5e692a110807e5c5c995089cbfefdbd50

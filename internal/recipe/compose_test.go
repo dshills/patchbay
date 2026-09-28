@@ -1,6 +1,7 @@
 package recipe
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
@@ -118,5 +119,57 @@ func TestReferencedInputBoundsCannotWiden(t *testing.T) {
 	merged, err = intersectInput(host, config.Input{Type: parameter.Enum, Enum: []string{"list", "delete"}})
 	if err != nil || len(merged.Enum) != 1 || merged.Enum[0] != "list" {
 		t.Fatal("enum expanded", err)
+	}
+}
+
+func TestCuratedRecipesConformAndRigolMappingsStayInert(t *testing.T) {
+	for _, name := range []string{"benchmark", "project-checkup", "rigol-capture"} {
+		t.Run(name, func(t *testing.T) {
+			p, err := Inspect(context.Background(), "../../recipes/"+name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(p.Samples) != 2 {
+				t.Fatal("missing illustrative comparison")
+			}
+			data, err := ZIP(context.Background(), p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			restored, err := InspectZIP(context.Background(), data)
+			if err != nil || restored.Digest != p.Digest {
+				t.Fatal("content round trip", err)
+			}
+		})
+	}
+	p, err := Inspect(context.Background(), "../../recipes/rigol-capture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile("../../configs/bench.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	base, err := config.Parse(append(raw, []byte("\nprojects: {bench: {name: Bench, path: /tmp}}\n")...), "/tmp", "/tmp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry := Installation{ID: "rbench", Active: true, Content: p.Digest, BaseDigest: BaseDigest(base), Mappings: map[string]Mapping{"bench": {Project: "bench"}, "generator": {Action: "generator.inspect"}, "scope": {Action: "scope.capture"}}}
+	out, err := Compose(base, []Installation{entry}, map[string]*Package{p.Digest: p})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, a := range out.Config.Actions {
+		if strings.HasPrefix(name, Namespace(entry.ID)) && a.Type == "scpi" && a.Operation != "generator.inspect" && a.Operation != "scope.capture" {
+			t.Fatal("recipe added hardware writes")
+		}
+	}
+	for name, p := range out.Config.Parameters {
+		if strings.HasPrefix(name, Namespace(entry.ID)) && p.Instrument != nil {
+			t.Fatal("intended value became a hardware binding")
+		}
+	}
+	if !strings.Contains(p.Manifest.Description, "Physical verification pending") {
+		t.Fatal("unearned hardware claim")
 	}
 }

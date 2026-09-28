@@ -19,7 +19,7 @@ def main():
         metadata = provenance(args)
         files, modules = notices()
         # Only tracked/staged release inputs are shipped, including local dirty builds.
-        files.update(tracked_files(["LICENSE", "README.md", "Patchbay.command", "configs", "specs", "scripts"], root=ROOT))
+        files.update(tracked_files(["LICENSE", "README.md", "Patchbay.command", "configs", "recipes", "specs", "scripts"], root=ROOT))
         for name, value in tracked_files(["internal/workbench/assets"], root=ROOT).items():
             files["share/workbench/" + Path(name).name] = value
         files["Patchbay.command"] = (files["Patchbay.command"][0], 0o755)

@@ -360,7 +360,7 @@ func (r *Runtime) executeObserved(ctx context.Context, jobID string, plan *prepa
 		ctx, cancel = context.WithTimeout(ctx, plan.timeout)
 		defer cancel()
 	}
-	startedAt := time.Now().UTC()
+	startedAt := time.Now()
 	actionID := identity.New()
 	r.bus.Emit(event.ActionStarted, map[string]string{"action_id": actionID, "job_id": jobID, "action": plan.name})
 	defer func() {
@@ -378,7 +378,7 @@ func (r *Runtime) executeObserved(ctx context.Context, jobID string, plan *prepa
 			}
 		}
 		if collected != nil && plan.steps == nil {
-			if collectionErr := collected(plan, result, err, startedAt, time.Now().UTC()); collectionErr != nil {
+			if collectionErr := collected(plan, result, err, startedAt, time.Now()); collectionErr != nil {
 				if result.Data == nil {
 					result.Data = map[string]any{}
 				}

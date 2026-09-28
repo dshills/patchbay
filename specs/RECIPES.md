@@ -249,3 +249,46 @@ bytes. The exact file preview is capped at 8 MiB; select fewer large samples/doc
 if it exceeds that budget. The CLI holds a directory descriptor, rejects links and
 existing files, writes privately, checks the hash, and syncs the new file/directory.
 No dependency download, marketplace or remote fetch is part of recipe sharing.
+
+## Bundled starting points
+
+| Package | Local requirements | Try it |
+| --- | --- | --- |
+| `recipes/benchmark` | A project and the packaged `deckdemo` executable | Capture a baseline, change iterations and compare repeated timings. |
+| `recipes/project-checkup` | A project and two configured exec actions | Compare per-step elapsed time and status for your check/test commands. |
+| `recipes/rigol-capture` | A bench project, DG812 channel-1 inspection and MHO954 channel-1 stopped capture | Record an existing stopped trace and before/after generator observations. **Physical verification pending.** |
+
+Each package includes an MIT license, plain-language setup instructions and two
+illustrative samples. Supplied names/author fields do not prove origin; use the
+release checksum/inventory to identify files distributed with a verified bundle.
+Project Checkup runs both checks even if the first fails and records partial outcomes.
+Its daemon timing includes provider/process overhead; it is a quick comparison,
+not a statistical benchmark. Commands must have no required input arguments unless
+portable inputs supply valid defaults. Local `dangerous` policy is never downgraded.
+Rigol parameters describe intended settings only. Actual generator apply/output and
+scope acquisition remain separate, operator-controlled steps; this package installs
+no hardware-write actions.
+
+### Author a small recipe
+
+Start from a bundled directory and edit declarative definitions. Use recipe-local
+names; represent projects, executable paths and existing device/action references as
+requirements. Set action safety explicitly (normally `confirm`); omitted exec-like
+policy retains the conservative dangerous default. Keep defaults portable and within
+bounds. Controls suggest targets, without assigning a physical device.
+
+Maintain required README/LICENSE files and inventory every additional document/sample.
+The in-repository generator `scripts/generate_recipes.go` shows how `recipe.Build`
+computes canonical manifest/payload digests and verifies references. Run it from the
+repository root, then use offline `recipe inspect`. To distribute changes, import
+and explicitly review them, use the export selector, and re-inspect the resulting ZIP.
+The format and limits above, [experiment contract](EVIDENCE.md), and
+[feature specification](features/recipes/SPEC.md) define the supported vocabulary.
+There are no arbitrary includes, installation scripts or remote dependency fetches.
+
+Maintainers run `python3 scripts/verify_recipes.py --bundle /path/to/extracted/bundle`
+for a native offline exchange: three package inspections, two fresh installations,
+three captures, remapped sample comparison, update/rollback/deactivation/removal,
+and saved-run readability after removal. It uses packaged binaries with a system-only
+PATH and no AI key, and never activates the hardware recipe. Separate human exchange,
+Intel execution, signing and physical-device gates still need recorded evidence.

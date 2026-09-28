@@ -47,6 +47,8 @@ func captureCollector(store *evidence.Store, run *protocol.Run, plan *prepared, 
 		mu.Lock()
 		defer mu.Unlock()
 		leaf := indices[p]
+		durationMS := finished.Sub(started).Seconds() * 1000
+		started, finished = started.UTC(), finished.UTC()
 
 		outcome := protocol.StepOutcome{Index: leaf, Action: p.name, State: string(result.Status), StartedAt: &started, FinishedAt: &finished, Truncated: result.Data["truncated"] == true, Error: fault.Safe(executeErr)}
 		if p.kind == "scpi" {
@@ -74,6 +76,10 @@ func captureCollector(store *evidence.Store, run *protocol.Run, plan *prepared, 
 			}
 			source := result.Data
 			valid := !outcome.Truncated
+			if collector.Source == "outcome" {
+				source = map[string]any{"duration_ms": durationMS, "state": outcome.State}
+				valid = durationMS >= 0
+			}
 			if collector.Source == "json_stdout" {
 				if !parsed {
 					parsed = true

@@ -154,7 +154,7 @@ func validate(m Manifest) error {
 		}
 	}
 	for feature, v := range m.Features {
-		if !slices.Contains([]string{"capture", "comparison", "export", "recipes", "run_store", "experiment_preparation"}, feature) || v != 1 {
+		if !slices.Contains([]string{"outcome_collectors", "capture", "comparison", "export", "recipes", "run_store", "experiment_preparation"}, feature) || v != 1 {
 			return fail("features", "unsupported required capability")
 		}
 	}

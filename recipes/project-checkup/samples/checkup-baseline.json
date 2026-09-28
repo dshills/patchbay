@@ -1,0 +1,114 @@
+{
+  "source_label": "Illustrative fixture; no physical or local measurement",
+  "schema_version": 1,
+  "id": "checkup-baseline",
+  "origin": "sample",
+  "experiment": {
+    "schema_version": 1,
+    "id": "checkup",
+    "title": "Project Checkup",
+    "description": "Both checks run in order even if the first fails. Duration is measured by Patchbay; status records the actual step outcome. Output truncation does not erase these independent observations.",
+    "projects": [
+      "project"
+    ],
+    "workflow": "checkup",
+    "collectors": [
+      {
+        "name": "check.duration",
+        "step": 0,
+        "action": "check",
+        "kind": "measurement",
+        "source": "outcome",
+        "path": [
+          "duration_ms"
+        ],
+        "unit": "ms",
+        "quantity": "duration",
+        "direction": "lower"
+      },
+      {
+        "name": "check.state",
+        "step": 0,
+        "action": "check",
+        "kind": "text",
+        "source": "outcome",
+        "path": [
+          "state"
+        ]
+      },
+      {
+        "name": "test.duration",
+        "step": 1,
+        "action": "test",
+        "kind": "measurement",
+        "source": "outcome",
+        "path": [
+          "duration_ms"
+        ],
+        "unit": "ms",
+        "quantity": "duration",
+        "direction": "lower"
+      },
+      {
+        "name": "test.state",
+        "step": 1,
+        "action": "test",
+        "kind": "text",
+        "source": "outcome",
+        "path": [
+          "state"
+        ]
+      }
+    ],
+    "layout": [
+      {
+        "id": "check-duration",
+        "kind": "measurement",
+        "title": "check elapsed",
+        "reference": "check.duration"
+      },
+      {
+        "id": "check-state",
+        "kind": "text",
+        "title": "check status",
+        "reference": "check.state"
+      },
+      {
+        "id": "test-duration",
+        "kind": "measurement",
+        "title": "test elapsed",
+        "reference": "test.duration"
+      },
+      {
+        "id": "test-state",
+        "kind": "text",
+        "title": "test status",
+        "reference": "test.state"
+      }
+    ]
+  },
+  "parameters": {},
+  "measurements": [
+    {
+      "name": "check.duration",
+      "value": 1000,
+      "unit": "ms",
+      "quantity": "duration",
+      "direction": "lower",
+      "status": "valid",
+      "source_step": 0,
+      "observed_at": "2026-09-28T00:00:00Z"
+    },
+    {
+      "name": "test.duration",
+      "value": 1500,
+      "unit": "ms",
+      "quantity": "duration",
+      "direction": "lower",
+      "status": "valid",
+      "source_step": 1,
+      "observed_at": "2026-09-28T00:00:00Z"
+    }
+  ],
+  "series": []
+}

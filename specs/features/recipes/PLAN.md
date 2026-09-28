@@ -1,6 +1,6 @@
 # Shareable Recipes implementation plan
 
-**Status:** RP-1/RP-2/RP-3 implemented; RP-4 next\
+**Status:** RP-1 through RP-4 software implemented; human exchange and physical verification gates pending\
 **Specification:** [Shareable Recipes](SPEC.md)\
 **Dependencies:** CC-1 schemas; CC-2 for activation/runs; CC-3 for UI. CC-5 gates only the verified Rigol recipe.
 
@@ -126,17 +126,17 @@ authoring pattern without depending on a community marketplace.
 
 **Depends on:** RP-3; CC-5 for a physically verified Rigol label only.
 
-- [ ] Package Benchmark Playground, Project Checkup, and Rigol Capture & Compare with
+- [x] Package Benchmark Playground, Project Checkup, and Rigol Capture & Compare with
   coherent controls, bounded defaults, sample results, descriptions, and licenses.
-- [ ] Keep commands/project tools explicit in Project Checkup. Ship Rigol mappings as
+- [x] Keep commands/project tools explicit in Project Checkup. Ship Rigol mappings as
   abstract roles, preserve manual acquisition/output steps, and show verification state.
-- [ ] Add recipe files and notices to deterministic release inventories and verify all
+- [x] Add recipe files and notices to deterministic release inventories and verify all
   bundled manifests/examples against the actual packaged feature versions.
-- [ ] Test clean installation, upgrade, deactivate/remove, rollback and stored-run
+- [x] Test clean installation, upgrade, deactivate/remove, rollback and stored-run
   readability without the recipe present. Document retention and export backup.
 - [ ] Run two-person recipe exchanges on supported Macs. Record required help, missing
   mappings and confusing permission descriptions; fix first-use blockers.
-- [ ] Complete Prism review, full release checks and a guide for authors with a minimal
+- [x] Complete Prism review, full release checks and a guide for authors with a minimal
   recipe plus schema/reference links. Record any remaining hardware/platform limits.
 
 **Verification:** Full `make check`, browser checks, importer fuzz corpus, recipe
@@ -151,6 +151,8 @@ evidence and Prism report.
 recipes can release while Rigol physical verification is still explicitly pending.
 
 **Commit boundary:** Bundled recipes; release tooling; documentation and evidence.
+
+**Evidence:** [RP-4 release and review report](../../reviews/RP4.md). The two-person supported-Mac study and physical verification remain external gates; the automated two-installation exchange passed.
 
 ## Acceptance traceability
 

@@ -31,8 +31,11 @@ experiments:
       - {id: duration, title: Duration, kind: measurement, reference: duration}
 ```
 
-Collector kinds are `measurement`, `series`, and `text`; sources are `native` and
-`json_stdout` (exec only). Paths contain literal JSON object field names, without
+Collector kinds are `measurement`, `series`, and `text`; sources are `native`,
+`json_stdout` (exec only), and `outcome` (capability `outcome_collectors:1`).
+Outcome paths are exactly `[duration_ms]` for a measurement with unit `ms` and
+quantity `duration`, or `[state]` for text. These come from the daemon's monotonic
+step timing and terminal status, independently of provider output/truncation. Paths contain literal JSON object field names, without
 expressions. Measurement direction is `higher`, `lower`, or `neutral`. Unit strings
 are exact. Targets cannot contain other experiment actions. Existing workflows
 remain valid independently: their ordinary arguments/defaults must satisfy each

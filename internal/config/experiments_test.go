@@ -75,3 +75,15 @@ func TestExperimentEffectiveOverridesAndNestedCycles(t *testing.T) {
 		}
 	}
 }
+
+func TestOutcomeCollectorVocabulary(t *testing.T) {
+	valid := strings.Replace(experimentFixture, "source: json_stdout, path: [duration], unit: ms", "source: outcome, path: [duration_ms], unit: ms, quantity: duration", 1)
+	if _, err := parseTest(t, valid); err != nil {
+		t.Fatal(err)
+	}
+	for _, replacement := range []struct{ from, to string }{{"path: [duration_ms]", "path: []"}, {"path: [duration_ms]", "path: [state]"}, {"path: [duration_ms]", "path: [stdout]"}, {"unit: ms", "unit: s"}, {"quantity: duration", "quantity: count"}} {
+		if _, err := parseTest(t, strings.Replace(valid, replacement.from, replacement.to, 1)); err == nil {
+			t.Fatal("invalid outcome collector accepted", replacement.to)
+		}
+	}
+}

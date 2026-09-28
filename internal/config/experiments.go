@@ -167,8 +167,23 @@ func (v *validator) experiments(c *Config) error {
 					return v.fail(path+".collectors", "collector names must be unique")
 				}
 				names[collector.Name] = collector
-				if !slices.Contains([]string{"measurement", "series", "text"}, collector.Kind) || !slices.Contains([]string{"native", "json_stdout"}, collector.Source) || len(collector.Path) > 16 || len(collector.Unit) > 32 || len(collector.Quantity) > 128 || !slices.Contains([]string{"", "higher", "lower", "neutral"}, collector.Direction) {
+				if !slices.Contains([]string{"measurement", "series", "text"}, collector.Kind) || !slices.Contains([]string{"native", "json_stdout", "outcome"}, collector.Source) || len(collector.Path) > 16 || len(collector.Unit) > 32 || len(collector.Quantity) > 128 || !slices.Contains([]string{"", "higher", "lower", "neutral"}, collector.Direction) {
 					return v.fail(path+".collectors", "invalid collector kind, source, path, units, or direction")
+				}
+
+				if collector.Source == "outcome" {
+					valid := false
+					if len(collector.Path) == 1 {
+						switch collector.Path[0] {
+						case "state":
+							valid = collector.Kind == "text"
+						case "duration_ms":
+							valid = collector.Kind == "measurement" && collector.Unit == "ms" && collector.Quantity == "duration"
+						}
+					}
+					if !valid {
+						return v.fail(path+".collectors", "outcome supports state text or duration_ms measurement in ms/duration only")
+					}
 				}
 				if collector.Source == "json_stdout" && leaves[collector.Step].Definition.Type != "exec" {
 					return v.fail(path+".collectors", "JSON stdout collectors require an exec action")

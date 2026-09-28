@@ -1,0 +1,1 @@
+For a Go project, configure separate local actions for `go vet ./...` and `go test ./...` with the project working directory. For other languages, map your existing lint/test commands. Paths, environment values and local action IDs remain outside the portable package. Suggested physical controls are unassigned until explicitly mapped.

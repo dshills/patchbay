@@ -43,11 +43,12 @@ def universal():
 def fixture():
     files = {"bin/" + name: (thin("arm64"), 0o755) for name in common.COMMANDS}
     names = ["LICENSE", "README.md", "THIRD_PARTY_NOTICES.txt", "licenses/Go-LICENSE",
-             "share/workbench/index.html", "share/workbench/app.js", "share/workbench/style.css", "scripts/verify_workbench.py",
+             "share/workbench/index.html", "share/workbench/app.js", "share/workbench/style.css", "share/workbench/recipes.js", "scripts/verify_recipes.py", "specs/RECIPES.md", "scripts/verify_workbench.py",
              "configs/local.patchbay.deckd.plist", "specs/OPERATIONS.md", "specs/WORKBENCH.md", "specs/EVIDENCE.md",
              "scripts/verify_v1.py", "scripts/benchmark_runtime.py", "scripts/verify_release.py",
              "scripts/release_common.py"]
     names += [f"configs/{name}.yaml" for name in verify.CONFIGS]
+    names += [f"recipes/{name}/{file}" for name in verify.RECIPES for file in ("recipe.yaml", "LICENSE", "README.md")]
     names += [f"licenses/{m['path']}@{m['version']}/LICENSE" for m in MODULES]
     names += ["licenses/go.yaml.in/yaml/v3@v3.0.5/NOTICE"]
     files.update({name: (b"example\n", 0o644) for name in names})
@@ -101,7 +102,7 @@ class ReleaseTests(unittest.TestCase):
         verify.verify_archive(self.path, allow_dirty=True)
 
     def test_required_files_and_architecture(self):
-        for name in ("bin/deckplugin-example", "configs/bench.yaml", "bin/deckdemo", "configs/benchmark.yaml", "Patchbay.command", "LICENSE", "licenses/Go-LICENSE"):
+        for name in ("recipes/project-checkup/recipe.yaml", "recipes/rigol-capture/LICENSE", "share/workbench/recipes.js", "scripts/verify_recipes.py", "bin/deckplugin-example", "configs/bench.yaml", "bin/deckdemo", "configs/benchmark.yaml", "Patchbay.command", "LICENSE", "licenses/Go-LICENSE"):
             with self.subTest(name=name):
                 files = fixture()
                 del files[name]

@@ -242,3 +242,31 @@ func TestIndependentCapturesOwnCollectors(t *testing.T) {
 		}
 	}
 }
+
+func TestOutcomeCollectorsIgnoreSpoofedOrTruncatedProviderData(t *testing.T) {
+	source := fixture + `experiments:
+  status:
+    schema_version: 1
+    title: Step status
+    action: echo
+    collectors:
+      - {name: elapsed, step: 0, action: echo, kind: measurement, source: outcome, path: [duration_ms], unit: ms, quantity: duration, direction: lower}
+      - {name: state, step: 0, action: echo, kind: text, source: outcome, path: [state]}
+`
+	r, _ := setup(t, source, resultRunner{result: action.Result{Status: action.Failed, Data: map[string]any{"truncated": true, "duration_ms": -99, "state": "forged"}}})
+	response, err := r.Capture(context.Background(), prepareTestCapture(t, r, "status"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := waitCapture(t, r, response)
+	if run.State != "failed" || len(run.Measurements) != 1 || run.Measurements[0].Value == nil || *run.Measurements[0].Value < 0 || run.Measurements[0].Status != "valid" {
+		t.Fatal("outcome lost or forged", run.Measurements, run.State)
+	}
+	if len(run.Artifacts) != 1 {
+		t.Fatal("status not retained")
+	}
+	data, _, err := r.runs.Artifact(run.ID, run.Artifacts[0].ID)
+	if err != nil || string(data) != "failed" {
+		t.Fatal("provider spoofed daemon outcome", err)
+	}
+}

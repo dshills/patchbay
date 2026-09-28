@@ -1,0 +1,134 @@
+schema_version: 1
+id: project-checkup
+name: Project Checkup
+description: Run two explicitly mapped project checks and compare their status and elapsed time.
+author: Patchbay contributors
+license: MIT
+version: 1.0.0
+digest: d6df075ce780c731510401db63401c53488ac978bc5e1cba7bac70af1ba327c5
+features:
+    capture: 1
+    comparison: 1
+    outcome_collectors: 1
+schemas:
+    experiment: 1
+requirements:
+    check:
+        kind: action
+        description: Map a configured lint/build/check action with no required inputs. Review its exact executable and arguments.
+        provider: exec
+    project:
+        kind: project
+        description: Choose the project these checks operate on.
+    test:
+        kind: action
+        description: Map a configured test action with no required inputs. All commands and effects remain explicit.
+        provider: exec
+actions:
+    check:
+        type: reference
+        project: project
+        reference: check
+        safety: confirm
+        timeout: 2m
+    test:
+        type: reference
+        project: project
+        reference: test
+        safety: confirm
+        timeout: 2m
+workflows:
+    checkup:
+        stop_on_error: false
+        steps:
+            - action: check
+            - action: test
+experiments:
+    checkup:
+        schema_version: 1
+        id: checkup
+        title: Project Checkup
+        description: Both checks run in order even if the first fails. Duration is measured by Patchbay; status records the actual step outcome. Output truncation does not erase these independent observations.
+        projects:
+            - project
+        workflow: checkup
+        collectors:
+            - name: check.duration
+              step: 0
+              action: check
+              kind: measurement
+              source: outcome
+              path:
+                - duration_ms
+              unit: ms
+              quantity: duration
+              direction: lower
+            - name: check.state
+              step: 0
+              action: check
+              kind: text
+              source: outcome
+              path:
+                - state
+            - name: test.duration
+              step: 1
+              action: test
+              kind: measurement
+              source: outcome
+              path:
+                - duration_ms
+              unit: ms
+              quantity: duration
+              direction: lower
+            - name: test.state
+              step: 1
+              action: test
+              kind: text
+              source: outcome
+              path:
+                - state
+        layout:
+            - id: check-duration
+              kind: measurement
+              title: check elapsed
+              reference: check.duration
+            - id: check-state
+              kind: text
+              title: check status
+              reference: check.state
+            - id: test-duration
+              kind: measurement
+              title: test elapsed
+              reference: test.duration
+            - id: test-state
+              kind: text
+              title: test status
+              reference: test.state
+controls:
+    baseline:
+        baseline: checkup
+    capture:
+        capture: checkup
+    result:
+        result: checkup
+inventory:
+    - path: LICENSE
+      media_type: text/plain
+      size: 1068
+      sha256: ca78d6b55d10fab1eec3f362638ef62144c7597786f6becc1fa9df045af0b879
+    - path: README.md
+      media_type: text/markdown
+      size: 596
+      sha256: 99a1e457ad8bd0667c8ceb56ae526f599519ef018393dd748ef1114ec59f9705
+    - path: docs/mapping.md
+      media_type: text/markdown
+      size: 337
+      sha256: 1f84498222e782a40b5c3a063b5070dbff59be66d4ad9e7c9f286683d8c34bcf
+    - path: samples/checkup-baseline.json
+      media_type: application/json
+      size: 2654
+      sha256: b977486294485cb5e6f7f4ff5dc3ae51c490c640b2a90dd7f57a7b7e66786693
+    - path: samples/checkup-candidate.json
+      media_type: application/json
+      size: 2654
+      sha256: 9fc04a1c69860484b78efa14a667c5bcb6412aeb100805b6ce2bb312e92a7193
