@@ -121,6 +121,9 @@ func (r *Runtime) prepareWorkflow(ctx context.Context, name string, remaining *i
 	return r.prepareWorkflowBound(ctx, name, remaining, nil)
 }
 func (r *Runtime) prepareWorkflowBound(ctx context.Context, name string, remaining *int, bindings *inputBindings) (*prepared, error) {
+	if !r.recipeComposition.Allows(name, r.context.Project) {
+		return nil, fault.New(protocol.PermissionDenied, "Recipe workflow belongs to another project.")
+	}
 	if err := ctx.Err(); err != nil {
 		return nil, fault.Safe(err)
 	}
@@ -148,6 +151,9 @@ func (r *Runtime) prepareAction(ctx context.Context, name string, args map[strin
 	return r.prepareActionBound(ctx, name, args, remaining, nil)
 }
 func (r *Runtime) prepareActionBound(ctx context.Context, name string, args map[string]any, remaining *int, bindings *inputBindings) (*prepared, error) {
+	if !r.recipeComposition.Allows(name, r.context.Project) {
+		return nil, fault.New(protocol.PermissionDenied, "Recipe action belongs to another project.")
+	}
 	if err := ctx.Err(); err != nil {
 		return nil, fault.Safe(err)
 	}

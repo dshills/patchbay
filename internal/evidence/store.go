@@ -810,7 +810,7 @@ func sameJSON(a, b any) bool {
 	return bytes.Equal(left, right)
 }
 func immutable(run protocol.Run) any {
-	return map[string]any{"id": run.ID, "origin": run.Origin, "project": run.Project, "context": run.Context, "instance": run.Instance, "job_id": run.JobID, "request_id": run.RequestID, "request_digest": run.RequestDigest, "plan_digest": run.PlanDigest, "experiment_digest": run.ExperimentDigest, "schema_version": run.SchemaVersion, "generation": run.Generation, "created_at": run.CreatedAt, "experiment": run.Experiment, "parameters": run.Parameters, "steps": run.Steps}
+	return map[string]any{"id": run.ID, "origin": run.Origin, "recipe": run.Recipe, "project": run.Project, "context": run.Context, "instance": run.Instance, "job_id": run.JobID, "request_id": run.RequestID, "request_digest": run.RequestDigest, "plan_digest": run.PlanDigest, "experiment_digest": run.ExperimentDigest, "schema_version": run.SchemaVersion, "generation": run.Generation, "created_at": run.CreatedAt, "experiment": run.Experiment, "parameters": run.Parameters, "steps": run.Steps}
 }
 
 func validMetadata(meta metadata) bool {

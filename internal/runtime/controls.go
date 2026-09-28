@@ -37,6 +37,7 @@ func (r *Runtime) controlGuard() protocol.ControlGuard {
 func (r *Runtime) invalidateControls() {
 	r.controlRevision++
 	r.confirmations = nil
+	r.recipePreviews = nil
 	r.captures = map[string]capturePreparation{}
 }
 

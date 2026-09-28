@@ -10,7 +10,7 @@ bin/deckctl recipe inspect /path/to/shared.zip --json
 
 This command verifies content and explains unresolved roles. It does not execute
 commands, probe tool versions, contact devices/providers, install dependencies or
-change daemon configuration. Activation and guided setup are separate RP-2/RP-3 work.
+change daemon configuration. Activation uses the separate review-and-commit flow below.
 A declared author/name is attribution, not verified publisher identity.
 
 ## Format 1
@@ -75,3 +75,104 @@ filesystem reads remain subject to the operating system's filesystem behavior.
 Maintainers can regenerate the bundled example with
 `go run ./scripts/generate_recipes.go`. Deterministic ZIP generation re-imports its
 output with the same verifier before returning it.
+
+## Install and activate locally
+
+First import a folder or ZIP. Identical content returns the existing installation.
+A different package with the same publisher name gets a separate stable ID and alias.
+
+```sh
+bin/deckctl recipe import recipes/benchmark --json
+bin/deckctl recipe list --json
+bin/deckctl recipe show LOCAL_ID --json
+bin/deckctl recipe prepare LOCAL_ID '{"operation":"activate","mappings":{"benchmark":{"project":"my-project"},"demo":{"tool":"/absolute/path/to/deckdemo"}}}' --json
+```
+
+Use an existing project ID and the absolute executable you intend to run. Mapping
+resolves the executable but does not launch it. Action roles map to named local
+host actions; SCPI roles additionally require the model, channel, operation, units,
+and intersecting local/device/recipe limits. Imported actions have at least `confirm`
+safety. Stronger local/provider policy still applies to every later invocation.
+Optional unmapped roles disable their dependent definitions with diagnostics.
+
+The preview shows the installation/content identity, mappings, control assignments,
+before/after portable manifests, effective definitions, ordered workflows, experiment
+commands expanded with retained parameter values, changes and explicit resets.
+Ordinary action definitions with required arguments show `<input:name>` placeholders;
+those values are chosen and checked at invocation. Environment names are listed,
+never resolved values. Secret input positions are redacted. Review the complete
+preview; arbitrary literal text may still contain private content.
+
+A preview expires after 60 seconds. Copy its ID and digest and generate a request ID:
+
+```sh
+bin/deckctl request-id
+bin/deckctl recipe commit LOCAL_ID PREPARATION DIGEST REQUEST_ID --confirm
+```
+
+Use the exact installation ID returned by the preview when committing. If the
+connection fails, retry the **same complete command and request ID** to retrieve its
+receipt. Do not invent a new ID until you know the earlier result. Unknown request
+IDs must be within 24 hours (at most five minutes ahead). Receipts survive restart
+for at least 25 hours. Changes to context, parameter values, configuration, generation
+or recipe selection invalidate uncommitted previews. Import trust does not approve
+a future capture, command, model request, or hardware operation.
+
+Suggested controls start unassigned. Add explicit assignments in preparation JSON,
+for example `"assignments":{"capture":{"device":"deck","control":"key1","gesture":"press"}}`.
+Use a control name from the manifest and your adapter's device/control IDs. Gestures
+are `press`, `long_press`, `touch`, `long_touch`, and parameter `rotate`. Core ambiguity
+and target validation still applies. Physical assignments require a mapped project.
+
+## Update, disable, remove and recover
+
+Stage an update with `recipe stage LOCAL_ID /path/to/new.zip`. Prepare with
+`{"operation":"update"}`, then review and commit as above. Updates and rollback
+require the exact installation ID. A rejected update leaves the active version
+intact. Current and previous versions remain selected; `{"operation":"rollback"}`
+uses the same review process. Compatible parameter values survive publication.
+If a value no longer fits, preparation requires the explicit choice
+`"reset_parameters":true` and identifies the affected parameters.
+
+Other operations are `deactivate`, `remove`, and `rename` with `"alias":"new-name"`.
+Renaming changes only the display alias. Deactivation/removal prevent new recipe
+invocations and invalidate old preparations. Admitted jobs finish with their owned
+plans; saved runs retain recipe identity and experiment metadata after removal.
+Rollback changes configuration only; it cannot undo completed commands or equipment
+settings. No lifecycle operation runs an install/uninstall hook.
+
+The private store is `<state.path>.recipes`, limited to 200 MiB, 50 installations,
+one staged candidate and the current/previous selections per installation. Staging,
+old archives and incomplete files count toward the quota. Nothing is evicted to
+make room. `recipe list` reports bytes and unused files. To review explicit cleanup:
+
+```sh
+bin/deckctl recipe prepare store '{"operation":"cleanup"}' --json
+bin/deckctl recipe commit store PREPARATION DIGEST REQUEST_ID --confirm
+```
+
+Only the listed unselected archives/staging files are removed. Selected content and
+saved runs are retained. Failed cleanup leaves files charged and reports diagnostics;
+a new cleanup review can retry. In-flight jobs own their definitions and do not
+reopen recipe archives.
+
+### Transaction recovery
+
+The host YAML is independently valid and never rewritten by recipe management.
+All publication and work admission use the same runtime lock. The selection journal
+has these recovery rules:
+
+| Failure boundary | Runtime and restart behavior |
+| --- | --- |
+| Before `intent.json` or before selection rename | Old selection/generation stays authoritative. Incomplete files remain charged. |
+| Intent persisted, selection absent/unchanged | Restart ignores the inert intent and uses `selection.json`. |
+| Selection renamed but directory sync fails | Stop new admissions; restart resolves the selected file and receipt. |
+| Selection durable, publication interrupted | Restart validates the selected composition before accepting work; never replays an action. |
+| Publication succeeds, response lost | Same management request returns its durable receipt. |
+
+Restart reloads immutable packages and the current host YAML. Changed host config
+invalidates recipe grants; invalid packages/bindings are disabled with diagnostics
+while the host remains usable. Re-review activation to grant the new composition.
+An unsupported/corrupt store is preserved and recipe management becomes unavailable.
+A backward clock makes the store read-only. Stop the daemon before backing up the
+host config, state, runs and recipe directory together; preserve private permissions.

@@ -58,3 +58,18 @@ func TestSCPIInvalidConfigurations(t *testing.T) {
 		}
 	}
 }
+
+func TestCompositionSCPIInputsRemainWithinDeviceLimits(t *testing.T) {
+	raw := benchSource(t)
+	raw = strings.Replace(raw, "generator.output: {type: scpi, device: generator, channel: 1, operation: generator.output}", "generator.output: {type: scpi, device: generator, channel: 1, operation: generator.output, inputs: {value: {type: boolean, required: true}}}", 1)
+	if _, err := Parse([]byte(raw), "/tmp", "/tmp"); err == nil {
+		t.Fatal("source grammar accepted generated inputs")
+	}
+	if _, err := ParseComposition([]byte(raw), "/tmp", "/tmp"); err != nil {
+		t.Fatal(err)
+	}
+	raw = strings.Replace(raw, "generator.frequency: {type: scpi, parameter: bench.frequency}", "generator.frequency: {type: scpi, device: generator, channel: 1, operation: generator.set_frequency, inputs: {value: {type: float, required: true, min: 1, max: 1000001}}}", 1)
+	if _, err := ParseComposition([]byte(raw), "/tmp", "/tmp"); err == nil {
+		t.Fatal("composition widened device limits")
+	}
+}

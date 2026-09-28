@@ -30,7 +30,10 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("invalid_config: %s: %s", e.Path, e.Message)
 }
 
-type validator struct{ nodes map[string]*yaml.Node }
+type validator struct {
+	nodes    map[string]*yaml.Node
+	composed bool
+}
 
 func (v *validator) fail(path, message string) error {
 	e := &Error{Path: path, Message: message}
@@ -82,7 +85,17 @@ func FilePath(path string) (string, error) {
 // Parse returns an independently owned, normalized configuration. The caller
 // must treat it as immutable after publication. baseDir/home must be absolute.
 func Parse(data []byte, baseDir, home string) (*Config, error) {
-	v := &validator{nodes: map[string]*yaml.Node{}}
+	return parse(data, baseDir, home, false)
+}
+
+// ParseComposition validates an internally built configuration. Its only extra
+// grammar is narrowed generated SCPI value inputs; device limits remain mandatory.
+// User source files and portable recipe manifests must use Parse instead.
+func ParseComposition(data []byte, baseDir, home string) (*Config, error) {
+	return parse(data, baseDir, home, true)
+}
+func parse(data []byte, baseDir, home string, composed bool) (*Config, error) {
+	v := &validator{nodes: map[string]*yaml.Node{}, composed: composed}
 	if len(data) > MaxConfigBytes {
 		return nil, v.fail("$", "configuration exceeds 1 MiB")
 	}

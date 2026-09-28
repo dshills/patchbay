@@ -25,13 +25,28 @@ func (r *Runtime) Reload(ctx context.Context) (uint64, error) {
 	if err != nil {
 		return 0, fault.New(protocol.InvalidConfig, "Configuration reload failed validation.")
 	}
-	registries, err := buildRegistries(candidate)
-	if err != nil {
-		return 0, err
-	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if err := r.writable(ctx); err != nil {
+		return 0, err
+	}
+	composition := r.composeRecipes(ctx, candidate)
+	generation, err := r.publishConfig(ctx, composition.Config)
+	if err == nil {
+		r.baseConfig = candidate
+		r.recipeComposition = composition
+	}
+	return generation, err
+}
+
+// publishConfig is the shared publication path for reloads and approved recipe
+// selections. Its caller holds r.mu and serializes with reloadMu.
+func (r *Runtime) publishConfig(ctx context.Context, candidate *config.Config) (uint64, error) {
+	if err := r.writable(ctx); err != nil {
+		return 0, err
+	}
+	registries, err := buildRegistries(candidate)
+	if err != nil {
 		return 0, err
 	}
 	old := r.cfg
@@ -144,6 +159,9 @@ func (r *Runtime) Actions() []protocol.Action {
 	registry := r.registries[r.context.Project]
 	list := make([]protocol.Action, 0, len(registry.Names()))
 	for _, name := range registry.Names() {
+		if !r.recipeComposition.Allows(name, r.context.Project) {
+			continue
+		}
 		a, _ := registry.Get(name)
 		list = append(list, r.actionMetadata(name, a))
 	}
@@ -154,7 +172,7 @@ func (r *Runtime) Action(name string) (protocol.Action, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	a, exists := r.registries[r.context.Project].Get(name)
-	if !exists {
+	if !exists || !r.recipeComposition.Allows(name, r.context.Project) {
 		return protocol.Action{}, fault.New(protocol.ActionNotFound, "Action not found.")
 	}
 	return r.actionMetadata(name, a), nil
@@ -185,6 +203,9 @@ func (r *Runtime) Workflows() []protocol.Workflow {
 	defer r.mu.Unlock()
 	list := make([]protocol.Workflow, 0, len(r.cfg.Workflows))
 	for _, name := range slices.Sorted(maps.Keys(r.cfg.Workflows)) {
+		if !r.recipeComposition.Allows(name, r.context.Project) {
+			continue
+		}
 		w := r.cfg.Workflows[name]
 		steps := make([]protocol.WorkflowStep, 0, len(w.Steps))
 		for _, step := range w.Steps {

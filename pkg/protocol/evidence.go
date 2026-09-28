@@ -176,6 +176,7 @@ type WaveformObservation struct {
 }
 
 type Run struct {
+	Recipe           *RecipeOrigin      `json:"recipe,omitempty"`
 	Context          Context            `json:"context"`
 	Outcomes         []StepOutcome      `json:"outcomes,omitempty"`
 	SchemaVersion    int                `json:"schema_version"`
@@ -203,6 +204,12 @@ type Run struct {
 	SourceChanged    bool               `json:"source_changed,omitempty"`
 	Error            *Error             `json:"error,omitempty"`
 	Annotation       Annotation         `json:"annotation"`
+}
+type RecipeOrigin struct {
+	Installation string `json:"installation"`
+	DeclaredID   string `json:"declared_id"`
+	Version      string `json:"version"`
+	Content      string `json:"content_digest"`
 }
 
 type Annotation struct {

@@ -1,6 +1,6 @@
 # Shareable Recipes implementation plan
 
-**Status:** RP-1 implemented; RP-2 in progress\
+**Status:** RP-1/RP-2 implemented; RP-3 next\
 **Specification:** [Shareable Recipes](SPEC.md)\
 **Dependencies:** CC-1 schemas; CC-2 for activation/runs; CC-3 for UI. CC-5 gates only the verified Rigol recipe.
 
@@ -46,25 +46,25 @@ or changing the definitions of already admitted work.
 
 **Depends on:** RP-1 and CC-2; existing atomic config-generation machinery.
 
-- [ ] Add private recipe content/binding/grant storage with installed/staged/version
+- [x] Add private recipe content/binding/grant storage with installed/staged/version
   quotas and capability status. Keep portable files separate from local metadata.
-- [ ] Assign stable local installation IDs and editable display aliases; keep declared
+- [x] Assign stable local installation IDs and editable display aliases; keep declared
   publisher IDs separate. Support same-name packages, unique aliases with proposed
   suffixes, unambiguous CLI selection and explicit update targeting.
-- [ ] Implement project/tool/action/device binding with provider identity, channel,
+- [x] Implement project/tool/action/device binding with provider identity, channel,
   unit and limit intersection checks. Resolve executable paths without running them.
-- [ ] Compose namespaced definitions with host config, fully validate overrides and
+- [x] Compose namespaced definitions with host config, fully validate overrides and
   nested workflows, and detect all action/parameter/control collisions.
-- [ ] Build daemon-derived previews covering exact effective commands, destinations,
+- [x] Build daemon-derived previews covering exact effective commands, destinations,
   permissions, config changes and parameter resets; bind them to base and content
   digests, generation, local mappings, expiry, and durable management request IDs.
-- [ ] Implement activation journal/recovery and serialized publication of active disk
+- [x] Implement activation journal/recovery and serialized publication of active disk
   manifest plus runtime generation. Document each crash point and authoritative state.
-- [ ] Add update semantic diffs, compatible binding/value retention, explicit reset
+- [x] Add update semantic diffs, compatible binding/value retention, explicit reset
   choice, deactivation, removal, one-version rollback, and in-flight reference ownership.
-- [ ] Invalidate captures/agent proposals on deactivation or effective binding changes.
+- [x] Invalidate captures/agent proposals on deactivation or effective binding changes.
   Preserve durable evidence and block new unreviewed recipe invocations on host reload.
-- [ ] Extend CLI/API and operations docs; keep plain config behavior and plugin v1 intact.
+- [x] Extend CLI/API and operations docs; keep plain config behavior and plugin v1 intact.
 
 **Verification:** Real daemon transactions with concurrent jobs/reloads; changed action
 digests; namespace/binding collisions; stronger provider floors; invalid device limits;
@@ -80,6 +80,8 @@ documented recovery procedure, and transaction/state-machine tests.
 produces no action execution, provider request, hardware write, or automatic approval.
 
 **Commit boundary:** Bindings/composition; previews/activation; updates/removal/recovery.
+
+**Evidence:** [RP-2 review and tests](../../reviews/RP2.md), [lifecycle and recovery guide](../../RECIPES.md).
 
 ## RP-3 — Guided setup and portable export
 

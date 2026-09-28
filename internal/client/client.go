@@ -101,6 +101,17 @@ func (c *Client) CallQuery(ctx context.Context, method string, segments []string
 		}
 		body = bytes.NewReader(data)
 	}
+	return c.callBody(ctx, method, segments, query, body, "application/json", response)
+}
+
+// Upload sends explicit bounded bytes once; it never retries a mutation.
+func (c *Client) Upload(ctx context.Context, segments []string, query url.Values, data []byte, response any) error {
+	if len(data) > 20<<20 {
+		return &Error{"usage", "Upload exceeds 20 MiB."}
+	}
+	return c.callBody(ctx, "POST", segments, query, bytes.NewReader(data), "application/zip", response)
+}
+func (c *Client) callBody(ctx context.Context, method string, segments []string, query url.Values, body io.Reader, media string, response any) error {
 	escaped := make([]string, len(segments))
 	for i, part := range segments {
 		escaped[i] = url.PathEscape(part)
@@ -114,8 +125,8 @@ func (c *Client) CallQuery(ctx context.Context, method string, segments []string
 		return &Error{"usage", "Cannot construct the request."}
 	}
 	req.Header.Set("Accept", "application/json")
-	if request != nil {
-		req.Header.Set("Content-Type", "application/json")
+	if body != nil {
+		req.Header.Set("Content-Type", media)
 	}
 	connection := c.http
 	if method != "GET" && method != "HEAD" {

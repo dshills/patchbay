@@ -43,6 +43,12 @@ func (r *Runtime) capture(ctx context.Context, request protocol.CaptureRequest, 
 		return protocol.CaptureResponse{}, err
 	}
 	run := protocol.Run{Experiment: prep.experiment, ExperimentDigest: prep.preview.ExperimentDigest, PlanDigest: prep.preview.Digest, Project: prep.preview.Context.Project, Context: protocol.Context{Project: prep.preview.Context.Project, Mode: prep.preview.Context.Mode}, Instance: r.instance, Generation: r.generation, RequestID: request.RequestID, RequestDigest: digest, Parameters: prep.preview.Parameters, Steps: prep.preview.Steps}
+	for prefix, origin := range r.recipeComposition.Origins {
+		if strings.HasPrefix(prep.experiment.ID, prefix) {
+			copy := origin
+			run.Recipe = &copy
+		}
+	}
 	var response protocol.CaptureResponse
 	root := r.cfg.Projects[r.context.Project].Path
 	budget := provider.NewBudget(r.cfg.Jobs.OutputLimitBytes)

@@ -92,6 +92,9 @@ func call[T any](ctx context.Context, c *client.Client, method string, request a
 	return value, err
 }
 func executeCommand(ctx context.Context, c *client.Client, o ctlOptions, command []string) (any, error) {
+	if command[0] == "recipe" {
+		return recipeCommand(ctx, c, o, command)
+	}
 	if command[0] == "request-id" {
 		return map[string]string{"request_id": evidence.NewRequestID(time.Now())}, nil
 	}

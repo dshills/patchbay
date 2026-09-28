@@ -22,6 +22,7 @@ type Handler struct {
 func NewHandler(runtime *runtimecore.Runtime) http.Handler {
 	h := &Handler{runtime: runtime, mux: http.NewServeMux()}
 	h.evidenceRoutes()
+	h.recipeRoutes()
 	h.route("/v1/status", "GET", func(w http.ResponseWriter, r *http.Request) { respond(w, 200, runtime.Status()) })
 	h.route("/v1/context", "GET, PATCH", h.context)
 	h.route("/v1/context/project", "PUT", h.projectSelection)

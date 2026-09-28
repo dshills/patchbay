@@ -53,7 +53,7 @@ func (v *validator) scpiParameters(c *Config) error {
 	return nil
 }
 func (v *validator) scpiAction(path string, a *Action, c *Config) error {
-	if a.Command != "" || len(a.Args) != 0 || a.Cwd != "" || len(a.Environment) != 0 || a.Target != "" || a.Workflow != "" || a.Provider != "" || a.Prompt != "" || len(a.Files) != 0 || len(a.Inputs) != 0 {
+	if a.Command != "" || len(a.Args) != 0 || a.Cwd != "" || len(a.Environment) != 0 || a.Target != "" || a.Workflow != "" || a.Provider != "" || a.Prompt != "" || len(a.Files) != 0 || !v.composed && len(a.Inputs) != 0 {
 		return v.fail(path, "SCPI accepts only device, operation, channel or a bound parameter, plus safety and timeout; value inputs are generated")
 	}
 	if a.Parameter != "" {
@@ -71,6 +71,20 @@ func (v *validator) scpiAction(path string, a *Action, c *Config) error {
 		return v.fail(path, "unsupported instrument, semantic operation or channel")
 	}
 	kind, _, lo, hi := d.ValueSpec(a.Operation)
+	if v.composed && len(a.Inputs) > 0 {
+		input, exists := a.Inputs["value"]
+		if a.Parameter != "" || !exists || len(a.Inputs) != 1 || kind == "" || string(input.Type) != kind {
+			return v.fail(path, "composed SCPI input must match the device operation")
+		}
+		schema := input.definition()
+		if err := schema.Normalize(); err != nil {
+			return v.fail(path, err.Error())
+		}
+		if kind == "float" && (schema.Min == nil || schema.Max == nil || schema.Min.(float64) < lo || schema.Max.(float64) > hi) {
+			return v.fail(path, "composed SCPI input exceeds device limits")
+		}
+		return nil
+	}
 	if kind != "" && a.Parameter == "" {
 		input := Input{Type: parameter.Type(kind), Required: true}
 		if kind == "float" {

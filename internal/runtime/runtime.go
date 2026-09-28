@@ -26,12 +26,14 @@ import (
 	"patchbay/internal/logging"
 	"patchbay/internal/parameter"
 	"patchbay/internal/provider"
+	"patchbay/internal/recipe"
 	"patchbay/internal/state"
 	"patchbay/internal/version"
 	"patchbay/pkg/protocol"
 )
 
 type Options struct {
+	Recipes  recipe.StoreOptions
 	Evidence evidence.Options
 	Log      io.Writer
 	Runner   provider.Runner
@@ -39,35 +41,41 @@ type Options struct {
 	Agent    provider.Agent
 }
 type Runtime struct {
-	exports         map[string]exportPreparation
-	runs            *evidence.Store
-	storageError    error
-	captureKey      []byte
-	captures        map[string]capturePreparation
-	mu              sync.Mutex
-	reloadMu        sync.Mutex
-	cfg             *config.Config
-	registries      map[string]*action.Registry[config.Action]
-	context         runtimecontext.RuntimeContext
-	parameters      map[string]parameter.Definition
-	generation      uint64
-	instance        string
-	controlRevision uint64
-	confirmations   map[string]controlConfirmation
-	closed          bool
-	path            string
-	started         time.Time
-	bus             *event.Bus
-	jobs            *job.Manager
-	state           *state.Writer
-	stateLock       *localfs.Lock
-	runner          provider.Runner
-	opener          string
-	agent           provider.Agent
-	scpi            *provider.SCPI
-	plugins         *provider.Plugins
-	synchronization map[string]parameter.Synchronization
-	log             *logging.Logger
+	baseConfig           *config.Config
+	recipes              *recipe.Store
+	recipeError          error
+	recipeComposition    recipe.Composition
+	recipePreviews       map[string]recipePreparation
+	compositionUncertain bool
+	exports              map[string]exportPreparation
+	runs                 *evidence.Store
+	storageError         error
+	captureKey           []byte
+	captures             map[string]capturePreparation
+	mu                   sync.Mutex
+	reloadMu             sync.Mutex
+	cfg                  *config.Config
+	registries           map[string]*action.Registry[config.Action]
+	context              runtimecontext.RuntimeContext
+	parameters           map[string]parameter.Definition
+	generation           uint64
+	instance             string
+	controlRevision      uint64
+	confirmations        map[string]controlConfirmation
+	closed               bool
+	path                 string
+	started              time.Time
+	bus                  *event.Bus
+	jobs                 *job.Manager
+	state                *state.Writer
+	stateLock            *localfs.Lock
+	runner               provider.Runner
+	opener               string
+	agent                provider.Agent
+	scpi                 *provider.SCPI
+	plugins              *provider.Plugins
+	synchronization      map[string]parameter.Synchronization
+	log                  *logging.Logger
 }
 
 func New(path string, options Options) (*Runtime, error) {
@@ -106,7 +114,7 @@ func NewConfigured(path string, c *config.Config, options Options) (*Runtime, er
 	if options.Agent == nil {
 		options.Agent = provider.NewCodex()
 	}
-	r := &Runtime{cfg: c, registries: registries, path: path, started: time.Now(), generation: 1, instance: identity.New(), controlRevision: 1, runner: options.Runner, opener: options.Opener, log: logging.New(options.Log)}
+	r := &Runtime{baseConfig: c, cfg: c, registries: registries, path: path, started: time.Now(), generation: 1, instance: identity.New(), controlRevision: 1, runner: options.Runner, opener: options.Opener, log: logging.New(options.Log)}
 	r.agent = options.Agent
 	r.scpi = provider.NewSCPI(c.Devices)
 	r.plugins = provider.NewPlugins(c.Plugins)
@@ -117,9 +125,15 @@ func NewConfigured(path string, c *config.Config, options Options) (*Runtime, er
 	if err != nil {
 		return nil, err
 	}
+	r.initRecipes(c, options.Recipes)
+	c = r.cfg
+	r.parameters = cloneParameters(c.Parameters)
 	saved, err := state.Read(c.State.Path)
 	if err != nil && !errors.Is(err, state.ErrRecovered) {
 		_ = r.stateLock.Close()
+		if r.recipes != nil {
+			_ = r.recipes.Close()
+		}
 		return nil, err
 	}
 	if err != nil {
@@ -224,6 +238,9 @@ func (r *Runtime) persist(ctx runtimecontext.RuntimeContext, parameters map[stri
 func (r *Runtime) writable(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return fault.Safe(err)
+	}
+	if r.compositionUncertain {
+		return fault.New(protocol.RecordingFailed, "Recipe selection durability is uncertain; restart before new work.")
 	}
 	if r.closed {
 		return fault.New(protocol.ShuttingDown, "Daemon is shutting down.")
@@ -411,6 +428,9 @@ func (r *Runtime) Close(ctx context.Context) error {
 	jobErr := r.jobs.Shutdown(ctx)
 	if jobErr == nil && r.runs != nil {
 		_ = r.runs.Close()
+	}
+	if jobErr == nil && r.recipes != nil {
+		_ = r.recipes.Close()
 	}
 	pluginErr := r.plugins.Close(ctx)
 	scpiErr := r.scpi.Close(ctx)
