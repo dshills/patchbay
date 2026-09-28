@@ -8,6 +8,10 @@
 
 **Initial target:** Go daemon and CLI on macOS; Stream Deck+ follows the headless release.
 
+**Next feature plans:** [Capture & Compare, Shareable Recipes, and Agent Control Panel](features/README.md)
+have separate proposed specifications, phase plans, dependencies, and acceptance
+criteria. They extend the existing foundation without renumbering Phases 0–7.
+
 ## 1. Delivery strategy
 
 Build a usable, testable headless runtime first. Deliver V1 after Phases 0–2 satisfy all twelve acceptance criteria in SPEC §34. Add the Stream Deck+ adapter in Phase 3, then developer integrations, electronics, and executable plugins in Phases 4–6.

@@ -566,6 +566,11 @@ development tools and laboratory equipment.
 That future capability MUST emerge from stable core abstractions rather
 than V1 speculative complexity.
 
+The [feature roadmap](features/README.md) specifies the proposed Capture & Compare,
+Shareable Recipes, and Agent Control Panel extensions, with a separate phased
+implementation plan for each. Their new interfaces and capabilities are planned;
+the implementation decisions below still describe the current runtime.
+
 ## 38. Foundation Decisions
 
 Phase 0 schema/defaults, safety normalization, project override semantics,
