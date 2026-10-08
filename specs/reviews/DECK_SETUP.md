@@ -138,3 +138,36 @@ behavior on a connected Deck+ remain pending. This installer intentionally refus
 unknown hardware/profile formats; it does not claim Windows support. Backups retain
 file bytes with private permissions; ACLs and original directory permission metadata
 are not an archival guarantee. Signed distribution remains a separate release gate.
+
+
+## Service readiness correction
+
+A physical trial exposed missing `MaxResponseBytes` options in both native service
+clients. `client.New` rejects zero, so startup failed after bootstrap and rollback
+failed after bootout. Both checks now use an explicit 1 MiB response bound. Client
+validation precedes the launchctl mutation so constructor errors cannot change the
+service state. Manual quit guidance is clearer when macOS prevents automatic quit.
+
+The new fixture substitutes only launchctl for service startup and shutdown. The
+actual native methods construct their real HTTP clients and query an actual daemon
+through its private Unix socket. Its switch/restore test reproduced the reported
+startup and recovery error before the fix. After the fix, startup, demo-to-benchmark
+switching and exact restoration pass. A failed bootstrap also restores and restarts
+an existing demo service through the real native readiness path. All pass under the
+race detector. Real Stream Deck files and preferences are unchanged by these tests.
+
+Prism `7e58cd0ab94ad1f75f6e1588ab271cb4` reviewed the three source/test/guide
+files completely, with no skipped input or high findings.
+- Client leak: false positive. The quoted code already places `defer c.Close()`
+  immediately after the constructor error check; no intervening failure exists.
+- Alleged readiness race: false positive. `client.New` validates options and creates
+  transports; it performs no I/O or listening. Polling begins after launchctl returns.
+- Alleged nil active struct: false positive. `active()` returns an `Active` value.
+- Distinct output limits: retained. The 16 MiB native-command cap accommodates full
+  preference export; the 1 MiB service-status bound has a different purpose.
+- Missing-job exit code: its supported-host behavior and fail-closed treatment of
+  other errors are now explained in a source comment and covered by existing tests.
+
+The complete `make check` suite passed after the correction, including ordinary and
+race tests, vet, zero lint issues, native builds, plugin conformance and all 20 Python
+release tests. No private backup content was supplied to Prism.

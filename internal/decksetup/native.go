@@ -40,6 +40,8 @@ func Default() (*Manager, error) {
 	return New(paths, &native{paths: paths})
 }
 
+const serviceMaxResponseBytes = 1 << 20
+
 type native struct {
 	paths   Paths
 	command func(context.Context, string, ...string) ([]byte, error)
@@ -84,7 +86,7 @@ func (n *native) StopApp(ctx context.Context) (bool, error) {
 		return running, err
 	}
 	if _, err = n.run(ctx, "/usr/bin/osascript", "-e", `tell application id "com.elgato.StreamDeck" to quit`); err != nil {
-		return true, errors.New("could not close Stream Deck; close it and try again")
+		return true, errors.New("the Stream Deck app could not close automatically; quit it from its menu and retry (allow macOS Automation access if prompted)")
 	}
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
@@ -161,6 +163,8 @@ func (n *native) StopService(ctx context.Context, path string) error {
 	}
 	if _, err := n.run(ctx, "/bin/launchctl", "print", n.domain()+"/"+serviceID); err != nil {
 		var exit *exec.ExitError
+		// launchctl print uses 113 for a missing job on the supported macOS host.
+		// Other inspection failures must not be treated as a stopped service.
 		if errors.As(err, &exit) && exit.ExitCode() == 113 {
 			return nil
 		}
@@ -169,15 +173,16 @@ func (n *native) StopService(ctx context.Context, path string) error {
 	if _, err := os.Lstat(path); err != nil {
 		return errors.New("loaded setup service has no owned LaunchAgent; stop it before changing the setup")
 	}
-	if _, err := n.run(ctx, "/bin/launchctl", "bootout", n.domain()+"/"+serviceID); err != nil {
-		return errors.New("could not stop the Patchbay setup service")
-	}
-	// Wait for its socket to stop serving before replacing the configuration.
-	c, err := client.New(client.Options{Socket: filepath.Join(n.paths.Root, "deckd.sock"), Timeout: 200 * time.Millisecond})
+	// Validate the readiness client before changing the service's state.
+	c, err := client.New(client.Options{Socket: filepath.Join(n.paths.Root, "deckd.sock"), Timeout: 200 * time.Millisecond, MaxResponseBytes: serviceMaxResponseBytes})
 	if err != nil {
 		return err
 	}
 	defer c.Close()
+	if _, err := n.run(ctx, "/bin/launchctl", "bootout", n.domain()+"/"+serviceID); err != nil {
+		return errors.New("could not stop the Patchbay setup service")
+	}
+	// Wait for its socket to stop serving before replacing the configuration.
 	deadline := time.Now().Add(8 * time.Second)
 	for time.Now().Before(deadline) {
 		var status protocol.Status
@@ -196,14 +201,14 @@ func (n *native) StartService(ctx context.Context, path, socket string) error {
 	if err := n.ownedAgent(path); err != nil {
 		return err
 	}
-	if _, err := n.run(ctx, "/bin/launchctl", "bootstrap", n.domain(), path); err != nil {
-		return errors.New("could not start Patchbay; the previous setup will be restored")
-	}
-	c, err := client.New(client.Options{Socket: socket, Timeout: 300 * time.Millisecond})
+	c, err := client.New(client.Options{Socket: socket, Timeout: 300 * time.Millisecond, MaxResponseBytes: serviceMaxResponseBytes})
 	if err != nil {
 		return err
 	}
 	defer c.Close()
+	if _, err := n.run(ctx, "/bin/launchctl", "bootstrap", n.domain(), path); err != nil {
+		return errors.New("could not start Patchbay; the previous setup will be restored")
+	}
 	deadline := time.Now().Add(8 * time.Second)
 	for time.Now().Before(deadline) {
 		var status protocol.Status

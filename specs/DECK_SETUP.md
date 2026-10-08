@@ -89,6 +89,10 @@ old backups is a manual operation. The earliest remaining backup becomes `origin
 
 ## Failure and recovery
 
+If macOS does not let Patchbay close Stream Deck automatically, quit Stream Deck
+from its menu and retry the same command. Allow Automation access if macOS asks.
+Setup refuses to change configuration while the app remains open.
+
 Backup copy, hash verification and durable directory commit happen before live
 configuration is changed. A failed backup stops installation. Cancellation or a
 later failure attempts to restore the already committed backup with an independent
