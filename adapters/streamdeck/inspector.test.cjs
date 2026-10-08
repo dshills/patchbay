@@ -23,6 +23,8 @@ test('inspector waits for global settings and preserves unrelated settings', () 
   socket.onopen();
   assert.deepEqual(socket.sent[0], { event: 'registerPropertyInspector', uuid: 'ui-uuid' });
   assert.equal(fields.save.disabled, true);
+  socket.onmessage({ data: " ".repeat(65537) });
+  assert.equal(fields.save.disabled, true);
   socket.onmessage({ data: JSON.stringify({ event: 'didReceiveGlobalSettings', payload: { settings: { socket: '/private/sock', retained: 42 } } }) });
   assert.equal(fields.save.disabled, false);
   fields.control.value = '  volume  '; fields.label.value = 'Level'; fields.socket.value = '/new/socket';
@@ -30,6 +32,10 @@ test('inspector waits for global settings and preserves unrelated settings', () 
   const [global, local] = socket.sent.slice(-2);
   assert.deepEqual(global, { event: 'setGlobalSettings', context: 'ui-uuid', payload: { socket: '/new/socket', retained: 42 } });
   assert.deepEqual(local, { event: 'setSettings', context: 'action-instance', action: 'local.patchbay.deckd.control', payload: { control: 'volume', label: 'Level', retained: true } });
+  socket.onmessage({ data: JSON.stringify({ event: 'didReceiveGlobalSettings', payload: { settings: { socket: '/managed/socket', patchbayManaged: true, retained: 42 } } }) });
+  assert.equal(fields.socket.readOnly, true);
+  assert.equal(fields.socket.value, '/managed/socket');
+  assert.match(fields.status.textContent, /managed by deckctl/);
   const count = socket.sent.length;
   socket.onclose(); fields.settings.submit({ preventDefault() {}, target: fields.settings });
   assert.equal(socket.sent.length, count);

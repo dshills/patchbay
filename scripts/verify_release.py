@@ -135,6 +135,7 @@ def verify_archive(path, allow_dirty=False):
         required.update(binaries)
         if product == "deckd":
             required.update(f"configs/{name}.yaml" for name in CONFIGS)
+            required.add("specs/DECK_SETUP.md")
             required.update(f"recipes/{name}/{file}" for name in RECIPES for file in ("recipe.yaml", "README.md", "LICENSE"))
             required.update({"share/workbench/index.html", "share/workbench/app.js", "share/workbench/style.css", "share/workbench/recipes.js", "share/workbench/agents.js", "scripts/verify_agents.py", "specs/AGENT_CONTROL.md", "configs/benchmark-agent.yaml", "scripts/verify_recipes.py", "specs/RECIPES.md", "scripts/verify_workbench.py", "README.md", "Patchbay.command", "specs/WORKBENCH.md", "specs/EVIDENCE.md", "configs/local.patchbay.deckd.plist", "specs/OPERATIONS.md",
                              "scripts/verify_v1.py", "scripts/benchmark_runtime.py", "scripts/verify_release.py",
@@ -208,6 +209,13 @@ def smoke(metadata, files):
         for name in ("deckd", "deckctl", "deckplugincheck", "deckdemo"):
             output = subprocess.check_output([str(root / "bin" / name), "--version", "--json"], timeout=10)
             require(decode(output) == expected, "binary version mismatch: " + name)
+        adapter_version = decode(subprocess.check_output(
+            [str(root / "bin/decksd"), "--version"], timeout=10))
+        require(adapter_version == expected, "bundled adapter version mismatch")
+        presets = decode(subprocess.check_output(
+            [str(root / "bin/deckctl"), "deck", "list", "--json"], timeout=10))
+        require([preset["name"] for preset in presets] == ["demo", "benchmark"],
+                "deck setup presets are missing")
         for name in CONFIGS:
             subprocess.run([str(root / "bin/deckctl"), "config", "validate", "--json",
                             "--config", str(root / f"configs/{name}.yaml")], check=True, timeout=10)

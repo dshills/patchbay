@@ -49,7 +49,7 @@ See the [workbench guide](specs/WORKBENCH.md) for existing daemons and saved dat
 
 You'll need **macOS, Git, Go 1.27 or later, and Make**.
 
-### 1. Download and build
+### Download and build
 
 ```sh
 git clone https://github.com/dshills/patchbay.git
@@ -57,13 +57,42 @@ cd patchbay
 make build
 ```
 
+## Try it on your Stream Deck+
+
+With the Stream Deck app installed and your Deck+ connected, run this from the
+Patchbay folder (a downloaded bundle or the source checkout after `make build`):
+
+```sh
+./bin/deckctl deck use demo
+```
+
+Patchbay saves your current profiles and settings, installs its plugin and button/dial
+layout, starts its service, and reopens Stream Deck with the demo selected. Press the
+top-left button or turn the first dial. The service runs in the background, so you
+can close Terminal.
+
+Try another setup, or return to the one you had:
+
+```sh
+./bin/deckctl deck use benchmark
+./bin/deckctl deck restore
+```
+
+`deck restore` goes back one step. `deck restore original` returns to your first
+saved setup, and `deck backups` lists every saved setup. Restoring also makes a
+backup, so you can undo a restore. See [setup and recovery](specs/DECK_SETUP.md)
+for details. Automated recovery tests pass; physical profile loading remains
+pending validation on a connected Deck+.
+
+## Try your own project actions
+
 Run `./bin/deckctl demo` to open the benchmark playground. To try your own project
 actions, continue below. The two programs you'll use are:
 
 - **`deckd`** — runs the local Patchbay service.
 - **`deckctl`** — lets you choose projects, run actions, and see results.
 
-### 2. Start Patchbay
+### Start Patchbay
 
 The included example uses this checkout as its project. Check the configuration,
 then start the service:
@@ -75,7 +104,7 @@ then start the service:
 
 Leave that terminal open while you try the commands below.
 
-### 3. Try a few actions
+### Try a few actions
 
 Open a second terminal in the same `patchbay` folder:
 

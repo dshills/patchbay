@@ -91,6 +91,22 @@ Hardware evidence and outstanding checks belong in `reviews/PHASE3.md`.
 
 ## Build, install and configure
 
+For a normal installation or trial, use the [one-command setup](DECK_SETUP.md):
+
+```sh
+./bin/deckctl deck use demo
+```
+
+To go back later:
+
+```sh
+./bin/deckctl deck restore
+```
+
+It backs up the current profiles/settings before each switch, installs controls and
+starts the service automatically. The manual process below remains useful for adapter
+development and custom integration.
+
 Requirements: macOS 13+, Go 1.27+, Xcode Command Line Tools (`lipo`), Python 3,
 and Stream Deck 7.0+. Node 24 is used only for inspector tests and the optional
 vendor validation CLI. The installed plugin is a native universal Go executable.

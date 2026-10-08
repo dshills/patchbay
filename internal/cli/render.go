@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"patchbay/internal/decksetup"
 	"patchbay/internal/recipe"
 	"patchbay/internal/supervisor"
 	"patchbay/pkg/protocol"
@@ -16,6 +17,32 @@ func render(value any) string {
 	var out strings.Builder
 	line := func(format string, args ...any) { _, _ = fmt.Fprintf(&out, format+"\n", args...) }
 	switch v := value.(type) {
+	case []decksetup.Device:
+		for _, d := range v {
+			line("%s\t%s", d.ID, d.Name)
+		}
+	case []decksetup.Preset:
+		for _, p := range v {
+			line("%s\t%s", p.Name, p.Description)
+		}
+	case []deckBackup:
+		if len(v) == 0 {
+			line("No deck backups yet. Run deckctl deck use demo to get started.")
+		}
+		for _, b := range v {
+			line("%s\t%s\t%s", b.ID, b.Created, b.Reason)
+		}
+		if len(v) > 0 {
+			line("Restore previous: deckctl deck restore\nRestore original: deckctl deck restore original\nRestore one: deckctl deck restore <backup-id>")
+		}
+	case decksetup.Result:
+		if v.Restored != "" {
+			line("Restored backup %s. Stream Deck reopened.", v.Restored)
+		} else {
+			line("Patchbay %s is ready on your Stream Deck+. Stream Deck reopened.", v.Preset)
+		}
+		line("Your previous setup was saved as %s.", v.Backup)
+		line("Go back: deckctl deck restore\nReturn to your original setup: deckctl deck restore original")
 	case supervisor.ProposalPreview:
 		data, _ := json.MarshalIndent(v, "", "  ")
 		line("%s", data)

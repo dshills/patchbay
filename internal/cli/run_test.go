@@ -36,6 +36,12 @@ func TestFoundationCommands(t *testing.T) {
 		{"deckctl", []string{"--socket", path + "-missing.sock", "status"}, 3, false},
 		{"deckctl", []string{"config", "validate", "extra"}, 2, false},
 		{"deckctl", []string{"--unknown"}, 2, false},
+		{"deckctl", []string{"deck", "list"}, 0, false},
+		{"deckctl", []string{"deck", "list", "--json"}, 0, true},
+		{"deckctl", []string{"deck", "list", "--socket", "/tmp/unused"}, 2, false},
+		{"deckctl", []string{"deck", "use", "../escape"}, 2, false},
+		{"deckctl", []string{"deck", "restore", "original", "--confirm"}, 2, false},
+		{"deckctl", []string{"status", "--device", "fixture"}, 2, false},
 		{"deckctl", []string{"config", "validate", "--unknown"}, 2, false},
 		{"deckd", []string{"--version", "--validate"}, 2, false},
 	}

@@ -140,6 +140,15 @@ owns it. Restoring files cannot undo external action or instrument effects.
 | State recovered / persist_failed log | Inspect `.corrupt-*` backups, private directory permissions, disk space, and state limits. Failed writes retry and shutdown reports a final failure. |
 | Reload rejected (1) | Validate the daemon's file; restart for immutable settings. Its prior configuration stays active. |
 
+## Switch or restore a Stream Deck+ setup
+
+Use `./bin/deckctl deck use demo` or `./bin/deckctl deck use benchmark`. Each
+command backs up the current profiles and settings before installing and starting
+the named setup. `./bin/deckctl deck restore` goes back one step;
+`./bin/deckctl deck restore original` returns to the earliest retained backup.
+The complete [setup and recovery guide](DECK_SETUP.md) describes backup storage,
+interrupted recovery, and the separate service installed by these commands.
+
 ## Reproducible release builds
 
 Use the same Go toolchain, Python/zlib versions, source revision, module sums,

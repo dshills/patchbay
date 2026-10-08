@@ -12,6 +12,7 @@ import (
 
 type ctlOptions struct {
 	socket, config, demoDir             string
+	device                              string
 	json, help, version, async, confirm bool
 	requestTimeout, timeout             time.Duration
 	maxResponse                         int64
@@ -43,7 +44,7 @@ func parseOptions(args []string) (ctlOptions, []string, error) {
 			key = "help"
 		}
 		boolean := key == "json" || key == "help" || key == "version" || key == "async" || key == "confirm"
-		if !boolean && key != "socket" && key != "demo-dir" && key != "config" && key != "request-timeout" && key != "timeout" && key != "arg" && key != "max-response-bytes" {
+		if !boolean && key != "device" && key != "socket" && key != "demo-dir" && key != "config" && key != "request-timeout" && key != "timeout" && key != "arg" && key != "max-response-bytes" {
 			fail("Unknown option; use --help for supported options.")
 			continue
 		}
@@ -83,6 +84,8 @@ func parseOptions(args []string) (ctlOptions, []string, error) {
 			continue
 		}
 		switch key {
+		case "device":
+			o.device = value
 		case "demo-dir":
 			o.demoDir = value
 		case "socket":
@@ -142,10 +145,21 @@ func (o ctlOptions) validate(command []string) error {
 		key += " " + command[1]
 	}
 	lengths := map[string]int{"agent propose-patch": 3, "agent patches": 2, "agent restore": 4, "agent forget-patch": 3, "agent grant": 4, "agent review": 3, "agent approve": 6, "agent reject": 3, "agent duplicate": 4, "agent catalog": 2, "agent context": 3, "agent start": 5, "agent list": 2, "agent page": 3, "agent show": 3, "agent cancel": 3, "agent forget": 3, "recipe export-preview": 4, "recipe export-save": 6, "recipe inspect": 3, "recipe import": 3, "recipe stage": 4, "recipe list": 2, "recipe show": 3, "recipe prepare": 4, "recipe commit": 6, "capabilities": 1, "workbench": 1, "demo": 1, "sample list": 2, "experiment list": 2, "experiment prepare": 3, "experiment run": 3, "experiment capture": 5, "run compare": 4, "request-id": 1, "export prepare": 4, "export save": 6, "storage status": 2, "run list": 2, "run show": 3, "run page": 3, "run annotate": 4, "run delete": 3, "baseline show": 3, "baseline set": 4, "status": 1, "project list": 2, "project current": 2, "project use": 3, "context show": 2, "context set": 4, "action list": 2, "action run": 3, "workflow list": 2, "workflow run": 3, "job list": 2, "job show": 3, "job cancel": 3, "param list": 2, "param get": 3, "param set": 4, "config validate": 2, "config reload": 2}
-	if n, ok := lengths[key]; !ok || n != len(command) {
+	lengths["deck list"] = 2
+	lengths["deck devices"] = 2
+	lengths["deck backups"] = 2
+	lengths["deck use"] = 3
+	lengths["deck restore"] = 3
+	if n, ok := lengths[key]; !ok || n != len(command) && (key != "deck restore" || len(command) != 2) {
 		return usage("Unknown command or incorrect number of arguments; use --help.")
 	}
 	for flag := range o.used {
+		if strings.HasPrefix(key, "deck ") && flag != "json" && flag != "help" && (key != "deck use" || flag != "device") {
+			return usage("Deck setup accepts --json, and deck use also accepts --device.")
+		}
+		if flag == "device" && key != "deck use" {
+			return usage("--device requires deck use.")
+		}
 		if key == "demo" && flag != "demo-dir" && flag != "help" {
 			return usage("Demo accepts only --demo-dir and --help.")
 		}
@@ -202,6 +216,8 @@ Usage: deckctl [options] <command> [options]
   recipe export-preview <id-or-alias> <JSON>
   recipe export-save <installation-id> <preparation> <digest> <new.zip> --confirm
   demo [--demo-dir path]
+  deck list | use <demo|benchmark> [--device id]
+  deck devices | backups | restore [latest|original|backup-id]
   workbench [--socket path]
   status | capabilities
   experiment list | prepare <id> | run <id> [--confirm] [--async]

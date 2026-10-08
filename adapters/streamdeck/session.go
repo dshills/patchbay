@@ -19,6 +19,7 @@ type Launch struct {
 	RegisterEvent string
 	Devices       []Device
 	Socket        string
+	ManagedSocket bool
 }
 type received struct {
 	message Message
@@ -143,6 +144,24 @@ func Session(parent context.Context, conn *websocket.Conn, launch Launch) error 
 					continue
 				}
 				if settings.Socket == "" {
+					settings.Socket = launch.Socket
+				}
+				if launch.ManagedSocket {
+					var all map[string]json.RawMessage
+					if json.Unmarshal(m.Payload.Settings, &all) != nil || all == nil {
+						all = map[string]json.RawMessage{}
+					}
+					var installed string
+					var managed bool
+					_ = json.Unmarshal(all["socket"], &installed)
+					_ = json.Unmarshal(all["patchbayManaged"], &managed)
+					if installed != launch.Socket || !managed {
+						all["socket"], _ = json.Marshal(launch.Socket)
+						all["patchbayManaged"] = json.RawMessage(`true`)
+						if err := write(Command{Event: "setGlobalSettings", Context: launch.UUID, Payload: all}); err != nil {
+							return err
+						}
+					}
 					settings.Socket = launch.Socket
 				}
 				if socket != settings.Socket {

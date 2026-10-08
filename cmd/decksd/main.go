@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"patchbay/adapters/streamdeck"
@@ -59,6 +60,22 @@ func run(ctx context.Context, args []string, out, diagnostic io.Writer) int {
 	launch.Devices = registration.Devices
 	if len(launch.Devices) > streamdeck.MaxControls {
 		_, _ = fmt.Fprintln(diagnostic, "decksd: too many devices")
+		return 2
+	}
+	executable, err := os.Executable()
+	if err == nil {
+		executable, err = filepath.EvalSymlinks(executable)
+	}
+	if err == nil {
+		var socket string
+		socket, err = streamdeck.SetupSocket(executable)
+		if socket != "" {
+			launch.Socket = socket
+			launch.ManagedSocket = true
+		}
+	}
+	if err != nil {
+		_, _ = fmt.Fprintln(diagnostic, "decksd: installed setup is unavailable")
 		return 2
 	}
 	if err := streamdeck.Run(ctx, launch, diagnostic); err != nil {

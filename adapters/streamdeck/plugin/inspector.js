@@ -19,12 +19,16 @@
       send("getGlobalSettings", uuid);
     };
     connection.onmessage = ({ data }) => {
+      if (typeof data !== "string" || data.length > 65536) return;
       let message;
       try { message = JSON.parse(data); } catch { return; }
       if (message.event === "didReceiveGlobalSettings") {
         global = message.payload.settings || {}; globalReady = true;
         field("socket").value = typeof global.socket === "string" ? global.socket : "";
-        field("save").disabled = false; field("status").textContent = "Connected to Stream Deck.";
+        field("socket").readOnly = global.patchbayManaged === true;
+        field("save").disabled = false; field("status").textContent = global.patchbayManaged === true
+          ? "Connected. Socket is managed by deckctl deck use."
+          : "Connected to Stream Deck.";
       } else if (message.event === "didReceiveSettings" && message.context === instance) {
         local = message.payload.settings || {}; showLocal();
       }

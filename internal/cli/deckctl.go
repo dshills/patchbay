@@ -74,6 +74,20 @@ func runDeckctl(ctx context.Context, args []string, stdout, stderr io.Writer) in
 	if command[0] == "demo" {
 		return runDemo(ctx, options.demoDir, stdout, stderr)
 	}
+	if command[0] == "deck" {
+		value, err := deckCommand(ctx, options, command)
+		if err != nil {
+			code, exit := "deck_setup_failed", 1
+			if errors.Is(err, context.Canceled) {
+				code, exit = "cancelled", 130
+			}
+			if errors.Is(err, context.DeadlineExceeded) {
+				code, exit = "timeout", 124
+			}
+			err = &commandError{Code: code, Message: err.Error(), Exit: exit}
+		}
+		return report(value, err, options, stdout, stderr)
+	}
 	if command[0] == "workbench" {
 		return runWorkbench(ctx, options.socket, stdout, stderr)
 	}

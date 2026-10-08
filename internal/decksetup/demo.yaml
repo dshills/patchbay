@@ -1,0 +1,43 @@
+# Copy into a private temporary project directory before running the demo.
+version: 1
+server: {socket: private/deckd.sock}
+state: {path: private/state.json}
+context:
+  defaults: {project: demo, mode: development}
+projects:
+  demo: {name: Stream Deck demo, path: .}
+actions:
+  project.describe:
+    type: exec
+    safety: safe
+    command: /bin/echo
+    args: ['Project {{ .project.name }} / {{ .context.mode }}']
+  task.confirm:
+    type: exec
+    safety: confirm
+    command: /bin/echo
+    args: [Confirmed by this control]
+  task.long:
+    type: exec
+    safety: safe
+    command: /bin/sleep
+    args: ['10']
+  task.denied:
+    type: exec
+    safety: dangerous
+    command: /bin/echo
+parameters:
+  display.level: {type: integer, value: 50, min: 0, max: 100, step: 5, unit: '%', persistent: true}
+bindings:
+  - control: key-1
+    press: {action: project.describe}
+    long_press: {action: task.long}
+  - control: key-2
+    press: {action: task.confirm}
+  - control: key-3
+    press: {action: task.denied}
+  - control: dial-1
+    rotate: {parameter: display.level}
+    press: {action: task.confirm}
+    touch: {action: project.describe}
+    long_touch: {action: task.long}

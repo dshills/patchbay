@@ -43,7 +43,7 @@ def universal():
 def fixture():
     files = {"bin/" + name: (thin("arm64"), 0o755) for name in common.COMMANDS}
     names = ["LICENSE", "README.md", "THIRD_PARTY_NOTICES.txt", "licenses/Go-LICENSE",
-             "share/workbench/index.html", "share/workbench/app.js", "share/workbench/style.css", "share/workbench/recipes.js", "share/workbench/agents.js", "scripts/verify_agents.py", "specs/AGENT_CONTROL.md", "scripts/verify_recipes.py", "specs/RECIPES.md", "scripts/verify_workbench.py",
+             "share/workbench/index.html", "share/workbench/app.js", "share/workbench/style.css", "share/workbench/recipes.js", "share/workbench/agents.js", "scripts/verify_agents.py", "specs/AGENT_CONTROL.md", "scripts/verify_recipes.py", "specs/RECIPES.md", "scripts/verify_workbench.py", "specs/DECK_SETUP.md",
              "configs/local.patchbay.deckd.plist", "specs/OPERATIONS.md", "specs/WORKBENCH.md", "specs/EVIDENCE.md",
              "scripts/verify_v1.py", "scripts/benchmark_runtime.py", "scripts/verify_release.py",
              "scripts/release_common.py"]
@@ -102,7 +102,7 @@ class ReleaseTests(unittest.TestCase):
         verify.verify_archive(self.path, allow_dirty=True)
 
     def test_required_files_and_architecture(self):
-        for name in ("recipes/project-checkup/recipe.yaml", "recipes/rigol-capture/LICENSE", "share/workbench/recipes.js", "share/workbench/agents.js", "scripts/verify_agents.py", "specs/AGENT_CONTROL.md", "scripts/verify_recipes.py", "bin/deckplugin-example", "configs/bench.yaml", "bin/deckdemo", "configs/benchmark.yaml", "Patchbay.command", "LICENSE", "licenses/Go-LICENSE"):
+        for name in ("bin/decksd", "specs/DECK_SETUP.md", "recipes/project-checkup/recipe.yaml", "recipes/rigol-capture/LICENSE", "share/workbench/recipes.js", "share/workbench/agents.js", "scripts/verify_agents.py", "specs/AGENT_CONTROL.md", "scripts/verify_recipes.py", "bin/deckplugin-example", "configs/bench.yaml", "bin/deckdemo", "configs/benchmark.yaml", "Patchbay.command", "LICENSE", "licenses/Go-LICENSE"):
             with self.subTest(name=name):
                 files = fixture()
                 del files[name]

@@ -117,3 +117,15 @@ conformance probes against a configured plugin; see [PLUGINS.md](PLUGINS.md).
 
 See [Experiments and local evidence](EVIDENCE.md) for the CC-1/CC-2 schema, preparation,
 storage, capture, comparison, export, API, CLI, and recovery contracts.
+
+## Stream Deck setup
+
+`deck use demo` or `deck use benchmark` performs an offline local
+backup/install/start transaction. `deck list` shows presets, `deck devices` shows
+known Deck+ devices, and `deck backups` lists retained backups. `deck restore` returns
+to the most recent backup (or an interrupted operation's recovery backup);
+`deck restore original` chooses the earliest retained backup, and
+`deck restore <backup-id>` chooses a specific one. Every use or restore creates a backup
+before replacing the current setup. `deck use` accepts `--device <id>`; all deck
+commands accept `--json`. No existing daemon connection is required.
+See [setup and recovery](DECK_SETUP.md) for scope, limits and platform verification.
